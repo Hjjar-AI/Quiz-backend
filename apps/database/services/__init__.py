@@ -13,27 +13,20 @@ Split from a single ~600-line module into four sibling modules:
                             list_backups, restore_backup,
                             clear_database) keeps its original
                             signature and MariaDB branch.
-  • _sqlite_reference.py  — the previous SQLite implementation,
-                            preserved as runnable reference code.
-                            NOT imported by anything.
+  • _sqlite_reference.py  — SQLite backup/restore implementation,
+                            imported lazily only when the configured
+                            connection vendor is SQLite.
 
 `BackupService` is re-exported here unchanged, so
 `from .services import BackupService` in apps/database/views.py
 keeps working without modification.
 
-WHY THE SQLITE CODE WAS EXTRACTED, NOT DELETED
-----------------------------------------------
-The previous version of this module carried every SQLite branch as
-a commented-out block inside the corresponding method. Those
-comment blocks accounted for roughly 40 % of the file's length
-and turned every diff of an active method into a review exercise
-against dead code.
-
-The extracted module (`_sqlite_reference.py`) contains the same
-implementation as a runnable Python module. It is deliberately
-not imported by `backup_service.py` — the MariaDB branch remains
-the only live path, exactly as before. To re-enable SQLite, see
-the re-enable recipe in `_sqlite_reference.py`'s module docstring.
+WHY THE SQLITE CODE IS SEPARATE
+-------------------------------
+Keeping SQLite's online-backup API and sequence-reset details in a
+dedicated module prevents them from complicating the MariaDB subprocess
+path. `backup_service.py` performs a small vendor check and imports the
+SQLite module lazily; MariaDB behavior and imports remain unchanged.
 """
 
 from .backup_service import BackupService

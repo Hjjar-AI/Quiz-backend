@@ -10,6 +10,7 @@ Usage::
     python start_sqlite.py --seed-pro-users
     python start_sqlite.py --seed-pro-users --force-pro-users
     python start_sqlite.py --no-prompt
+    python start_sqlite.py --allow-threading
     SQLITE_DB_PATH=/tmp/quiz.sqlite3 python start_sqlite.py
 
 ADDRESS PROMPT
@@ -45,9 +46,10 @@ On every launch, in this order:
   5. Runs ``makemigrations`` for any model-bearing app whose
      ``migrations/`` directory contains no migration files.
   6. Runs ``migrate`` with ``--fake-initial``.
-  7. Runs the seed pipeline if no active superuser exists yet. The
-     base seed is invoked as ``seed --only data --only capabilities``
-     — the ``tips`` seeder is deliberately omitted.
+  7. Synchronises the idempotent base data and capabilities seeders.
+     Admin creation is skipped when any superuser already exists, so
+     a custom administrator is never replaced by the built-in one.
+     The ``tips`` seeder is deliberately omitted.
   8. Optionally runs ``seed_pro_users`` via ``--seed-pro-users``.
 
 Launcher flags (all optional):
@@ -67,15 +69,28 @@ Launcher flags (all optional):
                            the default silently. Implied when stdin
                            is not a terminal.
 
+  ``--allow-threading``    Allow Django's development server to handle
+                           concurrent requests. SQLite mode defaults to
+                           ``--nothreading`` because several workflows
+                           require row-lock semantics SQLite cannot
+                           provide. Use this only for trusted, light
+                           single-user development.
+
 ENVIRONMENT KNOBS
 -----------------
     SQLITE_DB_PATH          Path to the SQLite file.
                             Default: ``backend/SQLite/db.sqlite3``.
+    SQLITE_ROOT             Root for the default database, media,
+                            uploads, exports, and backups.
+                            Default: ``backend/SQLite``.
     SQLITE_SERVER_ADDRESS   Default address when nothing is passed on
                             the command line or at the prompt.
                             Default: ``localhost:5004``.
+    SQLITE_ALLOWED_HOSTS    Optional comma-separated host allow-list.
+                            The selected bind host is added automatically.
     SQLITE_AUTO_SETUP       Set to ``False``/``0``/``no``/``off`` to
                             behave as if ``--no-setup`` was passed.
+    SQLITE_ALLOW_THREADING  Truthy equivalent of ``--allow-threading``.
     QUIZ_VENV               Path to a virtualenv to re-exec into when
                             the current interpreter cannot import
                             Django.
@@ -120,10 +135,12 @@ _REQUIRED_MODULES = (
     'rest_framework',
     'corsheaders',
     'django_filters',
+    # These are imported while Django resolves the URL configuration,
+    # before the corresponding endpoints are called.
+    'pandas',
+    'openpyxl',
+    'PIL',
 )
-
-
-_SEED_ONLY = ('data', 'capabilities')
 
 
 _LAUNCHER_FLAGS = {
@@ -131,6 +148,7 @@ _LAUNCHER_FLAGS = {
     '--force-pro-users': 'force_pro_users',
     '--no-setup': 'no_setup',
     '--no-prompt': 'no_prompt',
+    '--allow-threading': 'allow_threading',
 }
 
 _DEFAULT_HOST = 'localhost'
@@ -183,13 +201,28 @@ def _ensure_runtime():
     backend_dir = Path(__file__).resolve().parent
     project_dir = backend_dir.parent
     candidates = []
+
+    def add_venv(venv_path):
+        """Add both POSIX and Windows interpreter layouts."""
+        root = Path(venv_path).expanduser()
+        if root.is_file():
+            candidates.append(root)
+            return
+        candidates.extend([
+            root / 'bin' / 'python',
+            root / 'bin' / 'python3',
+            root / 'Scripts' / 'python.exe',
+        ])
+
     if os.environ.get('QUIZ_VENV'):
-        candidates.append(Path(os.environ['QUIZ_VENV']).expanduser() / 'bin' / 'python')
-    candidates.extend([
-        project_dir / 'venv' / 'bin' / 'python',
-        project_dir / '.venv' / 'bin' / 'python',
-        Path.home() / 'Environments' / 'quizenv' / 'bin' / 'python',
-    ])
+        add_venv(os.environ['QUIZ_VENV'])
+    # DEPLOYMENT.md creates .venv while the shell is in backend/. Keep
+    # repository-root layouts as fallbacks for existing installations.
+    add_venv(backend_dir / 'venv')
+    add_venv(backend_dir / '.venv')
+    add_venv(project_dir / 'venv')
+    add_venv(project_dir / '.venv')
+    add_venv(Path.home() / 'Environments' / 'quizenv')
 
     current = Path(sys.executable).absolute()
     for candidate in candidates:
@@ -234,13 +267,29 @@ def _normalize_address(raw):
     if not value:
         return ''
 
+    def checked_port(port):
+        number = int(port)
+        if not 1 <= number <= 65535:
+            raise SystemExit(f'Invalid server port: {port}. Expected 1-65535.')
+        return str(number)
+
     if value.isdigit():
-        return f'{_DEFAULT_HOST}:{value}'
+        return f'{_DEFAULT_HOST}:{checked_port(value)}'
 
     if value.startswith(':'):
         tail = value[1:]
         if tail.isdigit():
-            return f'{_DEFAULT_HOST}:{tail}'
+            return f'{_DEFAULT_HOST}:{checked_port(tail)}'
+
+    # Validate the port in ordinary host:port and bracketed IPv6 forms.
+    if value.startswith('[') and ']:' in value:
+        host, port = value.rsplit(':', 1)
+        if port.isdigit():
+            return f'{host}:{checked_port(port)}'
+    elif value.count(':') == 1:
+        host, port = value.rsplit(':', 1)
+        if host and port.isdigit():
+            return f'{host}:{checked_port(port)}'
 
     return value
 
@@ -261,12 +310,18 @@ def _resolve_server_address(positional_args, flags):
 
     Only called from the parent process — see ``main`` for why.
     """
-    default = os.environ.get(
-        'SQLITE_SERVER_ADDRESS',
-        f'{_DEFAULT_HOST}:{_DEFAULT_PORT}',
+    configured_default = os.environ.get(
+        'SQLITE_SERVER_ADDRESS', f'{_DEFAULT_HOST}:{_DEFAULT_PORT}',
     )
+    default = _normalize_address(configured_default)
+    if not default:
+        default = f'{_DEFAULT_HOST}:{_DEFAULT_PORT}'
 
     if positional_args:
+        # An option-only invocation (for example ``--noreload``) still
+        # receives our port instead of falling back to Django's :8000.
+        if positional_args[0].startswith('-'):
+            return [default, *positional_args]
         head = _normalize_address(positional_args[0]) or default
         return [head, *positional_args[1:]]
 
@@ -289,6 +344,45 @@ def _resolve_server_address(positional_args, flags):
     print('')
     normalized = _normalize_address(answer)
     return [normalized if normalized else default]
+
+
+def _address_host(address):
+    """Extract the host portion of a normalized runserver address."""
+    value = str(address).strip()
+    if value.startswith('[') and ']:' in value:
+        return value[1:value.rfind(']')]
+    if ':' in value:
+        return value.rsplit(':', 1)[0]
+    return value
+
+
+def _configure_sqlite_network(runserver_args):
+    """Pass the selected bind host to the SQLite settings overlay."""
+    if not runserver_args:
+        return
+    host = _address_host(runserver_args[0])
+    if host:
+        os.environ['SQLITE_BIND_HOST'] = host
+    if (
+        host in {'0.0.0.0', '::'}
+        and os.environ.get('SQLITE_NETWORK_WARNING_SHOWN') != '1'
+    ):
+        print(
+            'WARNING: SQLite development server is listening on all interfaces.\n'
+            '         Use it only on a trusted LAN; do not expose it to the internet.'
+        )
+        os.environ['SQLITE_NETWORK_WARNING_SHOWN'] = '1'
+
+
+def _configure_threading(runserver_args, flags):
+    """Serialize requests unless concurrent SQLite use was explicitly requested."""
+    allow_threading = flags['allow_threading'] or _enabled(
+        'SQLITE_ALLOW_THREADING', default=False,
+    )
+    if flags['allow_threading']:
+        os.environ['SQLITE_ALLOW_THREADING'] = '1'
+    if not allow_threading and '--nothreading' not in runserver_args:
+        runserver_args.append('--nothreading')
 
 
 def _ensure_package_files(backend_dir):
@@ -330,6 +424,15 @@ def _app_needs_makemigrations(backend_dir, app):
 def main():
     flags, positional = _split_argv(sys.argv[1:])
 
+    # Persist launcher-only choices through Django's autoreloader, which
+    # re-executes this script after the custom flags have been removed from
+    # sys.argv. This keeps --no-setup and --allow-threading effective in the
+    # worker child without leaking unknown options into ``runserver``.
+    if flags['no_setup']:
+        os.environ['SQLITE_AUTO_SETUP'] = '0'
+    if flags['allow_threading']:
+        os.environ['SQLITE_ALLOW_THREADING'] = '1'
+
     _ensure_runtime()
 
     if os.environ.get(_RELOADER_ENV_VAR) == 'true':
@@ -344,7 +447,15 @@ def main():
         # Parent process. Resolve the address once, then rewrite
         # sys.argv so the child inherits it.
         runserver_args = _resolve_server_address(positional, flags)
+        _configure_threading(runserver_args, flags)
+        _configure_sqlite_network(runserver_args)
         sys.argv = [sys.argv[0], *runserver_args]
+
+    # The reloader child receives the already-resolved arguments. Reapply
+    # only environment-derived configuration that is harmless and idempotent.
+    if os.environ.get(_RELOADER_ENV_VAR) == 'true':
+        _configure_threading(runserver_args, flags)
+        _configure_sqlite_network(runserver_args)
 
     backend_dir = Path(__file__).resolve().parent
 
@@ -393,9 +504,7 @@ def main():
         User = get_user_model()
 
         try:
-            has_superuser = User.objects.filter(
-                is_superuser=True, is_active=True,
-            ).exists()
+            has_superuser = User.objects.filter(is_superuser=True).exists()
         except Exception as exc:
             print('')
             print('ERROR: could not query the users table.')
@@ -413,20 +522,28 @@ def main():
             raise SystemExit(1)
 
         if not has_superuser:
-            print('No active superuser found — running the seed pipeline...')
+            print('No superuser found — creating the default admin...')
             print(f'  (skipping tips; run `manage.py seed --only tips` '
                   f'later if needed)')
             print('(The admin password will be printed to stderr below.)')
-
-            # `seed` is the orchestrator command; it owns the
-            # canonical ordering of the individual seeders. Passing
-            # `only` narrows its selection to the two we want.
-            call_command('seed', only=list(_SEED_ONLY))
-
-            print('')
-            print('Seeding complete. Use the credentials printed above to log in.')
         else:
-            print('Superuser already present — skipping base seed.')
+            print('Superuser already present — preserving existing admin accounts.')
+
+        # Both commands are idempotent. Run them on every setup so a
+        # partially interrupted first launch repairs missing categories,
+        # runtime settings, and capability rows. ``skip_admin`` prevents
+        # seed_data from adding its built-in admin when a custom superuser
+        # already exists.
+        print('[setup] synchronising base data and capabilities...')
+        call_command('seed_data', skip_admin=has_superuser)
+        call_command('seed_capabilities')
+
+        if not User.objects.filter(is_superuser=True, is_active=True).exists():
+            print(
+                'WARNING: no active superuser exists. Reactivate an existing '
+                'superuser or create one with `manage.py createsuperuser`.'
+            )
+        print('Seeding complete.')
 
         if flags['seed_pro_users']:
             kwargs = {}

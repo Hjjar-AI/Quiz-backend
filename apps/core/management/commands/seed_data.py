@@ -12,8 +12,20 @@ User = get_user_model()
 class Command(BaseCommand):
     help = 'Seed database with default admin, categories, settings'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--skip-admin',
+            action='store_true',
+            help=(
+                'Seed categories and runtime settings without creating the '
+                'built-in admin account. Used by the SQLite launcher when a '
+                'custom superuser already exists.'
+            ),
+        )
+
     def handle(self, *args, **options):
-        self.seed_admin()
+        if not options.get('skip_admin', False):
+            self.seed_admin()
         self.seed_categories()
         self.seed_settings()
         self.stdout.write(self.style.SUCCESS('Data seeded successfully'))

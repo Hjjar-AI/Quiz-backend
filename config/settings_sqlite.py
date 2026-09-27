@@ -26,7 +26,8 @@ parts that differ are isolated by this file:
     backups — AND the SQLite database file itself. Every one of
     them is redirected into ``BASE_DIR/SQLite/`` so nothing the
     SQLite instance writes ever appears in, or overwrites a file
-    from, the MariaDB instance running from the same tree.
+    from, the MariaDB instance running from the same tree. Set
+    ``SQLITE_ROOT`` to place that tree somewhere else.
 
 The parts that are NOT isolated and are shared by design:
 
@@ -69,6 +70,11 @@ rows are gone.
 absolute path is used as-is; a relative path is resolved against
 ``BASE_DIR``, not against the current working directory, so the
 launcher behaves the same no matter where it is invoked from.
+
+``SQLITE_ROOT`` moves the complete local instance (default database,
+media, uploads, exports, and backups). This is useful on Termux, where
+the instance should live in Termux-private storage rather than Android
+shared storage.
 """
 
 import os
@@ -86,12 +92,43 @@ from .settings import *  # noqa: E402,F401,F403
 
 DEBUG = True
 
+# ``sslserver`` is a MariaDB/deployment convenience and is not used by
+# start_sqlite.py (which invokes Django's ordinary runserver). Keeping it
+# out of this overlay lets the portable SQLite dependency set remain free
+# of an otherwise unused package. The base settings list is copied, so the
+# normal manage.py configuration is unchanged.
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'sslserver']
+
+
+# Add the concrete address selected by start_sqlite.py. A wildcard bind has
+# no single request host, so allow any Host header only for this DEBUG-only
+# overlay; the launcher prints a warning when it is selected. An explicit
+# SQLITE_ALLOWED_HOSTS value takes precedence.
+_sqlite_allowed_hosts = os.environ.get('SQLITE_ALLOWED_HOSTS')
+if _sqlite_allowed_hosts is not None:
+    ALLOWED_HOSTS = [
+        host.strip() for host in _sqlite_allowed_hosts.split(',') if host.strip()
+    ]
+else:
+    ALLOWED_HOSTS = list(ALLOWED_HOSTS)
+    _bind_host = os.environ.get('SQLITE_BIND_HOST', '').strip().strip('[]')
+    if _bind_host in {'0.0.0.0', '::'}:
+        if '*' not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append('*')
+    elif _bind_host and _bind_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_bind_host)
+
 
 # ── Filesystem isolation root ───────────────────────────────────────
 #
-# Every SQLite-instance path is derived from this one root. Moving the
-# whole instance to a different location is a single-line change here.
-_sqlite_root = BASE_DIR / 'SQLite'
+# Every SQLite-instance path is derived from this one root. This is an
+# environment option so Termux can keep state under its private home
+# rather than Android shared storage.
+_sqlite_root = Path(
+    os.environ.get('SQLITE_ROOT', str(BASE_DIR / 'SQLite'))
+).expanduser()
+if not _sqlite_root.is_absolute():
+    _sqlite_root = BASE_DIR / _sqlite_root
 
 
 # ── Database ────────────────────────────────────────────────────────
@@ -124,6 +161,11 @@ DATABASES = {
             # Give concurrent requests a short opportunity to finish
             # rather than immediately returning "database is locked".
             'timeout': 20,
+            # SQLite ignores SELECT ... FOR UPDATE. BEGIN IMMEDIATE
+            # acquires the write reservation at the start of each atomic
+            # block, serialising the app's read-modify-write workflows
+            # before they read stale state.
+            'transaction_mode': 'IMMEDIATE',
         },
     },
 }

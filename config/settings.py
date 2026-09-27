@@ -128,16 +128,11 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 # ── Database configuration ─────────────────────────────────────────────
 #
-# The active backend is MariaDB / MySQL. The previous SQLite block
-# used to sit as a commented-out reference here; it has been removed
-# because it duplicated the pattern already established by
-# `apps/database/services/_sqlite_reference.py` — reference code for a
-# disabled backend lives in a dedicated runnable module, not as dead
-# comments inside the active configuration file.
-#
-# To run against SQLite, see the re-enable recipe in
-# `apps/database/services/_sqlite_reference.py` and swap the block
-# below for the commented alternative it documents.
+# The active backend is MariaDB / MySQL. SQLite is intentionally kept out
+# of this normal settings module: use `config.settings_sqlite` through
+# `start_sqlite.py`. Database administration services dispatch by the
+# configured connection vendor, so both settings modules share their public
+# API without changing this MariaDB configuration.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

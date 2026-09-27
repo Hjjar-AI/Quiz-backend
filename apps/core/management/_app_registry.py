@@ -44,11 +44,11 @@ than a convention.
 SEED-STEP LOGIC IS DELIBERATELY NOT SHARED
 ------------------------------------------
 The two launchers seed different data sets on first run:
-`start_sqlite.py` runs `seed --only data --only capabilities`
-(explicitly omitting `tips`, and saying so in its console output),
-while `bootstrap.py` runs `seed` with no `--only`, which falls
-through to `seed.py`'s `_DEFAULT_SEEDERS = ('data', 'tips',
-'capabilities')`.
+`start_sqlite.py` runs the idempotent `seed_data` and
+`seed_capabilities` commands directly (explicitly omitting `tips`, and
+saying so in its console output), while `bootstrap.py` runs `seed` with
+no `--only`, which falls through to `seed.py`'s `_DEFAULT_SEEDERS =
+('data', 'tips', 'capabilities')`.
 
 That difference is intentional — a local SQLite dev instance does
 not want onboarding tips injected, a real deployment does — and it

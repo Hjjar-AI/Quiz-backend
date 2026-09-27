@@ -249,20 +249,37 @@ For a self-contained SQLite instance alongside a MariaDB instance, use
 the SQLite launcher instead:
 
 ```bash
+pip install -r requirements-sqlite.txt
 python start_sqlite.py                 # interactive address prompt
 python start_sqlite.py 5005            # localhost:5005
+python start_sqlite.py 0.0.0.0:5004    # trusted LAN (DEBUG server)
 python start_sqlite.py --seed-pro-users
 python start_sqlite.py --no-prompt
+python start_sqlite.py --allow-threading  # explicit opt-in; see below
 ```
 
 `start_sqlite.py` creates `backend/apps/__init__.py`, initialises each
 custom app's `migrations/` package, runs `makemigrations` and
-`migrate`, and seeds default data if no active superuser exists. It
+`migrate`, and idempotently synchronises categories, runtime settings,
+and capabilities on every setup run. It creates the default admin only
+when no superuser exists. It
 uses `config/settings_sqlite.py`, which redirects every on-disk path
 (`media/`, `uploads/`, `exports/`, `backups/`, the SQLite file itself)
 into `backend/SQLite/` and gives the SQLite instance its own session
 and CSRF cookie names, so it can run alongside a MariaDB instance from
 the same checkout without collision.
+
+SQLite mode defaults Django's development server to `--nothreading` and
+uses `BEGIN IMMEDIATE` for atomic transactions. These settings serialize
+the read-modify-write paths that use row locks on MariaDB. Pass
+`--allow-threading` only for light, trusted single-user development; use
+MariaDB for real concurrent users.
+
+`SQLITE_ROOT=/safe/path` moves the database and all SQLite-owned data
+folders together. `SQLITE_DB_PATH` still overrides only the database.
+When binding a concrete LAN address, the launcher adds it to this
+overlay's `ALLOWED_HOSTS`; a wildcard bind permits Host headers only in
+this DEBUG-only overlay and prints an exposure warning.
 
 ### 2.5 Optional — pro / moderator accounts
 
@@ -341,8 +358,12 @@ MariaDB timezone tables are empty. See § 1.6.
 
 ### Termux (Android)
 
-Dependency names differ slightly. The Python package list from
-`requirements.txt` is installed in the same order.
+Dependency names differ slightly. SQLite installations should use the
+dedicated dependency file, which avoids the unused `mysqlclient` and
+Gunicorn builds. Keep the checkout, virtualenv, and SQLite state under
+Termux-private `$HOME`, not `/sdcard` or `/storage/emulated/0`; Android
+shared storage does not provide reliable executable and SQLite locking
+semantics.
 
 ```bash
 pkg install -y \
@@ -352,7 +373,7 @@ pkg install -y \
     libffi file tzdata openssl curl
 
 python -m pip install --upgrade pip wheel setuptools
-pip install -r backend/requirements.txt
+pip install -r backend/requirements-sqlite.txt
 ```
 
 Notes:
@@ -364,13 +385,21 @@ Notes:
   defensively for older mirrors.
 - `xlrd` still works on Termux; `openpyxl` is pure Python.
 - WeasyPrint on Termux is fragile. If `import weasyprint` fails after
-  installing the above, PDF export is unavailable but every other
-  export format still works.
+  installing it separately, PDF export is unavailable but every other
+  export format still works. It is deliberately not part of
+  `requirements-sqlite.txt`.
 
 Then:
 
 ```bash
-python backend/start_sqlite.py
+SQLITE_ROOT="$HOME/.local/share/quiz" python backend/start_sqlite.py
+```
+
+For access from another device on a trusted Wi-Fi network:
+
+```bash
+SQLITE_ROOT="$HOME/.local/share/quiz" \
+  python backend/start_sqlite.py 0.0.0.0:5004
 ```
 
 ### macOS

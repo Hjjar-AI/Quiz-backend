@@ -2,11 +2,11 @@
 """
 Backup / restore / clear operations against the configured database.
 
-The live implementation targets MariaDB / MySQL. The previous SQLite
-implementation is preserved as a runnable reference module
-(`._sqlite_reference`) — it is not imported here. Every method
-below returns a clean "backend not supported" error when the
-configured database is neither MariaDB nor MySQL.
+MariaDB remains the normal deployment backend. SQLite calls are
+dispatched to ``._sqlite_reference`` so the self-contained launcher has
+the same database-panel surface without importing SQLite-specific code
+on the normal MariaDB path. Unknown database vendors still return a
+clean "backend not supported" error.
 
 CALLERS
 -------
@@ -37,7 +37,7 @@ from django.db import connection, connections
 from django.utils import timezone
 from apps.core.artifacts import reserve_artifact_path
 
-from .backend import _is_mariadb, _mysql_config, _write_defaults_file
+from .backend import _is_mariadb, _is_sqlite, _mysql_config, _write_defaults_file
 
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,10 @@ class BackupService:
 
     @staticmethod
     def get_info():
+        if _is_sqlite():
+            from ._sqlite_reference import get_info
+            return get_info()
+
         if _is_mariadb():
             cfg = _mysql_config()
             try:
@@ -94,6 +98,10 @@ class BackupService:
 
     @staticmethod
     def create_backup(safety=False):
+        if _is_sqlite():
+            from ._sqlite_reference import create_backup
+            return create_backup(safety=safety)
+
         if _is_mariadb():
             cfg = _mysql_config()
             backup_dir = Path(settings.BACKUP_FOLDER)
@@ -148,15 +156,13 @@ class BackupService:
         """
         List backup files on disk.
 
-        FIXED BEHAVIOUR: the previous version silently globbed `*.db`
-        when the backend was not MariaDB — meaning on SQLite it
-        returned a list of `.db` files that the (also inactive)
-        SQLite restore path could not consume, and on any third
-        backend (Postgres, for example) it returned an empty list
-        rather than an error. It now returns a clean
-        "backend not supported" error on anything other than MariaDB,
-        matching the other four methods in this class.
+        SQLite and MariaDB use their own suffixes and restore formats.
+        Unknown backends return a clean unsupported-backend error.
         """
+        if _is_sqlite():
+            from ._sqlite_reference import list_backups
+            return list_backups()
+
         if not _is_mariadb():
             return _unsupported_backend()
 
@@ -180,6 +186,10 @@ class BackupService:
 
     @staticmethod
     def restore_backup(backup_name):
+        if _is_sqlite():
+            from ._sqlite_reference import restore_backup
+            return restore_backup(backup_name)
+
         backup_dir = Path(settings.BACKUP_FOLDER)
         target_path = (backup_dir / backup_name).resolve()
 
@@ -284,16 +294,16 @@ class BackupService:
                 model = apps.get_model(model_name)
                 model.objects.all().delete()
 
-            # MariaDB: reset AUTO_INCREMENT on the wiped tables.
-            # SQLite: call _sqlite_reference.reset_autoincrement —
-            # see that module's docstring for the re-enable recipe.
-            if _is_mariadb():
-                cursor = connection.cursor()
-                for model_name in models_to_clear:
-                    model = apps.get_model(model_name)
-                    table_name = model._meta.db_table
-                    cursor.execute(
-                        f"ALTER TABLE `{table_name}` AUTO_INCREMENT = 1"
-                    )
+            with connection.cursor() as cursor:
+                if _is_sqlite():
+                    from ._sqlite_reference import reset_autoincrement
+                    reset_autoincrement(cursor, models_to_clear)
+                elif _is_mariadb():
+                    for model_name in models_to_clear:
+                        model = apps.get_model(model_name)
+                        table_name = model._meta.db_table
+                        cursor.execute(
+                            f"ALTER TABLE `{table_name}` AUTO_INCREMENT = 1"
+                        )
 
         return {'message': 'تم مسح قاعدة البيانات'}
