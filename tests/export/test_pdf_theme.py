@@ -19,9 +19,14 @@ class PdfThemeTests(SimpleTestCase):
     def test_supported_theme_is_preserved(self):
         self.assertEqual(_normalize_pdf_theme('dark'), 'dark')
         self.assertEqual(_normalize_pdf_theme(' Blossom '), 'blossom')
+        self.assertEqual(_normalize_pdf_theme('iris'), 'iris')
+        self.assertEqual(_normalize_pdf_theme('midnight'), 'midnight')
+        self.assertEqual(_normalize_pdf_theme('lagoon'), 'lagoon')
 
     def test_light_alias_and_unknown_theme_fall_back_to_stone(self):
         self.assertEqual(_normalize_pdf_theme('light'), 'stone')
+        self.assertEqual(_normalize_pdf_theme('sepia'), 'amber')
+        self.assertEqual(_normalize_pdf_theme('fresh'), 'lagoon')
         self.assertEqual(_normalize_pdf_theme('not-a-theme'), 'stone')
         self.assertEqual(_normalize_pdf_theme(None), 'stone')
 
