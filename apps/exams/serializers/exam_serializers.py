@@ -34,6 +34,16 @@ class TestHistorySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'completed_at']
 
 
+class TestHistoryDetailSerializer(TestHistorySerializer):
+    """Completed-session summary plus the frozen per-question outcomes."""
+
+    class Meta(TestHistorySerializer.Meta):
+        fields = TestHistorySerializer.Meta.fields + ['started_at', 'results']
+        read_only_fields = TestHistorySerializer.Meta.read_only_fields + [
+            'started_at', 'results',
+        ]
+
+
 class SessionIdSerializer(serializers.Serializer):
     session_id = serializers.CharField()
 

@@ -28,9 +28,10 @@ but no code consulted them, so the panel switch did nothing.
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
 
 from ..models import TestHistory
-from ..serializers import TestHistorySerializer
+from ..serializers import TestHistorySerializer, TestHistoryDetailSerializer
 from apps.core.utils import api_success, api_error, paginate
 
 
@@ -68,3 +69,22 @@ class TestHistoryView(APIView):
         page, meta = paginate(queryset, request)
         serializer = TestHistorySerializer(page, many=True)
         return api_success(data={'items': serializer.data, **meta})
+
+
+class TestHistoryDetailView(APIView):
+    """Return one completed session including its frozen answer review."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, history_id):
+        can_see_all = request.user.has_capability('tests.view_all_history')
+        can_see_own = request.user.has_capability('tests.view_own_history')
+        if not can_see_all and not can_see_own:
+            return api_error('غير مصرح لك', 403)
+
+        queryset = TestHistory.objects.all()
+        if not can_see_all:
+            queryset = queryset.filter(user=request.user)
+
+        history = get_object_or_404(queryset, id=history_id)
+        return api_success(data=TestHistoryDetailSerializer(history).data)

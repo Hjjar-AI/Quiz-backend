@@ -3,6 +3,7 @@
 from .exam_serializers import (
     ExamSessionSerializer,
     TestHistorySerializer,
+    TestHistoryDetailSerializer,
     SessionIdSerializer,
     SessionIdOrModeSerializer,
     SubmitAnswerSerializer,
@@ -12,6 +13,7 @@ from .exam_serializers import (
 __all__ = [
     'ExamSessionSerializer',
     'TestHistorySerializer',
+    'TestHistoryDetailSerializer',
     'SessionIdSerializer',
     'SessionIdOrModeSerializer',
     'SubmitAnswerSerializer',

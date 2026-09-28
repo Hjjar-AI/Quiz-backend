@@ -9,7 +9,7 @@ from django.contrib import admin
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.urls import include, path, re_path
 
-from apps.exams.views import TestHistoryView
+from apps.exams.views import TestHistoryDetailView, TestHistoryView
 from apps.users.views.auth_views import AdminPasswordChangeView
 
 
@@ -92,6 +92,11 @@ urlpatterns = [
     path('api/v1/analytics/', include('apps.analytics.urls')),
     path('api/v1/database/', include('apps.database.urls')),
     path('api/v1/history/', TestHistoryView.as_view(), name='user-history'),
+    path(
+        'api/v1/history/<int:history_id>/',
+        TestHistoryDetailView.as_view(),
+        name='user-history-detail',
+    ),
     path('api/v1/admin/history/', TestHistoryView.as_view(), name='admin-history'),
 ]
 

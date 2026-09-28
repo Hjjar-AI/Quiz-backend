@@ -19,7 +19,7 @@ from .session_views import (
     DiscardProgressView,
     StatusView,
 )
-from .history_views import TestHistoryView
+from .history_views import TestHistoryView, TestHistoryDetailView
 from .blueprint_views import BlueprintListView, BlueprintDetailView
 
 
@@ -35,6 +35,7 @@ __all__ = [
     'StatusView',
     # History
     'TestHistoryView',
+    'TestHistoryDetailView',
     # Blueprints
     'BlueprintListView',
     'BlueprintDetailView',

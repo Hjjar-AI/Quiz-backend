@@ -88,17 +88,25 @@ class BookmarkListView(APIView):
                 'question__case',
             )
             .prefetch_related('question__tags')
+            .order_by('-created_at', '-id')
         )
-        questions = [b.question for b in bookmarks]
+        wants_pagination = (
+            'page' in request.query_params or 'per_page' in request.query_params
+        )
+        if wants_pagination:
+            bookmark_page, meta = paginate(bookmarks, request)
+            questions = [b.question for b in bookmark_page]
+        else:
+            # Backward-compatible shape for the Vue bookmark store,
+            # which intentionally fetches the complete id set.
+            questions = [b.question for b in bookmarks]
+            meta = {'count': len(questions)}
         cache = QuestionSerializer.build_case_sibling_cache(questions, request.user)
         serializer = QuestionSerializer(
             questions, many=True,
             context={'request': request, 'case_sibling_cache': cache},
         )
-        return api_success(data={
-            'items': serializer.data,
-            'count': len(serializer.data),
-        })
+        return api_success(data={'items': serializer.data, **meta})
 
 
 class BookmarkCountView(APIView):

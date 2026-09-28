@@ -233,6 +233,13 @@ class AdminUserListView(APIView):
             .filter(is_stub=False)
             .order_by('-created_at')
         )
+        search = str(request.query_params.get('search', '')).strip()
+        if search:
+            users_qs = users_qs.filter(
+                Q(username__icontains=search)
+                | Q(full_name__icontains=search)
+                | Q(email__icontains=search)
+            )
         page, meta = paginate(users_qs, request)
 
         # Materialize the page once — `paginate` returns a sliced

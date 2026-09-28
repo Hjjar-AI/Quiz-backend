@@ -29,7 +29,14 @@ class MyGroupsView(APIView):
     def get(self, request):
         qs = GroupService.groups_for_user(request.user)
         serializer = GroupListSerializer(qs, many=True)
-        return api_success(data={'items': serializer.data})
+        visibility = dict(
+            GroupMembership.objects.filter(user=request.user, group__in=qs)
+            .values_list('group_id', 'show_in_leaderboard')
+        )
+        items = list(serializer.data)
+        for item in items:
+            item['show_in_leaderboard'] = visibility.get(item['id'], True)
+        return api_success(data={'items': items})
 
 
 class GroupLeaderboardView(APIView):
