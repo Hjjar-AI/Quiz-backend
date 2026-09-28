@@ -88,6 +88,11 @@ ENVIRONMENT KNOBS
                             Default: ``localhost:5004``.
     SQLITE_ALLOWED_HOSTS    Optional comma-separated host allow-list.
                             The selected bind host is added automatically.
+    SQLITE_CORS_ORIGINS     Optional comma-separated browser origins.
+                            ``*`` enables CORS allow-all mode.
+    SQLITE_CSRF_TRUSTED_ORIGINS
+                            Optional explicit origins including schemes,
+                            e.g. ``http://192.168.1.10:5173``.
     SQLITE_AUTO_SETUP       Set to ``False``/``0``/``no``/``off`` to
                             behave as if ``--no-setup`` was passed.
     SQLITE_ALLOW_THREADING  Truthy equivalent of ``--allow-threading``.

@@ -119,6 +119,47 @@ else:
         ALLOWED_HOSTS.append(_bind_host)
 
 
+# django-cors-headers does not accept ``*`` in CORS_ALLOWED_ORIGINS;
+# wildcard access is represented by CORS_ALLOW_ALL_ORIGINS instead. The base
+# .env used by some local installations predates that distinction and sets
+# CORS_ORIGINS=*. Normalise it only in this SQLite overlay. CSRF trusted
+# origins are separate and must always include an explicit scheme.
+_sqlite_cors_raw = os.environ.get('SQLITE_CORS_ORIGINS')
+if _sqlite_cors_raw is None:
+    _sqlite_cors_origins = list(CORS_ALLOWED_ORIGINS)
+else:
+    _sqlite_cors_origins = [
+        origin.strip()
+        for origin in _sqlite_cors_raw.split(',')
+        if origin.strip()
+    ]
+
+if '*' in _sqlite_cors_origins:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = [
+        origin for origin in _sqlite_cors_origins if origin != '*'
+    ]
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = _sqlite_cors_origins
+
+_sqlite_csrf_raw = os.environ.get('SQLITE_CSRF_TRUSTED_ORIGINS')
+if _sqlite_csrf_raw is not None:
+    CSRF_TRUSTED_ORIGINS = [
+        origin.strip()
+        for origin in _sqlite_csrf_raw.split(',')
+        if origin.strip()
+    ]
+else:
+    # Same-origin requests need no trusted-origin entry. Preserve only
+    # valid cross-origin URLs from the CORS configuration.
+    CSRF_TRUSTED_ORIGINS = [
+        origin
+        for origin in CORS_ALLOWED_ORIGINS
+        if origin.startswith(('http://', 'https://'))
+    ]
+
+
 # ── Filesystem isolation root ───────────────────────────────────────
 #
 # Every SQLite-instance path is derived from this one root. This is an

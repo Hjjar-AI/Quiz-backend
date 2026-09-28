@@ -280,6 +280,11 @@ folders together. `SQLITE_DB_PATH` still overrides only the database.
 When binding a concrete LAN address, the launcher adds it to this
 overlay's `ALLOWED_HOSTS`; a wildcard bind permits Host headers only in
 this DEBUG-only overlay and prints an exposure warning.
+Legacy `CORS_ORIGINS=*` values are translated to
+`CORS_ALLOW_ALL_ORIGINS=True` in this overlay instead of being copied
+into Django's scheme-required CSRF list. For a separate frontend origin,
+set `SQLITE_CSRF_TRUSTED_ORIGINS` to explicit URLs such as
+`http://192.168.1.10:5173`.
 
 ### 2.5 Optional — pro / moderator accounts
 
