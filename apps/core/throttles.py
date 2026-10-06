@@ -116,3 +116,8 @@ class MasterExamAnswerRateThrottle(_UserScopedThrottle):
 
 class MasterExamStartRateThrottle(_UserScopedThrottle):
     scope = 'master_exam_start'
+
+
+class PdfExportRateThrottle(_UserScopedThrottle):
+    """Protect the synchronous, memory-intensive PDF renderer per admin."""
+    scope = 'pdf_export'

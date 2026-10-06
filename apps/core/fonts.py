@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-ARABIC_FONT_NAME = 'NotoSansArabic-VariableFont_wdth,wght.ttf'
+ARABIC_FONT_NAME = 'NotoSansArabicVariable.ttf'
 
 
 def arabic_font_candidates():

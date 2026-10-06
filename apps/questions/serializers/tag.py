@@ -10,6 +10,28 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['id', 'uuid', 'name', 'parent']
         read_only_fields = ['id', 'uuid']
 
+    def validate_parent(self, parent):
+        instance = self.instance
+        if parent is None or instance is None:
+            return parent
+        if parent.pk == instance.pk:
+            raise serializers.ValidationError('A tag cannot be its own parent.')
+
+        current = parent
+        visited = set()
+        while current is not None:
+            if current.pk in visited:
+                raise serializers.ValidationError(
+                    'Tag hierarchy cannot contain a cycle.'
+                )
+            if current.pk == instance.pk:
+                raise serializers.ValidationError(
+                    'Tag hierarchy cannot contain a cycle.'
+                )
+            visited.add(current.pk)
+            current = current.parent
+        return parent
+
 
 # ── Rename / merge name fields ────────────────────────────────────────
 #

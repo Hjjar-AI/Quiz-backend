@@ -306,6 +306,7 @@ REST_FRAMEWORK = {
         'clear_db': '2/hour',
         'admin_password': '50/hour',
         'bulk_verify': '30/min',
+        'pdf_export': '20/hour',
 
         'master_exam_answer': '2000/hour',
         'master_exam_start': '10/hour',
@@ -396,6 +397,17 @@ MAX_QUIZ_QUESTIONS = 200
 MAX_IMPORT_QUESTIONS = 5000
 ITEMS_PER_PAGE = REST_FRAMEWORK['PAGE_SIZE']
 MAX_CHOICES = 8
+
+# PDF rendering materializes the selected questions, embeds images as base64,
+# and lets WeasyPrint build the complete document in one worker. Bound both
+# dimensions so an accidental all-bank export cannot exhaust worker memory.
+PDF_EXPORT_MAX_QUESTIONS = max(
+    1, int(os.environ.get('PDF_EXPORT_MAX_QUESTIONS', 1000)),
+)
+PDF_EXPORT_MAX_TOTAL_IMAGE_BYTES = max(
+    1,
+    int(os.environ.get('PDF_EXPORT_MAX_TOTAL_IMAGE_BYTES', 50 * 1024 * 1024)),
+)
 
 # Retention window for the PrivilegedAction audit log, in days.
 # Swept by `manage.py cleanup_database` (aggregate housekeeping) and by

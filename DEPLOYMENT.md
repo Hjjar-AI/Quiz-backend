@@ -95,7 +95,7 @@ PDF export embeds a Noto Sans Arabic TTF so the output carries its own
 glyphs. The font ships in the repo at:
 
 ```
-frontend/public/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf
+frontend/public/fonts/NotoSansArabicVariable.ttf
 ```
 
 `pdf_export.py` searches (in order):
@@ -109,7 +109,7 @@ build:
 
 ```bash
 mkdir -p backend/static/fonts
-cp frontend/public/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf \
+cp frontend/public/fonts/NotoSansArabicVariable.ttf \
    backend/static/fonts/
 ```
 

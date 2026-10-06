@@ -215,19 +215,37 @@ class AdminTagMergeView(APIView):
         # avoids adding a `questions → planning` edge at module load.
         from apps.planning.models import StudyPlanner
 
+        # Merging an ancestor into one of its descendants would make the
+        # target its own ancestor when the source's children are reparented.
+        # Validate every source before moving anything so the operation cannot
+        # partially complete and then discover a cycle.
+        sources = list(
+            Tag.objects.filter(name__in={
+                str(name).strip() for name in source_tags
+                if str(name).strip() and str(name).strip() != target_name
+            })
+        )
+        ancestor_ids = set()
+        current = target
+        while current is not None and current.pk not in ancestor_ids:
+            ancestor_ids.add(current.pk)
+            current = current.parent
+        if any(src.pk in ancestor_ids for src in sources):
+            return api_error(
+                'لا يمكن دمج وسم أب ضمن أحد الوسوم التابعة له',
+                400,
+            )
+
         moved = 0
         reparented = 0
         plans_migrated = 0
         sources_processed = []
 
-        for src_name in source_tags:
-            src_name = src_name.strip()
-            if not src_name or src_name == target_name:
-                continue
-
-            try:
-                src = Tag.objects.get(name=src_name)
-            except Tag.DoesNotExist:
+        sources_by_name = {tag.name: tag for tag in sources}
+        for raw_src_name in source_tags:
+            src_name = str(raw_src_name).strip()
+            src = sources_by_name.get(src_name)
+            if src is None:
                 continue
 
             # Idempotency guard: if a previous merge already consumed

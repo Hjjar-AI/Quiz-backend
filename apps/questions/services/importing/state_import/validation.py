@@ -344,6 +344,21 @@ def _validate_state_envelope(payload):
         verification_notes = entry.get('verification_notes')
         if verification_notes is not None and not isinstance(verification_notes, str):
             return {'error': f'السؤال رقم {idx + 1}: verification_notes غير صالح', 'code': 400}
+        if entry.get('verified', False):
+            if not (entry.get('verified_by') and verified_at):
+                return {
+                    'error': (
+                        f'السؤال رقم {idx + 1}: بيانات التدقيق غير مكتملة'
+                    ),
+                    'code': 400,
+                }
+        elif entry.get('verified_by') or verified_at or verification_notes:
+            return {
+                'error': (
+                    f'السؤال رقم {idx + 1}: سؤال غير مدقق يحمل بيانات تدقيق'
+                ),
+                'code': 400,
+            }
         difficulty = entry.get('difficulty', 'medium')
         if not isinstance(difficulty, str) or difficulty not in {'easy', 'medium', 'hard'}:
             return {'error': f'السؤال رقم {idx + 1}: difficulty غير صالح', 'code': 400}
@@ -443,6 +458,25 @@ def _validate_state_envelope(payload):
             parent_uuid = _canonical_uuid(parent_uuid)
             if parent_uuid not in tag_uuids:
                 return {'error': f'الوسوم: الوسم الأب غير موجود في الحزمة', 'code': 400}
+
+    # A self-referential parent or a longer cycle produces no root in the tag
+    # tree and can make later hierarchy operations loop forever. Validate the
+    # complete graph before the import starts writing rows.
+    tag_parents = {
+        _canonical_uuid(tag['uuid']): _canonical_uuid(tag.get('parent_uuid'))
+        for tag in payload['tags']
+    }
+    for tag_uuid in tag_parents:
+        current = tag_uuid
+        path = set()
+        while current:
+            if current in path:
+                return {
+                    'error': 'الوسوم: لا يمكن أن تحتوي شجرة الوسوم على دورة',
+                    'code': 400,
+                }
+            path.add(current)
+            current = tag_parents.get(current, '')
     for idx, entry in enumerate(payload['questions']):
         references = (
             ('category_uuid', category_uuids, 'التصنيف'),

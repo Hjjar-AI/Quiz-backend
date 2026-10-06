@@ -23,6 +23,7 @@ from apps.core.throttles import (
     BackupRateThrottle,
     ClearDatabaseRateThrottle,
     AdminPasswordRateThrottle,
+    PdfExportRateThrottle,
 )
 from apps.questions.services import ImportService, ExportService
 from apps.questions.services.content_quality import (
@@ -344,7 +345,16 @@ class ImportTelegramView(APIView):
         return api_success(data=result, code=201)
 
 
-class ExportDatabaseView(APIView):
+class _PdfExportThrottleMixin:
+    """Throttle only the expensive PDF branch, not flat file downloads."""
+
+    def get_throttles(self):
+        if self.kwargs.get('fmt') == 'pdf':
+            return [PdfExportRateThrottle()]
+        return super().get_throttles()
+
+
+class ExportDatabaseView(_PdfExportThrottleMixin, APIView):
     """
     Flat export of every question (or every matching question, when
     filters are supplied in the query string).
@@ -396,7 +406,7 @@ class ExportDatabaseView(APIView):
         return _post_pdf_export(request, verified_only=False)
 
 
-class ExportVerifiedDatabaseView(APIView):
+class ExportVerifiedDatabaseView(_PdfExportThrottleMixin, APIView):
     """
     Flat export of verified questions only. Accepts the same filter
     set and `title` param as ExportDatabaseView; the two are composed

@@ -119,6 +119,28 @@ class MasterExam(TimeStampedModel):
         indexes = [
             models.Index(fields=['stored_status', 'opens_at'], name='me_status_opens_idx'),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(closes_at__gt=models.F('opens_at')),
+                name='me_closes_after_opens',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(duration_minutes__gt=0),
+                name='me_duration_positive',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(weight_easy__gte=0.1, weight_easy__lte=10)
+                    & models.Q(weight_medium__gte=0.1, weight_medium__lte=10)
+                    & models.Q(weight_hard__gte=0.1, weight_hard__lte=10)
+                ),
+                name='me_difficulty_weights_in_range',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name='me_version_positive',
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -222,6 +244,12 @@ class MasterExamQuestion(models.Model):
         ordering = ['order']
         indexes = [
             models.Index(fields=['master_exam', 'order'], name='meq_exam_order_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['master_exam', 'order'],
+                name='meq_unique_order_per_exam',
+            ),
         ]
 
     def __str__(self):

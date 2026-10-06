@@ -181,6 +181,14 @@ def reorder_questions(exam, ordered_ids, request=None, expected_version=None):
     ]
     with transaction.atomic():
         _cas_bump_version(exam, expected_version)
+        # Move every row out of the destination range first. Without this
+        # phase, swapping positions can transiently violate the database's
+        # unique (master_exam, order) constraint while a CASE update is being
+        # applied row by row.
+        offset = (
+            exam.exam_questions.aggregate(m=Max('order'))['m'] or 0
+        ) + 1
+        exam.exam_questions.update(order=F('order') + offset)
         exam.exam_questions.update(
             order=Case(*when_clauses, output_field=IntegerField())
         )

@@ -2,6 +2,7 @@
 
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -78,6 +79,43 @@ class Tag(models.Model):
         blank=True,
         related_name='children',
     )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(parent=models.F('pk')),
+                name='tag_cannot_parent_itself',
+            ),
+        ]
+
+    def clean(self):
+        """Reject self-parenting and longer ancestry cycles."""
+        super().clean()
+        if self.parent_id is None:
+            return
+        if self.pk is not None and self.parent_id == self.pk:
+            raise ValidationError({'parent': 'A tag cannot be its own parent.'})
+
+        current_id = self.parent_id
+        visited = set()
+        while current_id is not None:
+            if current_id in visited:
+                raise ValidationError({'parent': 'Tag hierarchy cannot contain a cycle.'})
+            if self.pk is not None and current_id == self.pk:
+                raise ValidationError({'parent': 'Tag hierarchy cannot contain a cycle.'})
+            visited.add(current_id)
+            current_id = (
+                type(self).objects
+                .filter(pk=current_id)
+                .values_list('parent_id', flat=True)
+                .first()
+            )
+
+    def save(self, *args, **kwargs):
+        # Tag writes are rare, and validating here protects import/admin callers
+        # that do not explicitly invoke Model.full_clean().
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -423,6 +461,45 @@ class Question(TimeStampedModel):
             models.CheckConstraint(
                 condition=models.Q(is_draft=True) | models.Q(owned_by__isnull=False),
                 name='question_published_has_owner',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(is_draft=True) & models.Q(draft_owner__isnull=False))
+                    | (models.Q(is_draft=False) & models.Q(draft_owner__isnull=True))
+                ),
+                name='question_draft_owner_matches_state',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (
+                        models.Q(verified=True)
+                        & models.Q(verified_by__isnull=False)
+                        & models.Q(verified_at__isnull=False)
+                    )
+                    | (
+                        models.Q(verified=False)
+                        & models.Q(verified_by__isnull=True)
+                        & models.Q(verified_at__isnull=True)
+                        & models.Q(verification_notes__isnull=True)
+                    )
+                ),
+                name='question_verification_fields_match_state',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(times_answered__gte=0),
+                name='question_times_answered_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(times_correct__gte=0),
+                name='question_times_correct_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(times_correct__lte=models.F('times_answered')),
+                name='question_correct_not_above_answered',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name='question_version_positive',
             ),
         ]
 

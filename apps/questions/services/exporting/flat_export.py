@@ -255,9 +255,6 @@ def export_questions(
     format, PDF engine missing).
     """
     queryset = _build_export_queryset(filters, verified_only)
-    if not queryset.exists():
-        return {'error': 'لا توجد بيانات للتصدير', 'code': 404}
-
     # ── PDF — dispatched to the sibling module ────────────────────
     #
     # Placed FIRST, before the export_dir/prefix computation, so the
@@ -268,6 +265,18 @@ def export_questions(
     # exactly the same rows the other formats would have contained
     # for the same filter set.
     if fmt == 'pdf':
+        question_count = queryset.count()
+        if question_count == 0:
+            return {'error': 'لا توجد بيانات للتصدير', 'code': 404}
+        max_questions = getattr(settings, 'PDF_EXPORT_MAX_QUESTIONS', 1000)
+        if question_count > max_questions:
+            return {
+                'error': (
+                    f'عدد أسئلة PDF يتجاوز الحد ({max_questions}). '
+                    'استخدم الفلاتر لتصدير مجموعة أصغر.'
+                ),
+                'code': 413,
+            }
         return export_questions_pdf(
             list(queryset),
             verified_only=verified_only,
@@ -277,6 +286,9 @@ def export_questions(
             locale=locale,
             front_matter=front_matter,
         )
+
+    if not queryset.exists():
+        return {'error': 'لا توجد بيانات للتصدير', 'code': 404}
 
     export_dir = Path(settings.EXPORT_FOLDER)
     export_dir.mkdir(parents=True, exist_ok=True)

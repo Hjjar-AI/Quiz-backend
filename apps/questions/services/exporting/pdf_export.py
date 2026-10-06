@@ -8,7 +8,7 @@ contextual letter-joining and RTL bidi reordering work correctly
 without an arabic-reshaper / python-bidi preprocessing layer.
 
 The Arabic font is embedded into the PDF from
-`frontend/public/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf`,
+`frontend/public/fonts/NotoSansArabicVariable.ttf`,
 so the generated file carries its own glyphs and does not depend on
 the reader's system having an Arabic font installed.
 
@@ -84,7 +84,7 @@ from apps.core.fonts import resolve_arabic_font_path
 from apps.core.utils import parse_csv_param
 from apps.questions.colors import is_valid_hex_color
 from ...models import Question
-from .image_export import read_image_as_base64
+from .image_export import MAX_EXPORT_IMAGE_BYTES, read_image_as_base64
 
 logger = logging.getLogger(__name__)
 
@@ -498,6 +498,23 @@ def _attach_pdf_image_uri(question):
         )
 
 
+def _pdf_source_image_bytes(questions):
+    """Return readable image bytes that would be embedded in this PDF."""
+    total = 0
+    for question in questions:
+        image = getattr(question, 'image', None)
+        if not image:
+            continue
+        try:
+            size = image.size
+        except (OSError, ValueError):
+            # The image reader treats an inaccessible object as absent too.
+            continue
+        if size <= MAX_EXPORT_IMAGE_BYTES:
+            total += size
+    return total
+
+
 def export_questions_pdf(
     questions,
     *,
@@ -523,18 +540,28 @@ def export_questions_pdf(
     """
     try:
         from weasyprint import HTML, CSS
-    except ImportError:
-        logger.error(
-            'WeasyPrint is not installed; PDF export is unavailable. '
-            'Install it with: pip install weasyprint'
-        )
+    except (ImportError, OSError) as exc:
+        logger.exception('WeasyPrint or one of its native dependencies is unavailable: %s', exc)
         return {
-            'error': 'محرك PDF غير مثبت على الخادم. تواصل مع المسؤول.',
+            'error': 'محرك PDF أو إحدى مكتباته الأساسية غير متاح على الخادم.',
             'code': 500,
         }
 
     if not questions:
         return {'error': 'لا توجد بيانات للتصدير', 'code': 404}
+
+    max_image_bytes = getattr(
+        settings, 'PDF_EXPORT_MAX_TOTAL_IMAGE_BYTES', 50 * 1024 * 1024,
+    )
+    source_image_bytes = _pdf_source_image_bytes(questions)
+    if source_image_bytes > max_image_bytes:
+        return {
+            'error': (
+                'حجم صور ملف PDF يتجاوز الحد المسموح. '
+                'استخدم الفلاتر لتصدير مجموعة أصغر.'
+            ),
+            'code': 413,
+        }
 
     locale = _normalize_pdf_locale(locale)
     copy = _PDF_COPY[locale]
