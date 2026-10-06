@@ -456,7 +456,7 @@ def _build_question(row, username, author=None, owner=None):
     return question, tags
 
 
-def _persist_records(records, username, author=None, owner=None):
+def _persist_records(records, username, author=None, owner=None, *, first_row=None):
     """
     Persist a list of already-extracted record dicts.
 
@@ -465,6 +465,8 @@ def _persist_records(records, username, author=None, owner=None):
     import. Returns the number of rows written.
 
     Called by flat_import.import_file and telegram_import.import_telegram.
+    When first_row is provided, prefix construction errors with the source
+    row number (2 for a spreadsheet with a heading row, 1 for JSON records).
     """
     if owner is None:
         owner = get_user_safe(username)
@@ -479,10 +481,15 @@ def _persist_records(records, username, author=None, owner=None):
         for text in Question.objects.values_list('question', flat=True)
     }
     with transaction.atomic():
-        for row in records:
-            question, tags = _build_question(
-                row, username, author=author, owner=owner,
-            )
+        for index, row in enumerate(records):
+            try:
+                question, tags = _build_question(
+                    row, username, author=author, owner=owner,
+                )
+            except ValueError as exc:
+                if first_row is None:
+                    raise
+                raise ValueError(f'الصف {first_row + index}: {exc}') from exc
             if Question.objects.filter(uuid=question.uuid).exists():
                 skipped += 1
                 continue
@@ -570,7 +577,23 @@ def import_file(file, username):
             if 'choices' not in df.columns:
                 return {'error': "عمود choices مطلوب في ملف JSON", 'code': 400}
         else:
-            choice_cols = [c for c in df.columns if c.startswith('choice_')]
+            # Spreadsheet headings often contain accidental whitespace or
+            # capitalization. Match the same canonical names used by the CSV
+            # preview so filled choices are not silently overlooked.
+            columns = [
+                str(c).strip().lstrip('\ufeff').strip().lower()
+                for c in df.columns
+            ]
+            if len(columns) != len(set(columns)):
+                return {
+                    'error': 'يوجد اسم عمود مكرر بعد إزالة المسافات وتوحيد حالة الأحرف',
+                    'code': 400,
+                }
+            df.columns = columns
+            choice_cols = [
+                f'choice_{i}' for i in range(1, MAX_CHOICES + 1)
+                if f'choice_{i}' in df.columns
+            ]
             if len(choice_cols) < 2:
                 return {
                     'error': "يجب توفير عمودين على الأقل من الاختيارات (choice_1, choice_2, ...)",
@@ -593,6 +616,7 @@ def import_file(file, username):
 
         count, skipped, flagged = _persist_records(
             records, username, author=user, owner=user,
+            first_row=1 if ext == 'json' else 2,
         )
 
         user.update_trust_score()

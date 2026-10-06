@@ -2,6 +2,15 @@
 
 ## 2026-10-06
 
+- Normalized Excel/CSV import headings for whitespace, BOMs, and capitalization
+  so recognized choice columns through `choice_8` are not silently missed.
+- Rejected heading normalization collisions and added source row numbers to
+  flat-file question validation errors. The correct answer must still refer to
+  a filled choice; the reported limit reflects that row's actual choice count.
+- Verified import changes with Python syntax parsing and diff whitespace checks;
+  no builds, compilation tasks, test suites, or migration work were performed.
+- The reported spreadsheet failure still needs confirmation using the original
+  file; heading differences are a possible cause, not a confirmed diagnosis.
 - Reviewed the application data model and PDF export pipeline.
 - Added safeguards against cyclic tag hierarchies in model writes, serializers,
   imports, and tag merges.
