@@ -15,4 +15,5 @@
 - Verified Python compilation, Django model checks, font resolution, and diff
   whitespace checks.
 - Did not create or review migration files.
-
+- Added a comprehensive backend README covering SQLite/MariaDB setup,
+  configuration, API layout, operations, deployment, and troubleshooting.
