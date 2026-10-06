@@ -3,6 +3,9 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
+from apps.core.model_validation import (
+    InvariantValidationMixin, require, validate_counts, validate_result_counts,
+)
 from apps.users.models import User
 
 
@@ -90,7 +93,7 @@ class ExamSession(models.Model):
         return f"{self.user.username} - {self.mode} - {self.session_id}"
 
 
-class TestHistory(models.Model):
+class TestHistory(InvariantValidationMixin, models.Model):
     """
     Immutable record of one completed session, keyed by mode.
 
@@ -144,6 +147,15 @@ class TestHistory(models.Model):
     results = models.JSONField(default=list, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(default=timezone.now)
+
+    def validate_invariants(self):
+        validate_result_counts(self)
+        validate_counts(self, 'time_spent')
+        if self.started_at is not None:
+            require(
+                self.completed_at is not None and self.completed_at >= self.started_at,
+                'completed_at', 'Completion must not precede the start.',
+            )
 
     class Meta:
         ordering = ['-completed_at']

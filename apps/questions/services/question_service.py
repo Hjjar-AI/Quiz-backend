@@ -156,6 +156,7 @@ class QuestionService:
         with transaction.atomic():
             instance = (
                 Question.objects
+                .select_for_update()
                 .select_related('case', 'authored_by', 'owned_by')
                 .filter(id=question_id)
                 .first()
@@ -180,6 +181,8 @@ class QuestionService:
             serializer = QuestionUpdateSerializer(
                 instance, data=data, partial=True,
             )
+            from apps.learning.evidence import question_learning_fingerprint, invalidate_question_learning
+            previous_learning = question_learning_fingerprint(instance)
             serializer.is_valid(raise_exception=True)
             validated = dict(serializer.validated_data)
 
@@ -238,6 +241,9 @@ class QuestionService:
                 Question.objects.filter(pk=question_id).update(**update_fields)
 
             instance.refresh_from_db()
+
+            if previous_learning != question_learning_fingerprint(instance):
+                invalidate_question_learning([instance.pk], using=instance._state.db)
 
             if tags_str is not None:
                 instance.tags.clear()

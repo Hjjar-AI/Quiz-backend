@@ -7,6 +7,9 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
+from apps.core.model_validation import (
+    InvariantValidationMixin, require, validate_percentage, validate_result_counts,
+)
 from apps.users.models import User
 
 
@@ -177,7 +180,7 @@ class MasterExam(TimeStampedModel):
 
     @property
     def can_edit_now(self):
-        if self.stored_status in ('cancelled', 'published_to_bank'):
+        if self.stored_status in ('cancelled', 'published_to_bank', 'completed'):
             return False
         return timezone.now() < self.opens_at
 
@@ -256,7 +259,7 @@ class MasterExamQuestion(models.Model):
         return f'{self.master_exam_id} · Q{self.question_id} @ {self.order}'
 
 
-class MasterExamAttempt(TimeStampedModel):
+class MasterExamAttempt(InvariantValidationMixin, TimeStampedModel):
     master_exam = models.ForeignKey(
         MasterExam,
         on_delete=models.CASCADE,
@@ -291,6 +294,25 @@ class MasterExamAttempt(TimeStampedModel):
     is_makeup = models.BooleanField(default=False)
     forced_finish = models.BooleanField(default=False)
     exam_name_snapshot = models.CharField(max_length=200)
+
+    def validate_invariants(self):
+        validate_result_counts(self)
+        validate_percentage(self, 'weighted_score')
+        require(
+            self.started_at is not None and self.deadline_at is not None
+            and self.deadline_at > self.started_at,
+            'deadline_at', 'Deadline must follow the start.',
+        )
+        require(
+            self.is_complete == (self.finished_at is not None),
+            'finished_at', 'A completion timestamp is required exactly when complete.',
+        )
+        if self.finished_at is not None:
+            require(
+                self.finished_at >= self.started_at,
+                'finished_at', 'Completion must not precede the start.',
+            )
+
     class Meta:
         ordering = ['-started_at']
         unique_together = ('master_exam', 'user', 'is_makeup')

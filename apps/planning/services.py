@@ -3,6 +3,8 @@
 from datetime import datetime, time, timedelta
 
 from django.utils import timezone
+from django.db import transaction
+from django.db.models import F
 
 from apps.exams.models import TestHistory
 from apps.master_exams.models import MasterExamAttempt
@@ -19,6 +21,7 @@ class StudyPlannerService:
         return planner
 
     @staticmethod
+    @transaction.atomic
     def update_planner(user, target, category_ids, tag_names, start_date, end_date):
         """
         Replace the planner's configuration.
@@ -33,7 +36,12 @@ class StudyPlannerService:
         Both lists are treated as full replacements: whatever was
         there before is cleared and replaced with the incoming set.
         """
-        planner, _ = StudyPlanner.objects.get_or_create(user=user)
+        planner, _ = StudyPlanner.objects.select_for_update().get_or_create(user=user)
+        old_scope = (
+            set(planner.target_categories.values_list('pk', flat=True)),
+            set(planner.target_tags.values_list('name', flat=True)),
+            planner.start_date, planner.end_date,
+        )
         planner.target_questions_per_day = target
         planner.start_date = start_date
         planner.end_date = end_date
@@ -64,20 +72,71 @@ class StudyPlannerService:
         else:
             planner.target_tags.clear()
 
+        new_scope = (
+            set(planner.target_categories.values_list('pk', flat=True)),
+            set(planner.target_tags.values_list('name', flat=True)),
+            planner.start_date, planner.end_date,
+        )
+        if old_scope != new_scope:
+            # Earlier activity belongs to the earlier plan. A scope/window
+            # change starts today's new plan at zero; target-only edits retain
+            # progress. Keep previous days as historical records.
+            StudyPlannerDay.objects.update_or_create(
+                planner=planner, date=timezone.localdate(),
+                defaults={'questions_answered': 0},
+            )
+
         return planner
 
     @staticmethod
+    @transaction.atomic
+    def record_learning_progress(user, results):
+        """Credit each committed learning event, including unfinished study.
+
+        Session writers call this once under their existing idempotency locks.
+        The daily ledger retains progress after a session is discarded.
+        """
+        planner, _ = StudyPlanner.objects.select_for_update().get_or_create(user=user)
+        today = timezone.localdate()
+        if today < planner.start_date or (planner.end_date and today > planner.end_date):
+            return 0
+        category_ids = set(planner.target_categories.values_list('pk', flat=True))
+        tag_names = set(planner.target_tags.values_list('name', flat=True))
+        targeted = bool(category_ids or tag_names)
+        count = sum(
+            1 for result in results
+            if result.get('user_answer') is not None and (
+                not targeted or result.get('category_id') in category_ids
+                or bool(set(result.get('tag_names') or []) & tag_names)
+            )
+        )
+        if count:
+            # Seed pre-existing completed activity only when no ledger exists.
+            StudyPlannerService.record_daily_progress(user)
+            StudyPlannerDay.objects.filter(planner=planner, date=today).update(
+                questions_answered=F('questions_answered') + count,
+            )
+        return count
+
+    @staticmethod
+    @transaction.atomic
     def record_daily_progress(user):
-        """Upsert today's answered count within the active plan scope.
+        """Read today's durable ledger, or initialize legacy completed activity.
 
         Both ordinary and master exams contribute. When category/tag
         targets exist, only answered result rows matching either target count.
         """
         today = timezone.localdate()
 
-        planner, _ = StudyPlanner.objects.prefetch_related(
+        planner, _ = StudyPlanner.objects.select_for_update().prefetch_related(
             'target_categories', 'target_tags',
         ).get_or_create(user=user)
+
+        # New activity is credited by the session writer. Recomputing from
+        # completed histories would erase paused/discarded learning events.
+        day = StudyPlannerDay.objects.filter(planner=planner, date=today).first()
+        if day is not None:
+            return day.questions_answered
 
         # A dated plan does not accrue progress before it starts or after it
         # ends. This prevents old/general activity from satisfying a new plan.

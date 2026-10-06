@@ -1,9 +1,11 @@
 # backend/apps/learning/models.py
 from django.db import models
 from django.utils import timezone
+import math
+from apps.core.model_validation import InvariantValidationMixin, require, validate_counts
 
 
-class UserQuestionAttempt(models.Model):
+class UserQuestionAttempt(InvariantValidationMixin, models.Model):
     ERROR_REASON_CHOICES = [
         ('unknown', 'Did not know the answer'),
         ('misread', 'Misread the question'),
@@ -48,6 +50,45 @@ class UserQuestionAttempt(models.Model):
     interval_days = models.IntegerField(default=0)
     repetitions = models.IntegerField(default=0)
     next_due = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    def validate_invariants(self):
+        validate_counts(self, 'attempts', 'wrong_count', 'interval_days', 'repetitions')
+        require(
+            self.wrong_count <= self.attempts,
+            'wrong_count', 'Wrong answers cannot exceed attempts.',
+        )
+        require(
+            self.ever_correct == (self.attempts > self.wrong_count),
+            'ever_correct', 'Correct-answer history must agree with the attempt counters.',
+        )
+        require(
+            self.repetitions <= self.attempts - self.wrong_count
+            and (self.last_correct or self.repetitions == 0),
+            'repetitions', 'Successful repetitions must agree with the answer history.',
+        )
+        require(
+            not self.last_correct or self.ever_correct,
+            'ever_correct', 'A correct last answer requires ever_correct.',
+        )
+        require(
+            not self.last_correct or not self.last_error_reason,
+            'last_error_reason', 'A correct answer cannot have an error reason.',
+        )
+        validate_counts(self, 'last_confidence_score')
+        require(
+            1 <= self.last_confidence_score <= 3
+            and self.last_confidence == (self.last_confidence_score == 3),
+            'last_confidence_score', 'Confidence score and confidence flag must agree.',
+        )
+        require(
+            isinstance(self.ease_factor, (int, float)) and math.isfinite(self.ease_factor)
+            and self.ease_factor >= 1.3,
+            'ease_factor', 'Ease factor must be finite and at least 1.3.',
+        )
+        require(
+            self.last_error_reason in (None, '', *dict(self.ERROR_REASON_CHOICES)),
+            'last_error_reason', 'Invalid error reason.',
+        )
 
     class Meta:
         constraints = [

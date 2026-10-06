@@ -21,7 +21,10 @@ def attempt_mastery_score(attempt):
     confidence = max(1, min(3, attempt.last_confidence_score or 3))
     confidence_points = confidence * 5.0
     repetition_points = min(max(attempt.repetitions or 0, 0), 3) / 3.0 * 35.0
-    return min(100.0, 50.0 + confidence_points + repetition_points)
+    score = min(100.0, 50.0 + confidence_points + repetition_points)
+    # A currently fragile/guessed answer must not simultaneously be labelled
+    # mastered, regardless of earlier successful repetitions.
+    return min(score, 79.9) if confidence < 3 else score
 
 
 def mastery_summary(attempts, total_questions):
@@ -40,6 +43,20 @@ def mastery_summary(attempts, total_questions):
         'attempts': sum(attempt.attempts or 0 for attempt in attempts),
         'wrong_count': sum(attempt.wrong_count or 0 for attempt in attempts),
     }
+
+
+def concept_mastery_summary(attempts, total_questions):
+    """Keep concept evidence independent of the number of available variants.
+
+    Average all attempted variants so contradictory answers lower confidence;
+    unseen variants affect coverage only.
+    """
+    attempts = list(attempts)
+    summary = mastery_summary(attempts, total_questions)
+    summary['score'] = round(
+        sum(attempt_mastery_score(attempt) for attempt in attempts) / len(attempts), 1,
+    ) if attempts else 0.0
+    return summary
 
 
 def category_mastery_rows(user_id, min_attempts=1):

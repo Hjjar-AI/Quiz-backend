@@ -5,7 +5,7 @@ from collections import defaultdict
 from apps.questions.models import KnowledgeObject, Question
 
 from .models import UserQuestionAttempt
-from .mastery import mastery_summary
+from .mastery import concept_mastery_summary
 
 
 def build_knowledge_map(user):
@@ -59,7 +59,7 @@ def build_knowledge_map(user):
         attempted_questions = len(object_attempts)
         total_questions = question_counts[obj.id]
         if object_attempts:
-            mastery = round(mastery_summary(object_attempts, total_questions)['score'])
+            mastery = concept_mastery_summary(object_attempts, total_questions)['score']
             average_confidence = round(
                 sum(attempt.last_confidence_score for attempt in object_attempts)
                 / attempted_questions,

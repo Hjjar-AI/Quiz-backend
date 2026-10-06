@@ -5,10 +5,11 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
+from apps.core.model_validation import InvariantValidationMixin, require, validate_counts
 from apps.users.models import User
 
 
-class StudyPlanner(TimeStampedModel):
+class StudyPlanner(InvariantValidationMixin, TimeStampedModel):
     """
     A per-user study target.
 
@@ -50,6 +51,20 @@ class StudyPlanner(TimeStampedModel):
     )
     start_date = models.DateField(default=timezone.localdate)
     end_date = models.DateField(null=True, blank=True)
+
+    def validate_invariants(self):
+        validate_counts(self, 'target_questions_per_day')
+        require(
+            1 <= self.target_questions_per_day <= 1000,
+            'target_questions_per_day', 'Daily target must be between 1 and 1000.',
+        )
+        require(self.start_date is not None, 'start_date', 'Start date is required.')
+        if self.end_date is not None:
+            require(
+                self.end_date >= self.start_date,
+                'end_date', 'End date must not precede the start.',
+            )
+
     def __str__(self):
         return f"Planner: {self.user.username}"
 

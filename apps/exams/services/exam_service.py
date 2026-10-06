@@ -507,6 +507,7 @@ class ExamService:
         """
         if snapshot:
             return {
+                'learning_fingerprint': snapshot.get('learning_fingerprint'),
                 'id': question.id if question is not None else None,
                 'correct_answer': snapshot.get('correct_answer'),
                 'question': snapshot.get('question'),
@@ -522,7 +523,9 @@ class ExamService:
             }
         if question is None:
             return None
+        from apps.learning.evidence import question_learning_fingerprint
         return {
+            'learning_fingerprint': question_learning_fingerprint(question),
             'id': question.id,
             'correct_answer': question.correct_answer,
             'question': question.question,
@@ -547,7 +550,7 @@ class ExamService:
             for question in (
                 Question.objects
                 .filter(id__in=question_ids)
-                .select_related('case', 'category')
+                .select_related('case', 'category', 'knowledge_object')
                 .prefetch_related('tags')
             )
         }
@@ -596,6 +599,7 @@ class ExamService:
                     confidence_fragile += 1
 
             results.append({
+                'learning_fingerprint': merged.get('learning_fingerprint'),
                 'question_id': merged['id'] if merged['id'] is not None else qid,
                 'question': merged['question'],
                 'choices': merged['choices'],
@@ -693,6 +697,8 @@ class ExamService:
     def record_completion_side_effects(user, results):
         ExamService.update_question_stats(results)
         SRSService.record_attempts_bulk(user, results)
+        from apps.planning.services import StudyPlannerService
+        StudyPlannerService.record_learning_progress(user, results)
         if any(r.get('user_answer') is not None for r in results):
             user.record_study_day()
 

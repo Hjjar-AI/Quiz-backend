@@ -127,8 +127,10 @@ def build_grading_snapshot(question_ids):
     The ``case`` block is produced by ``case_block_from_live``, so its
     shape is identical to every other case block in the codebase.
     """
+    from apps.learning.evidence import question_learning_fingerprint
     return {
         str(question.id): {
+            'learning_fingerprint': question_learning_fingerprint(question),
             'correct_answer': question.correct_answer,
             'difficulty': question.difficulty,
             'category_id': question.category_id,
@@ -145,7 +147,7 @@ def build_grading_snapshot(question_ids):
         for question in (
             Question.objects
             .filter(id__in=question_ids)
-            .select_related('category', 'case')
+            .select_related('category', 'case', 'knowledge_object')
             .prefetch_related('tags')
         )
     }

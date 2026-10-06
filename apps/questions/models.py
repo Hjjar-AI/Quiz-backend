@@ -1,6 +1,7 @@
 # backend/apps/questions/models.py
 
 import uuid
+from numbers import Integral
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -8,6 +9,7 @@ from django.utils import timezone
 
 from apps.users.models import User
 from apps.core.models import TimeStampedModel
+from apps.core.model_validation import InvariantValidationMixin, require
 
 TAG_NAME_MAX_LENGTH = 50
 CATEGORY_NAME_MAX_LENGTH = 100
@@ -121,7 +123,7 @@ class Tag(models.Model):
         return self.name
 
 
-class ClinicalCase(TimeStampedModel):
+class ClinicalCase(InvariantValidationMixin, TimeStampedModel):
     """
     A clinical vignette shared by a set of questions.
 
@@ -187,8 +189,21 @@ class ClinicalCase(TimeStampedModel):
     def __str__(self):
         return self.title or self.key
 
+    def validate_invariants(self):
+        require(
+            isinstance(self.stem, str) and len(self.stem) <= CASE_STEM_MAX_LENGTH,
+            'stem', f'Case stem must be text of at most {CASE_STEM_MAX_LENGTH} characters.',
+        )
 
-class KnowledgeObject(TimeStampedModel):
+    def invariants_saved(self, previous, saved):
+        from apps.learning.evidence import invalidate_question_learning
+        if previous is not None and previous.stem != saved.stem:
+            invalidate_question_learning(
+                self.questions.values_list('pk', flat=True), using=self._state.db,
+            )
+
+
+class KnowledgeObject(InvariantValidationMixin, TimeStampedModel):
     """A canonical unit of knowledge that one or more questions assess.
 
     Categories and tags describe where content belongs.  A knowledge object
@@ -258,8 +273,19 @@ class KnowledgeObject(TimeStampedModel):
     def __str__(self):
         return self.title
 
+    def validate_invariants(self):
+        from .knowledge_validation import validate_knowledge_object
+        validate_knowledge_object(self)
 
-class Question(TimeStampedModel):
+    def invariants_saved(self, previous, saved):
+        from apps.learning.evidence import knowledge_learning_content, invalidate_question_learning
+        if previous is not None and knowledge_learning_content(previous) != knowledge_learning_content(saved):
+            invalidate_question_learning(
+                self.questions.values_list('pk', flat=True), using=self._state.db,
+            )
+
+
+class Question(InvariantValidationMixin, TimeStampedModel):
     DIFFICULTY_CHOICES = [
         ('easy', 'Easy'),
         ('medium', 'Medium'),
@@ -506,42 +532,32 @@ class Question(TimeStampedModel):
     def __str__(self):
         return self.question[:50]
 
-    def save(self, *args, **kwargs):
-        # Range check on correct_answer. `choices` is a JSONField list,
-        # so the constraint cannot be enforced at the DB layer. This
-        # guard runs on every .save() call (admin, seed, scripts) but
-        # not on .update() or .bulk_create() — see the docstring note
-        # in QuestionService for the paths that bypass it.
-        #
-        # SINGLE SOURCE OF TRUTH (fix — validation.py owns the message)
-        # -------------------------------------------------------------
-        # The previous version of this guard hardcoded an English
-        # message ("correct_answer {n} out of range for {m} choices")
-        # here. That made it the fourth copy of the correct-answer
-        # range rule — after validation.clean_and_validate_choices,
-        # flat_import._build_question, and
-        # QuestionUpdateSerializer.validate — and the only copy in
-        # English rather than Arabic. A caller that reached this
-        # branch (typically via a management command or a reverse-
-        # parse restore calling .save() directly) got a differently-
-        # shaped error than every other entry point produced for the
-        # identical business rule.
-        #
-        # The guard now delegates to `validate_correct_answer`, which
-        # owns both the rule and the message. The import is done
-        # lazily inside `save()` because `validation.py` imports
-        # `CHOICE_TEXT_MAX_LENGTH` from this module at load time —
-        # a module-level import here would deadlock the app registry.
-        choices = self.choices if isinstance(self.choices, list) else []
-        if choices:
-            from .validation import validate_correct_answer
-            error = validate_correct_answer(
-                int(self.correct_answer or 0),
-                len(choices),
-            )
-            if error is not None:
-                raise ValueError(error['message'])
-        super().save(*args, **kwargs)
+    def validate_invariants(self):
+        # Reject blanks rather than compacting the list: compaction can move
+        # the correct-answer index to a different choice. Imports may retain
+        # duplicates for moderation, so duplicate handling stays with callers.
+        from .validation import clean_and_validate_choices
+
+        require(isinstance(self.choices, list), 'choices', 'Choices must be a list.')
+        require(
+            all(isinstance(choice, str) and choice.strip() for choice in self.choices),
+            'choices', 'Every choice must be a nonblank string.',
+        )
+        require(
+            isinstance(self.correct_answer, Integral)
+            and not isinstance(self.correct_answer, bool),
+            'correct_answer', 'رقم الإجابة الصحيحة غير صالح',
+        )
+        _, error = clean_and_validate_choices(
+            self.choices, self.correct_answer, allow_duplicates=True,
+        )
+        if error is not None:
+            raise ValidationError({error['field'] or 'choices': error['message']})
+
+    def invariants_saved(self, previous, saved):
+        from apps.learning.evidence import question_learning_fingerprint, invalidate_question_learning
+        if previous is not None and question_learning_fingerprint(previous) != question_learning_fingerprint(saved):
+            invalidate_question_learning([self.pk], using=self._state.db)
 
 
 class QuestionTag(models.Model):

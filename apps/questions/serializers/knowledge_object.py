@@ -1,9 +1,13 @@
 from rest_framework import serializers
+from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from ..models import KnowledgeObject, Tag, clean_tag_name
+from ..knowledge_validation import normalize_knowledge_translations
 
 
 class KnowledgeObjectSerializer(serializers.ModelSerializer):
+    source_page = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     tags = serializers.StringRelatedField(many=True, read_only=True)
     tag_names = serializers.ListField(
@@ -43,20 +47,10 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
         return self._validate_string_list(value, 'misconceptions')
 
     def validate_translations(self, value):
-        if not isinstance(value, dict):
-            raise serializers.ValidationError('translations must be an object.')
-        allowed = {'title', 'learning_objective', 'canonical_answer'}
-        cleaned = {}
-        for locale, content in value.items():
-            if not isinstance(locale, str) or not locale.strip() or not isinstance(content, dict):
-                raise serializers.ValidationError('Invalid knowledge-object translation.')
-            unknown = set(content) - allowed
-            if unknown or any(not isinstance(item, str) for item in content.values()):
-                raise serializers.ValidationError('Invalid knowledge-object translation fields.')
-            cleaned[locale.strip().lower()] = {
-                key: item.strip() for key, item in content.items() if item.strip()
-            }
-        return cleaned
+        try:
+            return normalize_knowledge_translations(value)
+        except ValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
 
     def _set_tags(self, instance, names):
         if names is None:
@@ -67,12 +61,14 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
             tags.append(tag)
         instance.tags.set(tags)
 
+    @transaction.atomic
     def create(self, validated_data):
         names = validated_data.pop('tag_names', None)
         instance = super().create(validated_data)
         self._set_tags(instance, names)
         return instance
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         names = validated_data.pop('tag_names', None)
         validated_data['version'] = instance.version + 1

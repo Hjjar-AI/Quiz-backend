@@ -2,6 +2,46 @@
 
 ## 2026-10-06
 
+- Corrected invariant validation for explicit partial and deferred saves using
+  the actual persisted field combination inside a transaction/row lock.
+- Serialized learner review writes, replaced stale bulk overwrite fallbacks
+  with locked read/apply/save operations, and made streak updates reread the
+  learner's persisted state. Early correct practice does not increase ease,
+  spaced repetitions, or defer the due date. Fragile answers stay below mastery.
+- Separated knowledge-object mastery evidence from question-variant coverage.
+- Added content fingerprints to grading snapshots/results without schema or
+  version changes. Question, knowledge-object, and case-content edits invalidate
+  affected derived learning state. Old frozen answers still grade, but stale or
+  unidentifiable legacy snapshot evidence does not establish current mastery.
+- Added knowledge-object model/translation validation, positive source pages,
+  and transactional API content/tag writes. Added flag resolution/attempt
+  ownership/question membership guards and blocked edits to completed exams.
+- Credited planner progress when learning is committed, retaining unfinished
+  and discarded study work. Plan scope/window changes reset today's ledger;
+  daily-target-only changes retain credit. Earlier days remain historical.
+- Verified Django model checks, syntax, whitespace, and isolated SQLite
+  scenarios covering partial/deferred saves, due/early reviews, fingerprints,
+  content invalidation, concept coverage, planner ledgers/scope changes, stale
+  streak objects, knowledge validation, and flag relationships. Used only an
+  in-memory database. Full API/CAS integration and MariaDB concurrency checks
+  were unavailable because system Python lacks pandas/DRF and no isolated
+  MariaDB verification instance was used. No project database, migrations,
+  test-suite files, builds, compilation tasks, or versions were changed.
+- Added shared runtime invariant guards to Question, TestHistory,
+  MasterExamAttempt, User, UserQuestionAttempt, and StudyPlanner. Guards run on
+  ordinary saves and expose field-scoped errors through model clean().
+- Strengthened choice list/answer validation, result counters and percentages,
+  completion/deadline consistency, user counters/streaks, learning state, and
+  planner target/date bounds. Superuser creation rejects contradictory flags
+  and roles. Question saves preserve the import duplicate-moderation workflow.
+- Added explicit validation before the learning service's bulk writes.
+- Verified Python syntax, Django model checks, valid instances of all six
+  models, 20 invalid cases through validation and save guards, superuser
+  rejection, and SRS transitions using isolated in-memory settings without
+  database writes. No migration files, test-suite files, builds, compilation
+  tasks, or versions were changed.
+- These are runtime guards; raw SQL and other bulk/queryset writes are not
+  covered by them. Existing database schema and constraints are unchanged.
 - Normalized Excel/CSV import headings for whitespace, BOMs, and capitalization
   so recognized choice columns through `choice_8` are not silently missed.
 - Rejected heading normalization collisions and added source row numbers to

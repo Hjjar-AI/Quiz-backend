@@ -2,6 +2,7 @@
 from django.db import models
 
 from apps.core.models import TimeStampedModel
+from apps.core.model_validation import InvariantValidationMixin, require
 
 
 class Bookmark(TimeStampedModel):
@@ -25,7 +26,7 @@ class Bookmark(TimeStampedModel):
         ]
 
 
-class QuestionFlag(TimeStampedModel):
+class QuestionFlag(InvariantValidationMixin, TimeStampedModel):
     question = models.ForeignKey(
         'questions.Question',
         on_delete=models.CASCADE,
@@ -48,6 +49,23 @@ class QuestionFlag(TimeStampedModel):
         blank=True,
         related_name='flags',
     )
+
+    def validate_invariants(self):
+        require(
+            self.resolved == (self.resolved_at is not None)
+            and self.resolved == bool(isinstance(self.resolved_by, str) and self.resolved_by.strip()),
+            'resolved', 'Resolution state, moderator, and timestamp must agree.',
+        )
+        if self.master_exam_attempt_id is not None:
+            attempt = self.master_exam_attempt
+            require(
+                attempt.user_id == self.user_id,
+                'master_exam_attempt', 'The attempt must belong to the reporting user.',
+            )
+            require(
+                self.question_id in (attempt.question_ids or []),
+                'question', 'The question must belong to the frozen attempt.',
+            )
 
     class Meta:
         constraints = [

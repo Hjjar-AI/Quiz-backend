@@ -2,7 +2,7 @@
 import logging
 from datetime import timedelta
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -41,6 +41,10 @@ def _apply_review(
     confidence_score = normalize_confidence(confidence_score)
     confident = confidence_is_high(confidence_score)
 
+    first_review = not attempt.attempts
+    due_review = attempt.next_due is None or now >= attempt.next_due
+    previous_correct = attempt.last_correct
+
     attempt.attempts = (attempt.attempts or 0) + 1
     attempt.last_correct = is_correct
     attempt.last_confidence = confident
@@ -52,6 +56,11 @@ def _apply_review(
         attempt.ever_correct = True
     else:
         attempt.wrong_count = (attempt.wrong_count or 0) + 1
+
+    # Early practice still records the answer, but cannot earn spaced-review
+    # credit, increase ease, or postpone an already scheduled review.
+    if is_correct and previous_correct and not first_review and not due_review:
+        return attempt
 
     if is_correct and confident:
         quality = 5
@@ -116,10 +125,7 @@ class SRSService:
             question_id__in=Question.objects.visible_to(user).values_list('id', flat=True),
         )
 
-    # The set of fields _apply_review mutates. Kept as a class
-    # attribute so the three writers below (bulk_update, the
-    # per-row update_or_create fallback, and any future caller)
-    # cannot drift out of agreement.
+    # The fields changed by one review; persisted together under the learner lock.
     _REVIEW_FIELDS = (
         'attempts', 'wrong_count', 'ever_correct',
         'last_correct', 'last_confidence', 'last_error_reason',
@@ -190,72 +196,51 @@ class SRSService:
         if not answered:
             return 0
 
-        qids = [r['question_id'] for r in answered]
-        existing = {
-            a.question_id: a
-            for a in UserQuestionAttempt.objects.filter(user=user, question_id__in=qids)
+        # Serialize reviews for a learner, including first inserts. Locking
+        # only an existing attempt does not protect a missing row.
+        from apps.users.models import User
+        User.objects.select_for_update().only('id').get(pk=user.pk)
+        questions = {
+            question.pk: question
+            for question in Question.objects.select_for_update().filter(
+                pk__in=live_qids,
+            ).select_related('knowledge_object', 'case').order_by('pk')
         }
-
         now = timezone.now()
-        to_create = []
-        to_update = []
-
-        for r in answered:
-            qid = r['question_id']
-            is_correct = bool(r.get('is_correct'))
-            confidence_score = normalize_confidence(
-                r.get('confidence_score', r.get('confidence', 3)),
+        recorded = 0
+        from .evidence import question_learning_fingerprint
+        for result in answered:
+            question = questions.get(result['question_id'])
+            if question is None:
+                continue
+            # A frozen exam may still grade old content correctly, but that
+            # answer cannot establish mastery of the edited live question.
+            fingerprint = result.get('learning_fingerprint')
+            if 'learning_fingerprint' in result and fingerprint is None:
+                # Legacy frozen sessions have no concept provenance. Grade
+                # them normally, but wait for a new review to establish SRS.
+                continue
+            if fingerprint is not None:
+                if fingerprint != question_learning_fingerprint(question):
+                    continue
+            elif any(
+                result.get(field) != getattr(question, field)
+                for field in ('question', 'choices', 'correct_answer')
+                if field in result
+            ):
+                continue
+            attempt, _ = UserQuestionAttempt.objects.select_for_update().get_or_create(
+                user=user, question=question,
             )
-            error_reason = r.get('error_reason')
-
-            attempt = existing.get(qid)
-            if attempt is None:
-                attempt = UserQuestionAttempt(user=user, question_id=qid)
-
             _apply_review(
-                attempt,
-                is_correct,
-                confidence_score,
-                error_reason=error_reason,
-                now=now,
+                attempt, bool(result.get('is_correct')),
+                normalize_confidence(result.get('confidence_score', result.get('confidence', 3))),
+                error_reason=result.get('error_reason'), now=now,
             )
+            attempt.save(update_fields=SRSService._REVIEW_FIELDS)
+            recorded += 1
 
-            if attempt.pk is None:
-                to_create.append(attempt)
-            else:
-                to_update.append(attempt)
-
-        if to_create:
-            try:
-                with transaction.atomic():
-                    UserQuestionAttempt.objects.bulk_create(to_create)
-            except IntegrityError:
-                logger.warning(
-                    'SRSService.record_attempts_bulk: bulk_create hit '
-                    'a unique constraint (user_id=%s, question_ids=%s) '
-                    '— a concurrent finish inserted the same '
-                    '(user, question) pairs. Retrying via per-row '
-                    'update_or_create so this transaction\'s _apply_review '
-                    'state wins.',
-                    user.id, [a.question_id for a in to_create],
-                )
-                for attempt in to_create:
-                    UserQuestionAttempt.objects.update_or_create(
-                        user=user,
-                        question_id=attempt.question_id,
-                        defaults={
-                            field: getattr(attempt, field)
-                            for field in SRSService._REVIEW_FIELDS
-                        },
-                    )
-
-        if to_update:
-            UserQuestionAttempt.objects.bulk_update(
-                to_update,
-                list(SRSService._REVIEW_FIELDS),
-            )
-
-        return len(answered)
+        return recorded
 
     @staticmethod
     def due_question_ids(user, limit=None):

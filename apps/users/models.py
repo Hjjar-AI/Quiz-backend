@@ -7,8 +7,11 @@ import uuid
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import MinLengthValidator, RegexValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
+from apps.core.model_validation import (
+    InvariantValidationMixin, require, validate_counts, validate_percentage,
+)
 
 
 USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9_\u0600-\u06FF]{3,50}$')
@@ -35,6 +38,11 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('role', 'admin')
+        for field in ('is_staff', 'is_superuser', 'is_active'):
+            if extra_fields[field] is not True:
+                raise ValueError(f'A superuser must have {field}=True.')
+        if extra_fields['role'] != 'admin':
+            raise ValueError('A superuser must have role=admin.')
         return self.create_user(username, password, **extra_fields)
 
     def create_stub(self, username):
@@ -69,7 +77,7 @@ class UserManager(BaseUserManager):
         return stub
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(InvariantValidationMixin, AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
         ('admin',     'Admin'),
         ('moderator', 'Moderator'),
@@ -161,6 +169,16 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = []
+
+    def validate_invariants(self):
+        validate_counts(
+            self, 'questions_count', 'auto_renew_days', 'current_streak', 'longest_streak',
+        )
+        validate_percentage(self, 'trust_score')
+        require(
+            self.longest_streak >= self.current_streak,
+            'longest_streak', 'Longest streak cannot be shorter than the current streak.',
+        )
 
     def __str__(self):
         return self.username
@@ -340,16 +358,20 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def record_study_day(self):
         today = timezone.localdate()
-        if self.last_study_date == today:
-            return
-        if self.last_study_date is not None and self.last_study_date == today - timedelta(days=1):
-            self.current_streak = (self.current_streak or 0) + 1
-        else:
-            self.current_streak = 1
-        self.last_study_date = today
-        if self.current_streak > (self.longest_streak or 0):
-            self.longest_streak = self.current_streak
-        self.save(update_fields=['last_study_date', 'current_streak', 'longest_streak'])
+        using = self._state.db or 'default'
+        fields = ['last_study_date', 'current_streak', 'longest_streak']
+        with transaction.atomic(using=using):
+            current = type(self).objects.using(using).select_for_update().get(pk=self.pk)
+            if current.last_study_date != today:
+                if current.last_study_date == today - timedelta(days=1):
+                    current.current_streak += 1
+                else:
+                    current.current_streak = 1
+                current.last_study_date = today
+                current.longest_streak = max(current.longest_streak, current.current_streak)
+                current.save(using=using, update_fields=fields)
+            for field in fields:
+                setattr(self, field, getattr(current, field))
 
 
 class RoleCapabilities(models.Model):
