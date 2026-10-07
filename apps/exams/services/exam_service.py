@@ -266,26 +266,33 @@ class ExamService:
             payload['verified'] = question.verified
             payload['verified_by'] = question.verified_by
 
-        if session.mode in ('study', 'recall'):
-            raw = session.answers.get(str(index))
-            answer, _, _ = ExamService._read_answer_slot(raw)
-            is_answered = answer is not None
-            if is_answered:
-                if snapshot:
-                    payload['explanation'] = snapshot.get('explanation')
-                elif question is not None:
-                    payload['explanation'] = question.explanation
-
+        saved_answer = ExamService._saved_answer(session, index)
+        saved_pre_answer = ExamService._saved_pre_answer(session, index)
         may_show_feedback = (
             session.mode in ('study', 'recall')
-            and ExamService._saved_answer(session, index) is not None
+            and saved_answer is not None
+            and (session.mode != 'recall' or bool(saved_pre_answer))
         )
-        if not may_show_feedback:
+        saved_is_correct = None
+        saved_error_reason = None
+        if may_show_feedback:
+            # A read restores the latest saved answer's feedback without another
+            # submission. Use the same frozen grading source as answer writes;
+            # first-attempt grading is reserved for results/learning credit.
+            explanation, saved_is_correct, _ = ExamService.study_feedback(
+                session, qid, saved_answer,
+            )
+            payload['explanation'] = explanation
+            if saved_is_correct is False:
+                _, _, saved_error_reason = ExamService._read_answer_slot(
+                    session.answers.get(str(index)),
+                )
+        else:
+            payload.pop('explanation', None)
             payload['translations'] = without_translation_explanations(
                 payload.get('translations'),
             )
 
-        saved_pre_answer = ExamService._saved_pre_answer(session, index)
         if session.mode == 'recall' and not saved_pre_answer:
             payload['choices'] = []
             payload['choices_hidden'] = True
@@ -301,7 +308,9 @@ class ExamService:
             'index': index,
             'total': len(session.question_ids),
             'question': payload,
-            'saved_answer': ExamService._saved_answer(session, index),
+            'saved_answer': saved_answer,
+            'saved_is_correct': saved_is_correct,
+            'saved_error_reason': saved_error_reason,
             'saved_confidence': ExamService._saved_confidence(session, index),
             'saved_pre_answer': saved_pre_answer,
             'tag': session.tag,
