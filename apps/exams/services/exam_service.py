@@ -71,6 +71,10 @@ class ExamTimeExpired(ValueError):
     """Raised when an ordinary exam tries to mutate after its frozen limit."""
 
 
+class SessionProgressConflict(ValueError):
+    """The submitted question index no longer matches the locked session."""
+
+
 class ExamService:
 
     # ═══════════════════════════════════════════════════════════════
@@ -320,7 +324,7 @@ class ExamService:
     @staticmethod
     def submit_answer(
         session, answer, action, target_index=None, confidence=None,
-        error_reason=None, pre_answer=None,
+        error_reason=None, pre_answer=None, expected_index=None, expected_slot=None,
     ):
         """
         Record one answer slot and advance the session's current index.
@@ -382,12 +386,31 @@ class ExamService:
                 raise ExamTimeExpired('انتهى وقت الامتحان. سيتم إنهاء الجلسة الآن')
 
             idx = locked.current_index
+            if expected_index is not None and (expected_index != idx or not locked.is_active):
+                raise SessionProgressConflict('تغير تقدم الجلسة. حدّث الحالة قبل المحاولة مجدداً')
             answered_qid = None
             question = None
 
             if idx < len(locked.question_ids):
                 answered_qid = locked.question_ids[idx]
                 question = Question.objects.filter(id=answered_qid).first()
+
+            if expected_slot is not None:
+                _, _, saved_reason = ExamService._read_answer_slot(locked.answers.get(str(idx)))
+                if locked.mode not in ('study', 'recall'):
+                    saved_reason = None
+                elif ExamService._saved_answer(locked, idx) is not None:
+                    _, correct, _ = ExamService.study_feedback(locked, answered_qid, ExamService._saved_answer(locked, idx))
+                    if correct is not False:
+                        saved_reason = None
+                actual_slot = {
+                    'answer': ExamService._saved_answer(locked, idx),
+                    'confidence': ExamService._saved_confidence(locked, idx),
+                    'pre_answer': ExamService._saved_pre_answer(locked, idx),
+                    'error_reason': saved_reason,
+                }
+                if actual_slot != expected_slot:
+                    raise SessionProgressConflict('تغيرت الإجابة المحفوظة. حدّث الحالة قبل المحاولة مجدداً')
 
             existing_slot = locked.answers.get(str(idx))
             existing_slot = existing_slot if isinstance(existing_slot, dict) else {}

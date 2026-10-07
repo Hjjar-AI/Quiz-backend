@@ -37,7 +37,7 @@ from ..serializers import (
     SessionIdOrModeSerializer,
     SubmitAnswerSerializer,
 )
-from ..services import ExamService, BlueprintService, ExamTimeExpired
+from ..services import ExamService, BlueprintService, ExamTimeExpired, SessionProgressConflict
 from apps.core.permissions import HasCapability
 from apps.core.utils import (
     api_success,
@@ -270,6 +270,10 @@ class SubmitAnswerView(APIView):
     alongside the session — see `AnswerSubmission` — and this view
     reads it from there.
 
+    Optional `expected_index` and `expected_slot` reject stale clients with 409
+    under the service row lock before any answer or navigation is written.
+    Callers that omit them retain the legacy contract.
+
     Response data contains `{new_index, explanation, is_correct}`.
     When the submission was not an answer (action was
     `previous` / `goto`, or the answer was `None`), `explanation`
@@ -298,8 +302,10 @@ class SubmitAnswerView(APIView):
                 body.validated_data.get('confidence'),
                 body.validated_data.get('error_reason'),
                 body.validated_data.get('pre_answer'),
+                expected_index=body.validated_data.get('expected_index'),
+                expected_slot=body.validated_data.get('expected_slot'),
             )
-        except ExamTimeExpired as e:
+        except (ExamTimeExpired, SessionProgressConflict) as e:
             return api_error(str(e), 409)
         except ValueError as e:
             return api_error(str(e), 400)

@@ -53,10 +53,22 @@ class SessionIdOrModeSerializer(serializers.Serializer):
     mode = serializers.CharField(required=False, allow_blank=True)
 
 
+class AnswerSlotBaselineSerializer(serializers.Serializer):
+    answer = serializers.IntegerField(required=False, allow_null=True, default=None)
+    confidence = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=3, default=None)
+    pre_answer = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=1000, default=None)
+    error_reason = serializers.ChoiceField(
+        choices=['unknown', 'misread', 'confused', 'guessed'], required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+
+
 class SubmitAnswerSerializer(serializers.Serializer):
     session_id = serializers.CharField()
     answer = serializers.IntegerField(required=False, allow_null=True, default=None)
     action = serializers.CharField(required=False, default='next')
+    expected_index = serializers.IntegerField(required=False, allow_null=True, min_value=0, default=None)
+    expected_slot = AnswerSlotBaselineSerializer(required=False, allow_null=True)
     target_index = serializers.IntegerField(required=False, allow_null=True, default=None)
     confidence = serializers.JSONField(required=False, allow_null=True, default=None)
     pre_answer = serializers.CharField(
