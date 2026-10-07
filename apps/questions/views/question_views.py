@@ -545,8 +545,19 @@ class BulkTagUpdateView(APIView):
         if len(question_ids) > 500:
             return api_error('الحد الأقصى 500 سؤال في العملية الواحدة', 400)
 
+        # Match bulk verification: the capability does not grant visibility
+        # into another author's private drafts. Drop inaccessible IDs before
+        # returning a processed count or reaching the mutation service.
+        visible_ids = list(
+            Question.objects.visible_to(request.user)
+            .filter(id__in=question_ids)
+            .values_list('id', flat=True)
+        )
+        if not visible_ids:
+            return api_error('لم يتم العثور على أسئلة صالحة', 400)
+
         count = QuestionService.bulk_update_tags(
-            question_ids,
+            visible_ids,
             body.validated_data['add_tags'],
             body.validated_data['remove_tags'],
         )

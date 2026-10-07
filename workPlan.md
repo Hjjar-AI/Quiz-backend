@@ -24,3 +24,15 @@
 - Run `manage.py check` when the complete backend dependency set is installed.
 - Do not inspect or run test suites unless explicitly requested.
 - Do not create migration files unless explicitly requested.
+
+
+## Bulk-tag Android integration — pending verification
+
+- Verify mixed visible/inaccessible IDs and inaccessible-only selection against the
+  bulk tag endpoint; keep private drafts outside the mutation/count scope.
+- Verify transactional rollback includes new tags, memberships and question revisions.
+- Exercise concurrent bulk tagging and ordinary editor saves on MariaDB: actual tag
+  changes should trigger stale-editor conflicts, while no-op changes retain revision.
+- Deploy the matching backend source before validating Android bulk tag recovery.
+  Source/AST checks do not replace live API/database verification; test-suite and
+  migration work still requires explicit authorization.

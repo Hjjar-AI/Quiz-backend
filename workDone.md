@@ -66,3 +66,19 @@
 - Did not create or review migration files.
 - Added a comprehensive backend README covering SQLite/MariaDB setup,
   configuration, API layout, operations, deployment, and troubleshooting.
+
+
+## Android bulk-tag integration review — 2026-10-07
+
+- BulkTagUpdateView now filters selected IDs through `visible_to(request.user)`,
+  matching bulk verification. An entirely inaccessible selection returns 400 before
+  the service runs; mixed selections report only visible processed rows.
+- Bulk tag changes now lock question rows in primary-key order and include tag
+  creation within the method transaction. Only actual tag membership changes advance
+  the existing question revision/updated timestamp; unchanged rows retain their
+  revision. Normal question editor CAS/row locking can therefore detect intervening
+  bulk tag changes. Processed-count and payload contracts remain unchanged.
+- Reviewed native caller, DTO/payload, capability, tag limits and recovery wiring.
+  Verified production Python AST syntax, source contracts and diff whitespace only.
+  Live MariaDB concurrency, permission and rollback checks remain pending. No test
+  suites, migrations, builds or configured version changes were performed.

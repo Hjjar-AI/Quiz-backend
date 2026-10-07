@@ -439,9 +439,18 @@ class QuestionService:
     # which a tag change alters.
 
     @staticmethod
+    @transaction.atomic
     def bulk_update_tags(question_ids, add_tags, remove_tags):
 
-        questions = list(Question.objects.filter(id__in=question_ids))
+        # Serialize against normal editor writes, which lock the same rows.
+        questions = list(
+            Question.objects.select_for_update()
+            .filter(id__in=question_ids)
+            .order_by('pk')
+            .prefetch_related('tags')
+        )
+        if not questions:
+            return 0
 
         # Resolve add-tags once. Deduplicate on the cleaned name so a
         # caller that sends "  schizophrenia " and "schizophrenia"
@@ -472,14 +481,27 @@ class QuestionService:
             if remove_names else []
         )
 
-        with transaction.atomic():
-            count = 0
-            for q in questions:
+        # The method transaction includes tag creation, so a later failure
+        # cannot leave newly created orphan tags after the question writes roll back.
+        add_ids = {tag.pk for tag in add_tag_objects}
+        remove_ids = {tag.pk for tag in remove_tag_objects}
+        changed_ids = []
+        count = 0
+        for q in questions:
+            previous = {tag.pk for tag in q.tags.all()}
+            desired = (previous | add_ids) - remove_ids
+            if desired != previous:
                 if add_tag_objects:
                     q.tags.add(*add_tag_objects)
                 if remove_tag_objects:
                     q.tags.remove(*remove_tag_objects)
-                count += 1
+                changed_ids.append(q.pk)
+            count += 1
+        if changed_ids:
+            Question.objects.filter(pk__in=changed_ids).update(
+                version=F('version') + 1,
+                updated_at=timezone.now(),
+            )
         return count
 
     # ── Question duplication (fix — QuestionDuplicateView) ────────────
