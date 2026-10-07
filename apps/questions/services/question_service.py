@@ -247,7 +247,7 @@ class QuestionService:
 
             if tags_str is not None:
                 instance.tags.clear()
-                tags = [t.strip() for t in tags_str.split(',') if t.strip()]
+                tags = tags_str if isinstance(tags_str, list) else [t.strip() for t in tags_str.split(',') if t.strip()]
                 for tag_name in tags:
                     tag, _ = Tag.objects.get_or_create(
                         name=clean_tag_name(tag_name),

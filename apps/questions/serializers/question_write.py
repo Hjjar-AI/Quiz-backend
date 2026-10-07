@@ -20,9 +20,27 @@ from ..write_fields import (
 )
 
 
+class QuestionTagsField(serializers.CharField):
+    """Keep legacy CSV clients while allowing exact tag names in native lists."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, list):
+            names = []
+            for item in data:
+                if not isinstance(item, str) or not item.strip() or len(item.strip()) > 50:
+                    raise serializers.ValidationError(
+                        'Tags must be nonblank text values of at most 50 characters.'
+                    )
+                name = item.strip()
+                if name not in names:
+                    names.append(name)
+            return names
+        return super().to_internal_value(data)
+
+
 class _QuestionWriteFields(serializers.ModelSerializer):
     """Shared field schema; create overrides only its required fields."""
-    tags = serializers.CharField(required=False, allow_blank=True)
+    tags = QuestionTagsField(required=False, allow_blank=True)
     question = question_text_field(required=False)
     explanation = serializers.CharField(
         max_length=EXPLANATION_TEXT_MAX_LENGTH, required=False,
@@ -101,7 +119,7 @@ class QuestionCreateSerializer(_QuestionWriteFields):
         question = Question.objects.create(**validated_data)
 
         if tags_str:
-            tags = [t.strip() for t in tags_str.split(',') if t.strip()]
+            tags = tags_str if isinstance(tags_str, list) else [t.strip() for t in tags_str.split(',') if t.strip()]
             for tag_name in tags:
                 tag, _ = Tag.objects.get_or_create(name=clean_tag_name(tag_name))
                 question.tags.add(tag)
