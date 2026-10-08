@@ -16,6 +16,9 @@ urlpatterns = [
         name='change-password',
     ),
 
+    path('sessions/', views.OwnSessionsView.as_view(), name='own-sessions'),
+    path('sessions/<str:handle>/revoke/', views.RevokeOwnSessionView.as_view(), name='revoke-own-session'),
+
     # ── Admin: users ──────────────────────────────────────────────────
     path(
         'admin/users/',

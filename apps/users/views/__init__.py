@@ -27,6 +27,8 @@ from .permission_views import (
 )
 
 __all__ = [
+    'OwnSessionsView',
+    'RevokeOwnSessionView',
     # Auth
     'LoginView',
     'LogoutView',
@@ -43,3 +45,4 @@ __all__ = [
     'RoleCapabilitiesListView',
     'UserCapabilitiesView',
 ]
+from .session_views import OwnSessionsView, RevokeOwnSessionView

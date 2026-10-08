@@ -24,6 +24,8 @@ from .blueprint_views import BlueprintListView, BlueprintDetailView
 
 
 __all__ = [
+    'OfflinePackView',
+    'OfflineCompletionView',
     # Session runner
     'StartSessionView',
     'GetQuestionView',
@@ -40,3 +42,5 @@ __all__ = [
     'BlueprintListView',
     'BlueprintDetailView',
 ]
+
+from .offline_views import OfflinePackView, OfflineCompletionView

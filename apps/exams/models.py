@@ -252,3 +252,16 @@ class BlueprintWeight(InvariantValidationMixin, models.Model):
 
     def __str__(self):
         return f'{self.blueprint_id} · cat={self.category_id} = {self.weight}'
+
+
+class OfflineCompletion(models.Model):
+    """Durable idempotency receipt independent of History deletion.
+
+    Source preparation only: requires an explicitly authorized additive migration.
+    Stored response contains this caller's frozen result, never cookies or pack tokens.
+    """
+    completion_id = models.UUIDField(primary_key=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='offline_completions')
+    request_fingerprint = models.CharField(max_length=64, editable=False)
+    response = models.JSONField(default=dict, editable=False)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
