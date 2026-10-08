@@ -89,3 +89,10 @@
 - `python start.py -i` / `--interactive`: database selector, combined backend/frontend or backend-only launch, read-only diagnostics and command preview. Optional ports/LAN/venv/SQLite data root. Existing CLI behavior preserved; credentials remain in `.env`.
 - Combined mode sets Vite API/media proxy and browser origin per process, checks frontend prerequisites and supervises both processes with Ctrl+C/companion-exit cleanup. No backend autoreloader; frontend hot reload retained. Menu uses existing schemas and disables SQLite setup/seeding.
 - Inline menu/routing/validation/cancellation/preview checks and harmless child exit/cleanup passed; AST/whitespace passed. No real app server, database access/setup, builds, dependency installs, migration/test-suite or version work. Full Windows/Termux/runtime/frontend integration remains pending.
+
+## PDF answer sections and paper quiz — 2026-10-08
+
+- POST PDF options: `pdf_mode=study|quiz`, `answer_layout=inline|end|after_25|none`; defaults preserve current themed inline exports and existing GET callers. Validated through API/facade/flat exporter to PDF renderer; filters, limits, locale, images, front matter and attachment behavior retained.
+- Separate sections begin on new pages, with global numbering, correct choice/explanation and question ↔ answer anchors. After-25 mode includes the final partial group and starts the next question group on a new page.
+- Quiz overrides answer placement to none; compact white/light-grey styling, neutral choices, no explanation/answer links or source/tag hints. Vue controls and Arabic/English copy match the API; other formats remain unchanged.
+- Eighty-four isolated HTML/CSS cases passed across two locales, six question counts and seven mode/layout combinations, including anchors, batch order, escaping, theme retention and quiz suppression. WeasyPrint and an unused DRF response import were substituted; no actual PDF or HTTP integration was verified. No app data, migrations/test suites, builds or versions changed.

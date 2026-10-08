@@ -31,6 +31,10 @@ class PdfFrontMatterSerializer(serializers.Serializer):
 
 
 class PdfExportRequestSerializer(serializers.Serializer):
+    pdf_mode = serializers.ChoiceField(choices=('study', 'quiz'), default='study')
+    answer_layout = serializers.ChoiceField(
+        choices=('inline', 'end', 'after_25', 'none'), default='inline',
+    )
     title = serializers.CharField(
         max_length=150, required=False, allow_blank=True, default='',
     )

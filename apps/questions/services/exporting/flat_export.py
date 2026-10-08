@@ -236,7 +236,7 @@ def _row_for_json(q):
 
 def export_questions(
     fmt='excel', verified_only=False, filters=None, title=None, theme=None,
-    locale='ar', front_matter=None,
+    locale='ar', front_matter=None, pdf_mode='study', answer_layout='inline',
 ):
     """
     Export the filtered question bank as XLSX, CSV, JSON, or PDF.
@@ -285,6 +285,8 @@ def export_questions(
             theme=theme,
             locale=locale,
             front_matter=front_matter,
+            pdf_mode=pdf_mode,
+            answer_layout=answer_layout,
         )
 
     if not queryset.exists():

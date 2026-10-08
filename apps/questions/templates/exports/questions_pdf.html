@@ -32,7 +32,7 @@
   <meta name="generator" content="Mukhtabir">
   <meta name="dcterms.created" content="{{ exported_at|date:'c' }}">
 </head>
-<body>
+<body class="pdf-mode--{{ pdf_mode }}">
 
   {% if front_matter %}
     <section class="about-page" aria-labelledby="about-heading">
@@ -69,11 +69,13 @@
     </div>
   {% endif %}
 
-  {% for q in questions %}
-    <article class="question question--{{ q.difficulty }}">
+  {% for section in pdf_sections %}
+  {% for q in section.questions %}
+    <article id="question-{{ q.pdf_number }}" class="question{% if pdf_mode != 'quiz' %} question--{{ q.difficulty }}{% endif %}">
 
       <header class="q-header">
-        <span class="q-number">{{ forloop.counter }}</span>
+        <span class="q-number">{{ q.pdf_number }}</span>
+        {% if pdf_mode != 'quiz' %}
         <span class="q-difficulty q-difficulty--{{ q.difficulty }}">
           {{ q.difficulty_label }}
         </span>
@@ -83,12 +85,16 @@
             {{ q.category.name }}
           </span>
         {% endif %}
+        {% endif %}
+        {% if separate_answers %}
+          <a class="answer-link" href="#answer-{{ q.pdf_number }}">{{ labels.view_answer }}</a>
+        {% endif %}
       </header>
 
       {% if q.case and q.case.stem %}
         <div class="case-stem">
           <span class="case-stem-label">
-            {{ labels.clinical_case }}{% if q.case.key %} — {{ q.case.key }}{% endif %}
+            {{ labels.clinical_case }}{% if pdf_mode != 'quiz' and q.case.key %} — {{ q.case.key }}{% endif %}
           </span>
           {{ q.case.stem }}
         </div>
@@ -102,7 +108,7 @@
 
       <ul class="q-choices">
         {% for choice in q.pdf_choices %}
-          {% if forloop.counter == q.correct_answer %}
+          {% if answer_layout == 'inline' and forloop.counter == q.correct_answer %}
             <li class="q-choice q-choice--correct">
               <span class="choice-marker">{{ forloop.counter }}</span>
               <span class="choice-text">{{ choice }}</span>
@@ -117,13 +123,14 @@
         {% endfor %}
       </ul>
 
-      {% if q.pdf_explanation %}
+      {% if answer_layout == 'inline' and q.pdf_explanation %}
         <div class="q-explanation">
           <strong>{{ labels.explanation }}:</strong>
           {{ q.pdf_explanation }}
         </div>
       {% endif %}
 
+      {% if pdf_mode != 'quiz' %}
       {% if q.source or q.source_document or q.source_page or q.tags.all %}
         <footer class="q-footer">
           {% if q.source %}
@@ -152,7 +159,25 @@
         </footer>
       {% endif %}
 
+      {% endif %}
     </article>
+  {% endfor %}
+  {% if section.answers %}
+    <section class="answer-section{% if not forloop.last %} answer-section--followed{% endif %}">
+      <h2>{{ labels.answers }} — {{ section.answers.0.pdf_number }}–{% with last_answer=section.answers|last %}{{ last_answer.pdf_number }}{% endwith %}</h2>
+      {% for q in section.answers %}
+        <article id="answer-{{ q.pdf_number }}" class="answer-card">
+          <h3>{{ labels.question }} {{ q.pdf_number }} · <a class="back-link" href="#question-{{ q.pdf_number }}">{{ labels.back_to_question }}</a></h3>
+          <p><strong>{{ labels.correct_answer }}: {{ q.correct_answer }}</strong>
+            {% for choice in q.pdf_choices %}{% if forloop.counter == q.correct_answer %} — {{ choice }}{% endif %}{% endfor %}
+          </p>
+          {% if q.pdf_explanation %}
+            <div class="q-explanation"><strong>{{ labels.explanation }}:</strong> {{ q.pdf_explanation }}</div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
   {% endfor %}
 
 </body>

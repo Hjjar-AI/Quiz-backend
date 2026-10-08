@@ -14,8 +14,8 @@ the reader's system having an Arabic font installed.
 
 VISUAL LANGUAGE
 ---------------
-The stylesheet below mirrors the app's own token palette from
-`frontend/src/assets/tokens.css`. No bright whites anywhere.
+The study stylesheet mirrors the app's token palette from
+`frontend/src/assets/tokens.css`; paper quiz mode uses white/light grey.
 
 PER-CATEGORY COLOURS (no inline styles)
 ---------------------------------------
@@ -105,6 +105,9 @@ _PDF_COPY = {
         'source': 'المصدر', 'source_document': 'المستند',
         'source_page': 'الصفحة', 'about_title': 'من نحن',
         'question_image_alt': 'صورة السؤال', 'brand': 'مُختبِر',
+        'answers': 'الإجابات', 'correct_answer': 'الإجابة الصحيحة',
+        'view_answer': 'انتقل إلى الإجابة', 'back_to_question': 'العودة إلى السؤال',
+        'question': 'السؤال', 'quiz_title': 'اختبار ورقي',
     },
     'en': {
         'direction': 'ltr', 'text_align': 'left',
@@ -119,6 +122,9 @@ _PDF_COPY = {
         'source_document': 'Document', 'source_page': 'Page',
         'about_title': 'About Us', 'question_image_alt': 'Question image',
         'brand': 'Mukhtabir',
+        'answers': 'Answers', 'correct_answer': 'Correct answer',
+        'view_answer': 'View answer', 'back_to_question': 'Back to question',
+        'question': 'Question', 'quiz_title': 'Paper quiz',
     },
 }
 
@@ -515,6 +521,59 @@ def _pdf_source_image_bytes(questions):
     return total
 
 
+def _build_pdf_sections(questions, answer_layout):
+    """Keep global numbering and question/answer destinations stable across batches."""
+    for number, question in enumerate(questions, 1):
+        question.pdf_number = number
+    size = 25 if answer_layout == 'after_25' else len(questions) or 1
+    return [
+        {
+            'questions': questions[start:start + size],
+            'answers': questions[start:start + size] if answer_layout in ('end', 'after_25') else [],
+        }
+        for start in range(0, len(questions), size)
+    ]
+
+
+def _pdf_layout_css(pdf_mode):
+    css = """
+        .answer-link, .back-link { color: inherit; text-decoration: underline; font-size: 9pt; }
+        .answer-link { margin-inline-start: auto; }
+        .answer-section { break-before: page; }
+        .answer-section--followed { break-after: page; }
+        .answer-card { break-inside: avoid; border-bottom: 1px solid #999; padding: 0.7em 0; }
+        .answer-card h3 { margin: 0 0 0.4em; font-size: 11pt; }
+        .answer-card p { margin: 0.3em 0; }
+        .answer-card .q-explanation { white-space: pre-wrap; }
+    """
+    if pdf_mode == 'quiz':
+        css += """
+        @page { margin: 1cm 1cm 1.2cm; background: #fff; }
+        html, body { background: #fff; color: #111; font-size: 10pt; }
+        .doc-header { background: #fff; color: #111; border-radius: 0;
+                      padding: 0 0 0.5em; margin-bottom: 0.7em; border-bottom: 1px solid #aaa; }
+        .doc-header h1 { color: #111; font-size: 15pt; }
+        .doc-meta, .doc-meta strong { color: #444; }
+        .filters-applied { background: #f5f5f5; border: 1px solid #ddd;
+                           padding: 0.35em 0.5em; margin-bottom: 0.6em; font-size: 8pt; }
+        .question { background: #fff; border: 0; border-bottom: 1px solid #ccc;
+                    border-radius: 0; padding: 0.35em 0; margin-bottom: 0.4em; }
+        .q-header { margin-bottom: 0.25em; }
+        .q-number { background: #eee; color: #111; font-size: 9pt; border-radius: 2px; }
+        .q-text { font-size: 10pt; line-height: 1.4; margin-bottom: 0.35em; }
+        .q-choices { margin-bottom: 0; }
+        .q-choice { background: #fff; border: 0; padding: 0.1em 0.25em;
+                    margin-bottom: 0; font-size: 9pt; line-height: 1.35; }
+        .choice-marker { background: #fff; color: #111; border: 1px solid #999;
+                         min-width: 15px; height: 15px; line-height: 15px; font-size: 8pt; }
+        .case-stem { background: #f4f4f4; border-color: #aaa; padding: 0.3em 0.5em;
+                     margin-bottom: 0.35em; font-size: 9pt; line-height: 1.4; }
+        .case-stem-label { color: #444; letter-spacing: 0; }
+        .q-image { max-height: 6cm; margin: 0.2em auto 0.4em; }
+        """
+    return css
+
+
 def export_questions_pdf(
     questions,
     *,
@@ -524,6 +583,8 @@ def export_questions_pdf(
     theme=None,
     locale='ar',
     front_matter=None,
+    pdf_mode='study',
+    answer_layout='inline',
 ):
     """
     Render the given question list as a PDF.
@@ -537,7 +598,15 @@ def export_questions_pdf(
 
     `theme` is the browser's active visual theme. Unknown values fall
     back to Stone rather than being interpolated into HTML or CSS.
+
+    Study answers can be inline, at the end, after each 25 questions, or
+    omitted. Paper quiz mode always omits answers and uses compact neutral
+    styling. Separate answer sections link to global question numbers.
     """
+    if pdf_mode not in ('study', 'quiz') or answer_layout not in ('inline', 'end', 'after_25', 'none'):
+        return {'error': 'خيارات تصدير PDF غير صالحة', 'code': 400}
+    if pdf_mode == 'quiz':
+        answer_layout = 'none'
     try:
         from weasyprint import HTML, CSS
     except (ImportError, OSError) as exc:
@@ -600,7 +669,9 @@ def export_questions_pdf(
     filters_summary = _build_filters_summary(filters, locale)
     category_color_css = _build_category_color_css(questions)
     doc_title = _resolve_doc_title(title, verified_only, locale)
-    palette = _build_pdf_palette(theme)
+    palette = _build_pdf_palette('ink' if pdf_mode == 'quiz' else theme)
+    if pdf_mode == 'quiz' and not title:
+        doc_title = _resolve_doc_title(copy['quiz_title'], verified_only, locale)
     normalized_front_matter = _normalize_front_matter(front_matter, locale)
 
     html_string = render_to_string(
@@ -616,6 +687,10 @@ def export_questions_pdf(
             'direction': copy['direction'],
             'labels': copy,
             'front_matter': normalized_front_matter,
+            'pdf_mode': pdf_mode,
+            'answer_layout': answer_layout,
+            'separate_answers': answer_layout in ('end', 'after_25'),
+            'pdf_sections': _build_pdf_sections(questions, answer_layout),
         },
     )
 
@@ -1005,6 +1080,7 @@ def export_questions_pdf(
             color: {palette['text_secondary']};
             font-weight: 600;
         }}
+        {_pdf_layout_css(pdf_mode)}
     """)
 
     export_dir = Path(settings.EXPORT_FOLDER)

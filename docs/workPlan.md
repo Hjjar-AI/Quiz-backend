@@ -4,6 +4,7 @@
 
 1. Verify end-to-end Arabic/English PDF on a host with WeasyPrint/native libraries.
 2. Check small, image-heavy, filtered, verified-only, and front-matter PDF cases.
+   - Verify `pdf_mode`/`answer_layout` with DRF and real WeasyPrint: end/after-25 page breaks, question ↔ answer links in PDF viewers, Arabic shaping, long cases/images and compact quiz printing. HTML/CSS boundary/link checks passed; pagination/PDF annotations remain unverified.
 3. Monitor PDF defaults; adjust env limits to worker capacity:
    - `PDF_EXPORT_MAX_QUESTIONS`
    - `PDF_EXPORT_MAX_TOTAL_IMAGE_BYTES`

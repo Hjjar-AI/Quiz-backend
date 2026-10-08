@@ -180,6 +180,8 @@ def _post_pdf_export(request, *, verified_only):
         theme=data.get('theme') or None,
         locale=data.get('locale') or _extract_export_locale(request),
         front_matter=data.get('front_matter') or None,
+        pdf_mode=data['pdf_mode'],
+        answer_layout=data['answer_layout'],
     )
     return _export_response(result)
 
