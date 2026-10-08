@@ -2,6 +2,8 @@
 
 ## Current priorities
 
+- Desktop-check the guided startup tutorial on Linux/Windows/Tk: resized layout, Advanced options, sidebar/Back/Next, clipboard, menu-answer steps, LAN fields and separate help windows. Pure lesson generation, help/syntax/whitespace and headless widget checks passed; real display and actual app launch remain unverified. The tutorial stays read-only apart from clipboard copies.
+
 - Verify the four relationship fixes in `backendReview.md` against full HTTP/admin integration and isolated MariaDB/PostgreSQL concurrency: shared-draft delete versus composition/start, content deletion versus SRS/linkage, planner subscriptions versus taxonomy delete/merge, and reciprocal tag reparenting. Source corrections and disposable SQLite checks are complete; live row-lock behavior remains unverified.
 
 1. Verify end-to-end Arabic/English PDF on a host with WeasyPrint/native libraries.
