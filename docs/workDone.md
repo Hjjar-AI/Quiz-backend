@@ -1,5 +1,9 @@
 # Work Done
 
+## Agent theme coordination guidance — 2026-10-08
+
+- Documented frontend/PDF theme registry, palette and legacy-alias coordination with a link to the shared theme guide. Documentation/link/whitespace checks only; no runtime, permission, schema or configured-version changes.
+
 ## Ruby export theme — 2026-10-08
 
 - Registered the matching `ruby` PDF palette for the new frontend theme. Source AST/palette equality and whitespace checks passed; actual PDF rendering remains pending. No migrations, builds, compilation, test suites, installs or versions changed.

@@ -36,6 +36,9 @@
   Keep Arabic/English consistent and import/export formats backward-compatible.
 - Verify affected Vue/Android callers directly; document coordinated deployment
   requirements when a contract or authentication change needs matching clients.
+- Keep PDF theme names, palette seeds and aliases aligned with the frontend theme
+  registry/bootstrap/locales. Renames must preserve existing export requests;
+  honor intentional theme-aware print colors. See the [theme guide](../frontend/docs/theme-guidelines.md).
 - Never expose credentials, storage paths or internal exceptions through APIs;
   do not commit secrets or private logs.
 - Select the database through `.env`/`DB_ENGINE`; keep driver requirements, ports and
