@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only Tkinter startup tutorial. All commands/results are examples.
 
-Run: python startup_tutorial.py
+Run from backend/: python scripts/startup_tutorial.py
 No app imports, file access, configuration changes, process launches, database
 connections or network requests. Learning progress exists only in this window.
 """

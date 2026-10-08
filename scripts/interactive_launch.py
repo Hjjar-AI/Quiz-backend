@@ -11,7 +11,7 @@ import sys
 import time
 
 
-BACKEND = Path(__file__).resolve().parent
+BACKEND = Path(__file__).resolve().parents[1]
 FRONTEND = BACKEND.parent / 'frontend'
 
 

@@ -35,7 +35,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-sqlite.txt
 cp .env.example .env
-python start_sqlite.py
+python start.py sqlite
 ```
 
 Default `localhost:5004`; launcher initializes empty local instances and isolates SQLite database/media/uploads/exports/backups/cache/cookies.
@@ -43,13 +43,13 @@ Default `localhost:5004`; launcher initializes empty local instances and isolate
 Useful forms:
 
 ```bash
-python start_sqlite.py 5005
-python start_sqlite.py 0.0.0.0:8000
-python start_sqlite.py --seed-pro-users
-python start_sqlite.py --no-setup
+python start.py sqlite 5005
+python start.py sqlite 0.0.0.0:8000
+python start.py sqlite --seed-pro-users
+python start.py sqlite --no-setup
 ```
 
-Read `start_sqlite.py` before enabling threading or binding to an untrusted network.
+Read `scripts/start_sqlite.py` before enabling threading or binding to an untrusted network.
 
 ## Database configuration
 
@@ -177,7 +177,7 @@ Production: Gunicorn behind HTTPS proxy; secure cookies, explicit hosts/origins,
 - **PDF 500:** run `python manage.py doctor` and install native PDF libraries.
 - **PDF 413:** filter the export or deliberately adjust its safety limits.
 - **CSRF/CORS:** align origin, trusted origins, HTTPS, and cookie settings.
-- **SQLite/MariaDB cookie conflict:** use `start_sqlite.py` and its isolated overlay.
+- **SQLite/MariaDB cookie conflict:** use `scripts/start_sqlite.py` and its isolated overlay.
 
 ## Working documents
 

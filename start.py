@@ -11,7 +11,7 @@
     python start.py postgres
 
 No mode (or 'env') selects DB_ENGINE from .env. Explicit database modes override
-DB_ENGINE for this process. SQLite forwards to start_sqlite.py with its setup
+DB_ENGINE for this process. SQLite forwards to scripts/start_sqlite.py with its setup
 options; server databases use an existing schema without setup or seeding.
 Production HTTPS uses scripts/quiz_start.sh and docs/DEPLOYMENT.md instead.
 """
@@ -27,7 +27,7 @@ from config.database import database_engine
 def main():
     argv = sys.argv[1:]
     if argv in (['--interactive'], ['-i']):
-        from interactive_launch import main as interactive_main
+        from scripts.interactive_launch import main as interactive_main
         raise SystemExit(interactive_main())
     if argv and argv[0] in {'--help', '-h'}:
         print(__doc__)
@@ -55,7 +55,7 @@ def main():
             parser.error('Frontend origins must include http:// or https://.')
         os.environ['QUIZ_FRONTEND_ORIGINS'] = ','.join(origins)
 
-    import start_sqlite as runtime
+    from scripts import start_sqlite as runtime
     # Resolve core dependencies first so python-dotenv is available to read the
     # selector. Then check only the selected backend's driver before starting.
     if not args.diagnose:
@@ -121,7 +121,7 @@ def main():
 
 
 def _start_sqlite(argv):
-    launcher = Path(__file__).with_name('start_sqlite.py')
+    launcher = Path(__file__).resolve().parent / 'scripts' / 'start_sqlite.py'
     os.execv(sys.executable, [sys.executable, str(launcher), *argv])
 
 

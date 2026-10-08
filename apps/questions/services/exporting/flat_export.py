@@ -48,6 +48,8 @@ mkdir it does not use (matching the pre-refactor behaviour).
 
 import json
 import logging
+from apps.questions.export_options import manual_export_limit
+from numbers import Integral
 from pathlib import Path
 
 import pandas as pd
@@ -237,6 +239,7 @@ def _row_for_json(q):
 def export_questions(
     fmt='excel', verified_only=False, filters=None, title=None, theme=None,
     locale='ar', front_matter=None, pdf_mode='study', answer_layout='inline',
+    question_ids=None, user=None,
 ):
     """
     Export the filtered question bank as XLSX, CSV, JSON, or PDF.
@@ -250,11 +253,41 @@ def export_questions(
     the PDF renderer validates it and falls back to Stone when absent
     or unknown.
 
+    `question_ids` selects an exact ordered question set instead of filters. Missing,
+    inaccessible or (for verified-only exports) unverified rows fail the whole
+    request. The caller's `user` scopes draft visibility; no user means public.
+
     Returns {'filepath', 'filename'} on success, or
     {'error', 'code'} on failure (no data after filtering, unknown
     format, PDF engine missing).
     """
-    queryset = _build_export_queryset(filters, verified_only)
+    if fmt not in {'pdf', 'excel', 'csv', 'json'}:
+        return {'error': 'صيغة التصدير غير صالحة', 'code': 400}
+    selected_ids = None
+    if question_ids is not None:
+        if (
+            not isinstance(question_ids, (list, tuple)) or not question_ids
+            or any(not isinstance(qid, Integral) or isinstance(qid, bool)
+                   or not 1 <= qid <= 9223372036854775807 for qid in question_ids)
+        ):
+            return {'error': 'قائمة الأسئلة المحددة غير صالحة', 'code': 400}
+        if len(question_ids) > manual_export_limit(fmt):
+            return {'error': 'عدد الأسئلة المحددة يتجاوز الحد المسموح لهذه الصيغة', 'code': 413}
+        selected_ids = list(dict.fromkeys(question_ids))
+    # Explicit selection is an alternative to search/category/tag filters.
+    queryset = _build_export_queryset(None if selected_ids is not None else filters, verified_only)
+    if selected_ids is not None:
+        queryset = queryset.filter(pk__in=selected_ids).filter(
+            pk__in=Question.objects.visible_to(user).values('pk'),
+        )
+        # Materialize once: validate the entire set before creating any artifact,
+        # and preserve caller order consistently across all output writers.
+        selected_questions = list(queryset)
+        if len(selected_questions) != len(selected_ids):
+            return {'error': 'بعض الأسئلة المحددة لم تعد متاحة للتصدير. حدّث اختيارك.', 'code': 404}
+        positions = {qid: index for index, qid in enumerate(selected_ids)}
+        selected_questions.sort(key=lambda question: positions[question.pk])
+        queryset = selected_questions
     # ── PDF — dispatched to the sibling module ────────────────────
     #
     # Placed FIRST, before the export_dir/prefix computation, so the
@@ -265,7 +298,7 @@ def export_questions(
     # exactly the same rows the other formats would have contained
     # for the same filter set.
     if fmt == 'pdf':
-        question_count = queryset.count()
+        question_count = len(queryset) if selected_ids is not None else queryset.count()
         if question_count == 0:
             return {'error': 'لا توجد بيانات للتصدير', 'code': 404}
         max_questions = getattr(settings, 'PDF_EXPORT_MAX_QUESTIONS', 1000)
@@ -277,10 +310,11 @@ def export_questions(
                 ),
                 'code': 413,
             }
+        questions = list(queryset)
         return export_questions_pdf(
-            list(queryset),
+            questions,
             verified_only=verified_only,
-            filters=filters,
+            filters=None if selected_ids is not None else filters,
             title=title,
             theme=theme,
             locale=locale,
@@ -289,7 +323,7 @@ def export_questions(
             answer_layout=answer_layout,
         )
 
-    if not queryset.exists():
+    if selected_ids is None and not queryset.exists():
         return {'error': 'لا توجد بيانات للتصدير', 'code': 404}
 
     export_dir = Path(settings.EXPORT_FOLDER)

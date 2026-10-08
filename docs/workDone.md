@@ -96,3 +96,19 @@
 - Separate sections begin on new pages, with global numbering, correct choice/explanation and question ↔ answer anchors. After-25 mode includes the final partial group and starts the next question group on a new page.
 - Quiz overrides answer placement to none; compact white/light-grey styling, neutral choices, no explanation/answer links or source/tag hints. Vue controls and Arabic/English copy match the API; other formats remain unchanged.
 - Eighty-four isolated HTML/CSS cases passed across two locales, six question counts and seven mode/layout combinations, including anchors, batch order, escaping, theme retention and quiz suppression. WeasyPrint and an unused DRF response import were substituted; no actual PDF or HTTP integration was verified. No app data, migrations/test suites, builds or versions changed.
+
+## Manual PDF question selection — 2026-10-08
+
+- Optional POST `question_ids`: nonempty positive 64-bit IDs, configured PDF limit, deduplication and caller order. Manual selection replaces content filters; filter-based/non-PDF exports retain prior behavior. API/facade/exporter forward the authenticated actor.
+- Selected rows are checked against public/owned-draft visibility and verified-only gates. Any unavailable row rejects the whole selection with a generic 404; empty/invalid selection cannot fall back to the entire bank. Recheck after materialization handles intervening deletion. Existing PDF limits/layout/quiz answer suppression remain.
+- Six isolated SQLite scenario groups passed for ordering/filter independence, invalid/empty/non-PDF use, limits, missing/private IDs, verified-only and filter-mode regression. PDF renderer/pandas/unused DRF response import substituted; no HTTP/PDF integration, project data, migrations/test suites, builds or versions touched.
+
+## Custom selection for all question exports — 2026-10-08
+
+- Extended ordered POST `question_ids` to Excel/CSV/JSON and verified-only exports, superseding the earlier PDF-only restriction. Shared validation/visibility, deduplication, filter independence and all-or-nothing rejection run before artifact creation. Flat manual selections cap at 10,000 submitted IDs; PDF retains `PDF_EXPORT_MAX_QUESTIONS`. Existing row schemas, formula sanitization and filter GETs retained; portable state packages remain filter-based.
+- Disposable in-memory SQLite checks passed across all four formats: ordered/deduplicated rows, malformed/empty/private/missing IDs, no failure artifacts, owner drafts, verified-only gates, filter regressions and independent limits. Actual JSON files checked; pandas CSV/Excel and PDF writers substituted. AST/whitespace checks passed. No project data, migration/test-suite work, builds, installs or versions changed; DRF/real writer/browser integration remains pending.
+
+## Root Python organization — 2026-10-08
+
+- Kept `start.py`/`manage.py` at backend root; moved SQLite launcher, interactive helper and standalone tutorial to the existing `scripts/` package. Updated delegation/imports, backend/frontend/app/data/venv path resolution, current docs/requirements comments and agent guidance. `python start.py sqlite` replaces old root SQLite commands; direct helper: `python scripts/start_sqlite.py`. Tutorial: `python scripts/startup_tutorial.py`. Setup behavior and read-only tutorial contract retained.
+- Six Python AST checks, help commands and all four interactive previews passed from backend and `/tmp`; checked root/import/venv paths, interpreter/argument forwarding and server-mode helper/.env routing (loader/dependency probes substituted). Whitespace passed. No actual servers, GUI, project data/settings reads, builds, migration/test-suite work, installs or versions changed. Live app/reloader/Windows/Termux behavior remains pending.

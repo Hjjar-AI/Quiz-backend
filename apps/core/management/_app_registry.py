@@ -1,7 +1,7 @@
 # backend/apps/core/management/_app_registry.py
 """
 App registry shared by the `bootstrap` management command and the
-standalone SQLite launcher (`backend/start_sqlite.py`).
+standalone SQLite launcher (`backend/scripts/start_sqlite.py`).
 
 WHY THIS MODULE EXISTS
 ----------------------
@@ -11,7 +11,7 @@ There are two independent "first run" pipelines in this codebase:
     provisions the database, generates missing migrations, applies
     migrations, and seeds default data.
 
-  • `backend/start_sqlite.py` — the standalone SQLite launcher. It
+  • `backend/scripts/start_sqlite.py` — the standalone SQLite launcher. It
     creates package files, generates missing migrations, applies
     migrations, and seeds default data.
 
@@ -33,7 +33,7 @@ in sync:
     --clean`.
 
 Both lists used to be duplicated verbatim in `bootstrap.py` and
-`start_sqlite.py`. A new app added to one file but not the other
+`scripts/start_sqlite.py`. A new app added to one file but not the other
 broke silently — the launcher that did not know about the app left
 the app's tables unmigrated, and the failure only surfaced the first
 time someone queried those tables on a fresh install.
@@ -44,7 +44,7 @@ than a convention.
 SEED-STEP LOGIC IS DELIBERATELY NOT SHARED
 ------------------------------------------
 The two launchers seed different data sets on first run:
-`start_sqlite.py` runs the idempotent `seed_data` and
+`scripts/start_sqlite.py` runs the idempotent `seed_data` and
 `seed_capabilities` commands directly (explicitly omitting `tips`, and
 saying so in its console output), while `bootstrap.py` runs `seed` with
 no `--only`, which falls through to `seed.py`'s `_DEFAULT_SEEDERS =
@@ -60,7 +60,7 @@ IMPORT SAFETY
 -------------
 This module contains only tuples and the `APP_INIT_CONTENT` string.
 It imports nothing from Django, and it does not require
-`django.setup()` to have run. That is deliberate: `start_sqlite.py`
+`django.setup()` to have run. That is deliberate: `scripts/start_sqlite.py`
 imports it BEFORE calling `django.setup()`, and a top-level Django
 import here would raise `AppRegistryNotReady`.
 """
@@ -105,7 +105,7 @@ MODEL_APPS = (
 # `manage.py migrate` produces a plan that contains only Django's
 # four built-in apps — leaving every custom table missing.
 #
-# Only `start_sqlite.py` writes this file (bootstrap runs inside
+# Only `scripts/start_sqlite.py` writes this file (bootstrap runs inside
 # Django, where the package is already present because Django
 # imported it to find this module). The string is defined here so
 # both callers see the same content if that ever changes.

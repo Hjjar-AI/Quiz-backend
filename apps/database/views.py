@@ -13,6 +13,7 @@ from .serializers import (
     RestoreBackupSerializer,
     ClearDatabaseSerializer,
     PdfExportRequestSerializer,
+    QuestionExportRequestSerializer,
 )
 from apps.core.permissions import HasCapability
 from apps.core.utils import api_success, api_error
@@ -162,26 +163,31 @@ def _extract_export_locale(request):
     return value if value in {'ar', 'en'} else 'ar'
 
 
-def _post_pdf_export(request, *, verified_only):
-    serializer = PdfExportRequestSerializer(data=request.data)
+def _post_question_export(request, fmt, *, verified_only):
+    if fmt not in {'pdf', 'excel', 'csv', 'json'}:
+        raise MethodNotAllowed('POST')
+    serializer_class = PdfExportRequestSerializer if fmt == 'pdf' else QuestionExportRequestSerializer
+    serializer = serializer_class(data=request.data, context={'format': fmt})
     if not serializer.is_valid():
         return api_error(
-            'خيارات تصدير PDF غير صالحة',
+            'خيارات التصدير غير صالحة',
             400,
             details=serializer.errors,
         )
 
     data = serializer.validated_data
     result = ExportService.export_questions(
-        fmt='pdf',
+        fmt=fmt,
         verified_only=verified_only,
         filters=data.get('filters') or None,
         title=data.get('title') or None,
         theme=data.get('theme') or None,
         locale=data.get('locale') or _extract_export_locale(request),
         front_matter=data.get('front_matter') or None,
-        pdf_mode=data['pdf_mode'],
-        answer_layout=data['answer_layout'],
+        pdf_mode=data.get('pdf_mode', 'study'),
+        answer_layout=data.get('answer_layout', 'inline'),
+        question_ids=data.get('question_ids'),
+        user=request.user,
     )
     return _export_response(result)
 
@@ -402,10 +408,8 @@ class ExportDatabaseView(_PdfExportThrottleMixin, APIView):
         return _export_response(result)
 
     def post(self, request, fmt):
-        """Generate configurable PDFs without putting free text in a URL."""
-        if fmt != 'pdf':
-            raise MethodNotAllowed('POST')
-        return _post_pdf_export(request, verified_only=False)
+        """Generate configurable exports without putting selections in a URL."""
+        return _post_question_export(request, fmt, verified_only=False)
 
 
 class ExportVerifiedDatabaseView(_PdfExportThrottleMixin, APIView):
@@ -433,9 +437,7 @@ class ExportVerifiedDatabaseView(_PdfExportThrottleMixin, APIView):
         return _export_response(result)
 
     def post(self, request, fmt):
-        if fmt != 'pdf':
-            raise MethodNotAllowed('POST')
-        return _post_pdf_export(request, verified_only=True)
+        return _post_question_export(request, fmt, verified_only=True)
 
 
 class ExportStateView(APIView):

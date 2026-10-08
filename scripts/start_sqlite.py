@@ -3,15 +3,15 @@
 
 Usage::
 
-    python start_sqlite.py
-    python start_sqlite.py 5005
-    python start_sqlite.py localhost:5005
-    python start_sqlite.py 0.0.0.0:8000
-    python start_sqlite.py --seed-pro-users
-    python start_sqlite.py --seed-pro-users --force-pro-users
-    python start_sqlite.py --no-prompt
-    python start_sqlite.py --allow-threading
-    SQLITE_DB_PATH=/tmp/quiz.sqlite3 python start_sqlite.py
+    python scripts/start_sqlite.py
+    python scripts/start_sqlite.py 5005
+    python scripts/start_sqlite.py localhost:5005
+    python scripts/start_sqlite.py 0.0.0.0:8000
+    python scripts/start_sqlite.py --seed-pro-users
+    python scripts/start_sqlite.py --seed-pro-users --force-pro-users
+    python scripts/start_sqlite.py --no-prompt
+    python scripts/start_sqlite.py --allow-threading
+    SQLITE_DB_PATH=/tmp/quiz.sqlite3 python scripts/start_sqlite.py
 
 ADDRESS PROMPT
 --------------
@@ -119,13 +119,9 @@ import subprocess
 from importlib.util import find_spec
 from pathlib import Path
 
-# Ensure `backend/` is on sys.path so the shared app registry is
-# importable. Running `python start_sqlite.py` from `backend/` (the
-# documented invocation) already puts the script's directory at
-# sys.path[0]; the explicit insert covers the case where the script
-# is invoked from an unexpected working directory or via a launcher
-# wrapper that resets sys.path.
-_BACKEND_DIR = Path(__file__).resolve().parent
+# Resolve backend paths independently of the current directory. Direct script
+# execution puts scripts/ on sys.path; app imports still need backend/.
+_BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
@@ -226,7 +222,7 @@ def _print_help():
 
 
 def _runtime_candidates():
-    backend_dir = Path(__file__).resolve().parent
+    backend_dir = _BACKEND_DIR
     project_dir = backend_dir.parent
     candidates = []
 
@@ -561,7 +557,7 @@ def main():
         _configure_threading(runserver_args, flags)
         _configure_sqlite_network(runserver_args)
 
-    backend_dir = Path(__file__).resolve().parent
+    backend_dir = _BACKEND_DIR
 
     os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings_sqlite'
 

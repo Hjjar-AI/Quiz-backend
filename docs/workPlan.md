@@ -5,6 +5,7 @@
 1. Verify end-to-end Arabic/English PDF on a host with WeasyPrint/native libraries.
 2. Check small, image-heavy, filtered, verified-only, and front-matter PDF cases.
    - Verify `pdf_mode`/`answer_layout` with DRF and real WeasyPrint: end/after-25 page breaks, question ↔ answer links in PDF viewers, Arabic shaping, long cases/images and compact quiz printing. HTML/CSS boundary/link checks passed; pagination/PDF annotations remain unverified.
+   - Verify manual PDF/Excel/CSV/JSON POST `question_ids` validation, actor scope/order, deleted/private/unverified selection errors and rendering across answer-layout boundaries. Isolated service selection checks passed; full DRF integration remains pending. Verify real CSV/Excel downloads with pandas, unchanged schemas/formula sanitization, and the 10,000-ID flat selection cap.
 3. Monitor PDF defaults; adjust env limits to worker capacity:
    - `PDF_EXPORT_MAX_QUESTIONS`
    - `PDF_EXPORT_MAX_TOTAL_IMAGE_BYTES`
@@ -41,6 +42,7 @@
 
 ## Startup — pending environment verification (2026-10-08)
 
+- Relocated helpers: live SQLite reloader/venv handoff and Tkinter tutorial on Linux/Windows/Termux; help/path/preview checks passed.
 - Interactive `start.py -i`: complete-runtime combined launch, proxy/login/media, occupied ports and Ctrl+C/companion-exit descendant cleanup on Linux/Termux/Windows. Menu/command checks passed; live app integration remains unverified. Uses existing schemas without setup/seeding.
 - Complete runtime: simultaneous SQLite/MariaDB with separate Vite ports; verify login/CSRF/media/account isolation.
 - Exercise explicit Windows/Termux virtualenvs and Termux-private data directories.

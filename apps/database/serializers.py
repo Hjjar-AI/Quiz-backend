@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.questions.export_options import manual_export_limit
 
 class RestoreBackupSerializer(serializers.Serializer):
     backup_name = serializers.CharField()
@@ -30,22 +31,22 @@ class PdfFrontMatterSerializer(serializers.Serializer):
         return value
 
 
-class PdfExportRequestSerializer(serializers.Serializer):
-    pdf_mode = serializers.ChoiceField(choices=('study', 'quiz'), default='study')
-    answer_layout = serializers.ChoiceField(
-        choices=('inline', 'end', 'after_25', 'none'), default='inline',
+class QuestionExportRequestSerializer(serializers.Serializer):
+    export_format = 'json'
+
+    question_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=9223372036854775807),
+        required=False, allow_empty=False,
     )
     title = serializers.CharField(
         max_length=150, required=False, allow_blank=True, default='',
     )
-    theme = serializers.CharField(
-        max_length=32, required=False, allow_blank=True, default='',
-    )
-    locale = serializers.ChoiceField(
-        choices=('ar', 'en'), required=False,
-    )
     filters = serializers.DictField(required=False, default=dict)
-    front_matter = PdfFrontMatterSerializer(required=False)
+
+    def validate_question_ids(self, value):
+        if len(value) > manual_export_limit(self.context.get('format', self.export_format)):
+            raise serializers.ValidationError('The selection exceeds the question limit for this format.')
+        return list(dict.fromkeys(value))
 
     def validate_filters(self, value):
         allowed = {'search', 'difficulty', 'category_ids', 'tag', 'tags_filter'}
@@ -67,3 +68,19 @@ class PdfExportRequestSerializer(serializers.Serializer):
             if text:
                 cleaned[key] = text[:500]
         return cleaned
+
+
+class PdfExportRequestSerializer(QuestionExportRequestSerializer):
+    export_format = 'pdf'
+
+    pdf_mode = serializers.ChoiceField(choices=('study', 'quiz'), default='study')
+    answer_layout = serializers.ChoiceField(
+        choices=('inline', 'end', 'after_25', 'none'), default='inline',
+    )
+    theme = serializers.CharField(
+        max_length=32, required=False, allow_blank=True, default='',
+    )
+    locale = serializers.ChoiceField(
+        choices=('ar', 'en'), required=False,
+    )
+    front_matter = PdfFrontMatterSerializer(required=False)

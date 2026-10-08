@@ -1,4 +1,4 @@
-"""Local SQLite settings used by :mod:`start_sqlite`.
+"""Local SQLite settings used by :mod:`scripts.start_sqlite`.
 
 The regular settings module selects its database and shared cache from .env.
 This overlay is intentionally single-process: SQLite and LocMemCache are convenient
@@ -100,14 +100,14 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # ``sslserver`` is a MariaDB/deployment convenience and is not used by
-# start_sqlite.py (which invokes Django's ordinary runserver). Keeping it
+# scripts/start_sqlite.py (which invokes Django's ordinary runserver). Keeping it
 # out of this overlay lets the portable SQLite dependency set remain free
 # of an otherwise unused package. The base settings list is copied, so the
 # normal manage.py configuration is unchanged.
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'sslserver']
 
 
-# Add the concrete address selected by start_sqlite.py. A wildcard bind has
+# Add the concrete address selected by scripts/start_sqlite.py. A wildcard bind has
 # no single request host, so allow any Host header only for this DEBUG-only
 # overlay; the launcher prints a warning when it is selected. An explicit
 # SQLITE_ALLOWED_HOSTS value takes precedence.
@@ -210,7 +210,7 @@ _database_path = Path(
 if not _database_path.is_absolute():
     _database_path = BASE_DIR / _database_path
 
-# The folder is created here rather than in ``start_sqlite.py``
+# The folder is created here rather than in ``scripts/start_sqlite.py``
 # because ``DATABASES['default']['NAME']`` is read by ``django.setup``
 # and by every management command. If the parent folder does not
 # exist, SQLite refuses to open the file with "unable to open database

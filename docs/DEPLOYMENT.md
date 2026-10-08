@@ -212,15 +212,15 @@ For a self-contained SQLite instance alongside a MariaDB instance, use the SQLit
 
 ```bash
 pip install -r requirements-sqlite.txt
-python start_sqlite.py                 # interactive address prompt
-python start_sqlite.py 5005            # localhost:5005
-python start_sqlite.py 0.0.0.0:5004    # trusted LAN (DEBUG server)
-python start_sqlite.py --seed-pro-users
-python start_sqlite.py --no-prompt
-python start_sqlite.py --allow-threading  # explicit opt-in; see below
+python scripts/start_sqlite.py                 # interactive address prompt
+python scripts/start_sqlite.py 5005            # localhost:5005
+python scripts/start_sqlite.py 0.0.0.0:5004    # trusted LAN (DEBUG server)
+python scripts/start_sqlite.py --seed-pro-users
+python scripts/start_sqlite.py --no-prompt
+python scripts/start_sqlite.py --allow-threading  # explicit opt-in; see below
 ```
 
-`start_sqlite.py` creates `backend/apps/__init__.py`/custom `migrations/`, runs `makemigrations`/`migrate`, idempotently syncs categories/settings/capabilities each setup. Creates admin only without superuser. `config/settings_sqlite.py` redirects `media/`, `uploads/`, `exports/`, `backups/` and DB into `backend/SQLite/`; separate session/CSRF cookies permit concurrent same-checkout MariaDB.
+`scripts/start_sqlite.py` creates `backend/apps/__init__.py`/custom `migrations/`, runs `makemigrations`/`migrate`, idempotently syncs categories/settings/capabilities each setup. Creates admin only without superuser. `config/settings_sqlite.py` redirects `media/`, `uploads/`, `exports/`, `backups/` and DB into `backend/SQLite/`; separate session/CSRF cookies permit concurrent same-checkout MariaDB.
 
 SQLite defaults: `--nothreading`, `BEGIN IMMEDIATE`, serializing MariaDB-style row-locked read-modify-write. `--allow-threading` only for trusted light single-user development; real concurrency needs MariaDB.
 
@@ -258,7 +258,7 @@ Read-only configuration/DB/cache/PDF/Arabic font/directory/frontend-build report
 
 ### `ModuleNotFoundError: No module named 'apps.core.management._app_registry'`
 
-`bootstrap.py` (line ~90) and `start_sqlite.py` (line ~215) both import `apps.core.management._app_registry`, but the file ships at `apps/core/management/commands/_app_registry.py`. Move it up one directory:
+`bootstrap.py` (line ~90) and `scripts/start_sqlite.py` (line ~215) both import `apps.core.management._app_registry`, but the file ships at `apps/core/management/commands/_app_registry.py`. Move it up one directory:
 
 ```bash
 mv backend/apps/core/management/commands/_app_registry.py \
@@ -313,14 +313,14 @@ Notes:
 Then:
 
 ```bash
-SQLITE_ROOT="$HOME/.local/share/quiz" python backend/start_sqlite.py
+SQLITE_ROOT="$HOME/.local/share/quiz" python backend/scripts/start_sqlite.py
 ```
 
 For access from another device on a trusted Wi-Fi network:
 
 ```bash
 SQLITE_ROOT="$HOME/.local/share/quiz" \
-  python backend/start_sqlite.py 0.0.0.0:5004
+  python backend/scripts/start_sqlite.py 0.0.0.0:5004
 ```
 
 ### macOS

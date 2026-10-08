@@ -39,7 +39,7 @@ Run `python start.py`; `.env` engines: `mariadb`/3306, `postgresql`/5432, `sqlit
 | Existing MariaDB | `python start.py mariadb` | `http://localhost:5005` |
 | Existing MariaDB on another port | `python start.py mariadb 5010` | `http://localhost:5010` |
 
-`start_sqlite.py` remains supported; first-run setup runs unless `--no-setup`. New entry point never deletes/resets data. Server modes run no setup/migrations/seeders; initialize those instances through existing deployment workflow.
+`python start.py sqlite` uses `scripts/start_sqlite.py`; direct invocation is `python scripts/start_sqlite.py`. First-run setup runs unless `--no-setup`. New entry point never deletes/resets data. Server modes run no setup/migrations/seeders; initialize those instances through existing deployment workflow.
 
 All development modes use HTTP cookies despite production `.env` `USE_HTTPS=True`. Server credentials/cache remain configured. SQLite isolates database/files/local cache/cookies; distinct databases get distinct cookies because browsers do not isolate by port.
 
@@ -134,3 +134,9 @@ Diagnostics list dependencies/interpreter candidates/settings without server, DB
 | MariaDB/cache connection failure | Verify existing `.env` configuration and that the relevant services are running. |
 | Backend `/` has no page | Use the Vite frontend URL if no built frontend bundle exists. |
 | SQLite shows different/empty data | Check the printed database path and `--data-root`/`--db-path`. |
+
+## Entry points and tutorial
+
+The backend root keeps two Python entry points: `start.py` for development and `manage.py` for Django administration. Supporting launch code lives in `scripts/`; production HTTPS still uses `scripts/quiz_start.sh`. Old `python start_sqlite.py` commands become `python start.py sqlite` (same flags/setup behavior), or `python scripts/start_sqlite.py`.
+
+For the standalone, read-only desktop tutorial, run `python scripts/startup_tutorial.py` from `backend/`. It needs Tkinter/display support; it does not launch the app, read its configuration/data, or change its files.

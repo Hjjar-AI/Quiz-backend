@@ -1,11 +1,11 @@
-# Portable dependencies for backend/start_sqlite.py.
+# Portable dependencies for backend/scripts/start_sqlite.py.
 #
 # This intentionally excludes mysqlclient and gunicorn, which the SQLite
 # launcher never imports. WeasyPrint is also optional: install the matching
 # pin from requirements.txt only on hosts where PDF export and its native
 # Pango/Cairo stack are available.
 # pip install -r backend/requirements-sqlite.txt
-# SQLITE_ROOT="$HOME/.local/share/quiz" python backend/start_sqlite.py
+# SQLITE_ROOT="$HOME/.local/share/quiz" python backend/scripts/start_sqlite.py
 # Keep direct-version pins in sync with requirements.txt.
 
 Django==6.1.1

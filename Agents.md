@@ -19,6 +19,8 @@
 - Simple scripts and source/XML/AST/whitespace checks are allowed. Report their
   actual scope; do not claim builds, runtime/device checks or database concurrency.
 - If known five-hour usage reaches 20% remaining, finish the bounded step and stop.
+- Keep only `start.py` and Django `manage.py` as root Python entry points; place
+  supporting launch/tutorial utilities in `scripts/`, updating paths and callers.
 - Keep root README/Agents files discoverable; supporting Markdown belongs in `docs/`.
   Update links when moving docs. Record remaining work in the plan and completed
   portions/limits in the work log; keep implementation separate from verification.
