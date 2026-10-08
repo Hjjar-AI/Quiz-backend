@@ -59,3 +59,11 @@
 - With a compatible PostgreSQL driver and existing database/user, verify actual connectivity, ORM workflows, concurrency and authentication/cache integration.
 - Native PostgreSQL database administration (including backup/restore/provisioning) remains unsupported; implement only as a separately requested scope.
 - DB_ENGINE selection, backend-specific options, launcher overrides and isolated SQLite settings have passed source/temporary configuration checks. No live database work, migration/test-suite work or builds were performed.
+
+
+## Exact ordinary Finish-result recovery — prepared source, migration required (2026-10-08)
+
+- Obtain explicit authorization to create an additive migration for nullable, unique `TestHistory.source_session_id` (36-character session identity). No historical identity backfill: old records remain null. Migration files were not inspected/created/applied; do not deploy the model/service change before the schema is ready.
+- After authorized migration/application, verify existing Finish grading/learning effects/history/delete rollback and unique identity on the production database. Compare POST results with GET results for exam/study/recall, including confident/fragile correct answers and frozen case/image/context after content changes/deletion. GET must never grade or mutate.
+- Verify `GET /{exam|study|recall}/results/?session_id=...&mode=...`: strict caller ownership even with all-history capability, input length/mode validation, other-user/wrong-mode/unknown/discarded/legacy-null/deleted history all return no accessible result. Keep existing POST behavior and History serializers unchanged.
+- Deploy the matching Android GET recovery after backend/schema readiness; older backend 405 or legacy/unknown 404 keeps the personal History fallback. HTTP/runtime/concurrency and authorized test-suite/build checks remain pending.

@@ -897,6 +897,7 @@ class ExamService:
                 total_time,
                 started_at,
                 result['questions'],
+                source_session_id=locked.session_id,
             )
             # Delete inside the transaction so a mid-flight failure
             # rolls the delete back together with the results rows.
@@ -916,7 +917,7 @@ class ExamService:
     @staticmethod
     def save_history(
         user, mode, tag, total_questions, answered_count, correct_count,
-        accuracy, time_spent, started_at=None, results=None,
+        accuracy, time_spent, started_at=None, results=None, *, source_session_id=None,
     ):
         """
         Write the history row for a finished session. This is now the
@@ -934,8 +935,28 @@ class ExamService:
             time_spent=time_spent,
             started_at=started_at,
             results=results or [],
+            source_session_id=source_session_id,
         )
         return history
+
+    @staticmethod
+    def completed_result(history):
+        """Read frozen results only; no grading, learning writes or session replay."""
+        rows = history.results or []
+        correct_rows = [row for row in rows if row.get('is_correct') is True]
+        return {
+            'source_session_id': history.source_session_id,
+            'history_id': history.id,
+            'mode': history.mode,
+            'results': rows,
+            'correct_count': history.correct_count,
+            'total_questions': history.total_questions,
+            'accuracy': history.accuracy,
+            'total_time': history.time_spent,
+            'answered_count': history.answered_count,
+            'confidence_correct': sum(row.get('confidence') is True for row in correct_rows),
+            'confidence_fragile': sum(row.get('confidence') is not True for row in correct_rows),
+        }
 
     @staticmethod
     def pause_session(session):

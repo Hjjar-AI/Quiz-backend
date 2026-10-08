@@ -145,6 +145,9 @@ class TestHistory(InvariantValidationMixin, models.Model):
     # Frozen per-question outcomes make targeted planner progress auditable.
     # This is intentionally not exposed by the history serializer.
     results = models.JSONField(default=list, blank=True)
+    # Nullable for historical/imported rows: never infer identity from dates or answers.
+    # Unique UUID-text identity matches ExamSession.session_id and survives its deletion.
+    source_session_id = models.CharField(max_length=36, null=True, blank=True, unique=True, editable=False)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(default=timezone.now)
 

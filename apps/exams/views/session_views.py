@@ -30,7 +30,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 from ._helpers import _exam_duration_minutes
-from ..models import ExamSession, Blueprint
+from ..models import ExamSession, TestHistory, Blueprint
 from ..serializers import (
     ExamSessionSerializer,
     SessionIdSerializer,
@@ -346,6 +346,21 @@ class SubmitAnswerView(APIView):
 
 class FinishSessionView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Caller-owned exact completion lookup; independent of broad History access."""
+        session_id = request.query_params.get('session_id', '').strip()
+        mode = request.query_params.get('mode', '').strip()
+        if not session_id or len(session_id) > 36:
+            return api_error('معرف الجلسة غير صالح', 400)
+        if mode not in dict(ExamSession.MODE_CHOICES):
+            return api_error('وضع غير صالح', 400)
+        # Even administrators can recover only their own result through this path.
+        # Not found also covers older rows whose session identity was never recorded.
+        history = get_object_or_404(
+            TestHistory, user=request.user, source_session_id=session_id, mode=mode,
+        )
+        return api_success(data=ExamService.completed_result(history))
 
     def post(self, request):
         body = SessionIdSerializer(data=request.data)
