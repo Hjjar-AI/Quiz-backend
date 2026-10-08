@@ -1,5 +1,9 @@
 # Work Done
 
+## Ruby export theme — 2026-10-08
+
+- Registered the matching `ruby` PDF palette for the new frontend theme. Source AST/palette equality and whitespace checks passed; actual PDF rendering remains pending. No migrations, builds, compilation, test suites, installs or versions changed.
+
 ## 2026-10-06
 
 - Partial/deferred-save invariants validate actual persisted field combinations under transaction/row lock.

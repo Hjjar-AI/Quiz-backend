@@ -140,6 +140,7 @@ _PDF_THEME_ALIASES = {
     'light': _DEFAULT_PDF_THEME,
     'sepia': 'amber',
     'fresh': 'lagoon',
+    'blood-red': 'ruby',
 }
 _PDF_THEME_TOKENS = {
     'stone': {
@@ -212,6 +213,14 @@ _PDF_THEME_TOKENS = {
         'bg_body': '#efebe4', 'bg_card': '#ffffff', 'bg_alt': '#f7e7cc',
         'text_primary': '#33200f', 'text_secondary': '#604326',
         'text_muted': '#73583d', 'on_accent': '#ffffff',
+        'strong_weight': 0.70,
+    },
+    'ruby': {
+        'primary': '#8b0000', 'success': '#176544',
+        'danger': '#ae2455', 'warning': '#805500', 'info': '#235b85',
+        'bg_body': '#f3e6e7', 'bg_card': '#ffffff', 'bg_alt': '#ead6d8',
+        'text_primary': '#2b1015', 'text_secondary': '#4c2b32',
+        'text_muted': '#634c50', 'on_accent': '#ffffff',
         'strong_weight': 0.70,
     },
     'iris': {
