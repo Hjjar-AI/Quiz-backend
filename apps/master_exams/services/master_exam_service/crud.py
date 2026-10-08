@@ -169,6 +169,8 @@ def update(exam, data, expected_version=None, request=None):
     expected_version = int(expected_version)
 
     with transaction.atomic():
+        from .composition import _locked_editable_exam
+        exam = _locked_editable_exam(exam, expected_version)
         update_fields = {}
         for field in (
             'name', 'description', 'instructions',

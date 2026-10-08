@@ -1,6 +1,7 @@
 # backend/apps/core/audit.py
 
 import logging
+from django.db import transaction
 from .models import PrivilegedAction
 
 logger = logging.getLogger(__name__)
@@ -70,17 +71,21 @@ def log_privileged_action(request, action, target=None, target_repr=None, detail
             if ip is not None:
                 ip = str(ip)[:45] or None
 
-        return PrivilegedAction.objects.create(
-            actor=actor,
-            actor_username=actor_username,
-            action=action,
-            target_type=target_type,
-            target_id=target_id,
-            target_repr=target_repr,
-            ip=ip,
-            user_agent=user_agent,
-            details=details or {},
-        )
+        # Isolate a database failure from any enclosing service transaction.
+        # Catching DatabaseError without a savepoint leaves that transaction
+        # unusable even though this helper promises not to abort the caller.
+        with transaction.atomic():
+            return PrivilegedAction.objects.create(
+                actor=actor,
+                actor_username=actor_username,
+                action=action,
+                target_type=target_type,
+                target_id=target_id,
+                target_repr=target_repr,
+                ip=ip,
+                user_agent=user_agent,
+                details=details or {},
+            )
     except Exception:
         # Two intentional log lines — see the function docstring.
         logger.exception(

@@ -13,12 +13,9 @@ write silently clobbering the first. The row lock serializes the
 read-modify-write so the second submission sees the first one's
 result before applying its own mutation.
 
-The pre-lock time check runs OUTSIDE the transaction. `_force_finish`
-opens its own atomic block and expects to commit; wrapping it inside
-this method's atomic block would roll back the forced finish if the
-subsequent `raise ValueError('TIME_EXPIRED')` propagated through the
-outer block. Keeping the time check outside the lock is safe because
-`deadline_at` is immutable for the life of an attempt.
+The time check runs after acquiring the lock. A request may wait for
+the lock beyond its deadline. Timeout completion runs after leaving
+the answer transaction so raising TIME_EXPIRED cannot roll it back.
 
 The view for master exams already prevents most concurrent traffic —
 `masterExamAttemptStore.js` maintains a per-question `_pendingAnswers`
@@ -42,22 +39,22 @@ from .finish import _force_finish
 
 
 def submit_answer(attempt, question_id, answer, confidence=3, error_reason=None):
-    # ── Time check (outside the lock) ───────────────────────────
-    #
-    # The deadline does not change for the life of an attempt, so
-    # reading the pre-lock snapshot here is safe. If the window has
-    # closed, `_force_finish` runs its own atomic block and commits;
-    # raising TIME_EXPIRED afterwards is what the view's error map
-    # expects. Doing this inside the lock would roll the finish back.
-    now = timezone.now()
-    deadline = attempt.deadline_at
     grace = timedelta(seconds=_grace_seconds())
     tolerance = timedelta(seconds=_last_answer_tolerance_seconds())
-
-    if deadline is not None and now > deadline + grace + tolerance:
+    try:
+        return _submit_answer_locked(
+            attempt, question_id, answer, confidence, error_reason, grace + tolerance,
+        )
+    except _AnswerTimeExpired:
         _force_finish(attempt, reason='timeout')
         raise ValueError('TIME_EXPIRED')
 
+
+class _AnswerTimeExpired(Exception):
+    """Leave the answer transaction before committing timeout completion."""
+
+
+def _submit_answer_locked(attempt, question_id, answer, confidence, error_reason, allowance):
     with transaction.atomic():
         locked = (
             MasterExamAttempt.objects
@@ -73,6 +70,12 @@ def submit_answer(attempt, question_id, answer, confidence=3, error_reason=None)
         # attempt between the pre-lock read and lock acquisition.
         if locked.is_complete:
             raise ValueError('ATTEMPT_ALREADY_COMPLETE')
+
+        now = timezone.now()
+        if locked.deadline_at is not None and now > locked.deadline_at + allowance:
+            raise _AnswerTimeExpired
+        if isinstance(answer, bool) or not isinstance(answer, int) or answer < 1:
+            raise ValueError('إجابة غير صالحة. يجب أن تكون رقماً موجباً')
 
         attempt_qids = list(locked.question_ids or [])
         if question_id not in attempt_qids:

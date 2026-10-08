@@ -374,6 +374,7 @@ class ExamService:
           check here is the second line of defence.
         """
         with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
             locked = (
                 ExamSession.objects
                 .select_for_update()
@@ -711,7 +712,7 @@ class ExamService:
     @staticmethod
     def update_question_stats(results):
         with transaction.atomic():
-            for r in results:
+            for r in sorted(results, key=lambda row: row.get('question_id') or 0):
                 if r['user_answer'] is None:
                     continue
                 # A deleted question cannot be updated. The snapshot
@@ -726,7 +727,9 @@ class ExamService:
                 Question.objects.filter(id=r['question_id']).update(**updates)
 
     @staticmethod
+    @transaction.atomic
     def record_completion_side_effects(user, results):
+        User.objects.select_for_update().only('id').get(pk=user.pk)
         ExamService.update_question_stats(results)
         SRSService.record_attempts_bulk(user, results)
         from apps.planning.services import StudyPlannerService
@@ -801,6 +804,7 @@ class ExamService:
     def flush_session_learning(session):
         """Public lock-safe flush used by lifecycle and cleanup paths."""
         with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
             locked = (
                 ExamSession.objects
                 .select_for_update()
@@ -818,10 +822,16 @@ class ExamService:
     @staticmethod
     def discard_sessions(sessions):
         """Flush visible learning, then delete the selected live sessions."""
-        session_ids = list(sessions.values_list('pk', flat=True))
+        selected = list(sessions.values_list('pk', 'user_id'))
+        session_ids = [pk for pk, _ in selected]
         if not session_ids:
             return 0
         with transaction.atomic():
+            # Starts/resumes lock the learner before sessions. Use that same
+            # order for all writers, including multi-user cleanup batches.
+            list(User.objects.select_for_update().filter(
+                pk__in={user_id for _, user_id in selected},
+            ).order_by('pk').only('id'))
             locked_sessions = list(
                 ExamSession.objects
                 .select_for_update()
@@ -837,6 +847,7 @@ class ExamService:
     def finish_session(session, user):
 
         with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
             # Re-read under lock. If the row is gone, someone else
             # finished this session concurrently.
             locked = (
@@ -953,6 +964,7 @@ class ExamService:
         occurs. There is nothing to pause.
         """
         with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
             locked = (
                 ExamSession.objects
                 .select_for_update()
@@ -1046,7 +1058,7 @@ class ExamService:
 class BlueprintService:
     @staticmethod
     def select_question_ids(blueprint, count, filters=None):
-        from math import floor
+        from math import floor, isfinite
 
         from django.db.models import Count as DjCount
         from apps.questions.services.question_service import QuestionService
@@ -1073,7 +1085,7 @@ class BlueprintService:
                 weight = float(w)
             except (ValueError, TypeError):
                 continue
-            if weight > 0:
+            if isfinite(weight) and weight > 0:
                 normalized[cid] = weight
 
         if not normalized:
@@ -1083,6 +1095,10 @@ class BlueprintService:
                 .values_list('id', flat=True)[:count]
             )
 
+        # Relative weights are scale invariant. Scaling first prevents finite
+        # inputs such as 1e308 from overflowing during summation/allocation.
+        largest_weight = max(normalized.values())
+        normalized = {cid: weight / largest_weight for cid, weight in normalized.items()}
         total_weight = sum(normalized.values())
         available = dict(
             base.order_by()

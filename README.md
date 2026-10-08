@@ -1,28 +1,21 @@
 # Mukhtabir Backend
 
-Django REST backend for Mukhtabir. It owns authentication, permissions, the
-question-bank domain, exam/study workflows, analytics, administration,
-imports/exports, and production Vue SPA serving.
+Django REST backend: authentication/permissions, question bank, exams/study, analytics/admin, import/export and production Vue SPA serving.
 
 ## Main capabilities
 
 - Session users, account expiry/renewal, roles, and capability overrides.
-- Questions, taxonomy, clinical cases, knowledge objects, translations, images,
-  authorship/ownership, moderation, and reputation.
-- Exam, study, recall, SRS, confidence, reflection, history, planner, streak, and
-  knowledge-map services.
-- Scheduled master exams with audiences, ordered composition, drafts, immutable
-  attempt snapshots, makeup attempts, lifecycle controls, and result exports.
+- Questions, taxonomy, clinical cases, knowledge objects, translations, images, authorship/ownership, moderation, and reputation.
+- Exam, study, recall, SRS, confidence, reflection, history, planner, streak, and knowledge-map services.
+- Scheduled master exams with audiences, ordered composition, drafts, immutable attempt snapshots, makeup attempts, lifecycle controls, and result exports.
 - Groups, leaderboards, bookmarks, ratings, flags, analytics, and activity reports.
 - Excel, CSV, JSON, PDF, and portable state import/export.
-- MariaDB production and isolated SQLite development configurations.
+- Database selection from .env (MariaDB/MySQL, PostgreSQL or SQLite).
 - Backups/restores, audit logs, throttling, cleanup, diagnostics, and SPA fallback.
 
 ## Technology
 
-Django, Django REST Framework, MariaDB/MySQL, SQLite, Memcached or Redis,
-pandas/openpyxl/xlrd, WeasyPrint, Pillow, libmagic, and Gunicorn. Versions are
-pinned in `requirements.txt`.
+Stack: Django/DRF, MariaDB/MySQL/SQLite, Memcached/Redis, pandas/openpyxl/xlrd, WeasyPrint/Pillow/libmagic/Gunicorn. Pins: `requirements.txt`.
 
 ## Prerequisites
 
@@ -31,21 +24,21 @@ pinned in `requirements.txt`.
 - System packages required by the chosen database and export features
 - The sibling frontend when Django will serve the compiled SPA
 
-See `DEPLOYMENT.md` for production OS packages and service configuration.
+See `docs/DEPLOYMENT.md` for production OS packages and service configuration.
 
 ## Quick start: SQLite
+
+Ports, SQLite/MariaDB switching, Termux/Windows and diagnostics: [START_HERE.md](docs/START_HERE.md). Entry points: `python start.py sqlite` or `.env`-selected `python start.py`.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-sqlite.txt
 cp .env.example .env
 python start_sqlite.py
 ```
 
-The default address is `localhost:5004`. The launcher isolates its database,
-media, uploads, exports, backups, cache, and cookies under the SQLite setup and
-performs initial setup for an empty local instance.
+Default `localhost:5004`; launcher initializes empty local instances and isolates SQLite database/media/uploads/exports/backups/cache/cookies.
 
 Useful forms:
 
@@ -58,10 +51,9 @@ python start_sqlite.py --no-setup
 
 Read `start_sqlite.py` before enabling threading or binding to an untrusted network.
 
-## MariaDB configuration
+## Database configuration
 
-Normal `manage.py` uses `config.settings`, which expects MariaDB and shared cache.
-A minimal production-shaped `.env` includes:
+`manage.py` uses `config.settings`: `.env` `DB_ENGINE`/credentials, MariaDB default if omitted; shared cache configured separately. Minimal production-shaped `.env`:
 
 ```dotenv
 DJANGO_SECRET_KEY=replace-with-a-long-random-secret
@@ -69,6 +61,7 @@ DEBUG=False
 ALLOWED_HOSTS=quiz.example.com
 CORS_ORIGINS=https://quiz.example.com
 USE_HTTPS=True
+DB_ENGINE=mariadb
 DB_NAME=quiz
 DB_USER=quiz
 DB_PASSWORD=replace-me
@@ -78,8 +71,13 @@ CACHE_TYPE=MemcachedCache
 MEMCACHED_LOCATION=127.0.0.1:11211
 ```
 
-Use `python manage.py bootstrap` for the guided bootstrap flow. Read its `--help`
-and `DEPLOYMENT.md` before supplying administrative database credentials.
+PostgreSQL: `DB_ENGINE=postgresql`, `DB_PORT=5432`, compatible `psycopg`/`psycopg2`, existing database/user, optional `DB_SSLMODE`. MySQL options apply only to MariaDB/MySQL. Installed third-party Django backend module names are accepted; integration needs separate validation.
+
+SQLite: `DB_ENGINE=sqlite`, `DB_NAME=SQLite/db.sqlite3`; relative paths use `backend/`. `python start.py` selects portable overlay; `manage.py` retains independent cache/storage. Explicit `python start.py sqlite` ignores server `DB_NAME` in `.env`.
+
+Database administration (native backup/restore/provisioning) supports MariaDB/MySQL/SQLite only; PostgreSQL configuration adds none. Startup/dependencies: [START_HERE.md](docs/START_HERE.md).
+
+Use `python manage.py bootstrap` for the guided MariaDB bootstrap flow. Read its `--help` and `docs/DEPLOYMENT.md` before supplying administrative database credentials.
 
 ## Configuration
 
@@ -87,17 +85,14 @@ and `DEPLOYMENT.md` before supplying administrative database credentials.
 
 - Core/security: `DJANGO_SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `USE_HTTPS`
 - Browser origin: `CORS_ORIGINS`
-- Database: `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
+- Database: `DB_ENGINE`, `DB_SSLMODE` (PostgreSQL), `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
 - Cache: `CACHE_TYPE`, `MEMCACHED_LOCATION`, `REDIS_URL`
-- Upload/state limits: `MAX_UPLOAD_SIZE`, `MAX_STATE_TRANSFER_SIZE`,
-  `MAX_STATE_IMPORT_QUESTIONS`
+- Upload/state limits: `MAX_UPLOAD_SIZE`, `MAX_STATE_TRANSFER_SIZE`, `MAX_STATE_IMPORT_QUESTIONS`
 - PDF limits: `PDF_EXPORT_MAX_QUESTIONS`, `PDF_EXPORT_MAX_TOTAL_IMAGE_BYTES`
 - Audit retention: `PRIVILEGED_ACTION_RETENTION_DAYS`
 - Seed accounts: `SEED_PRO_USER_PASSWORD`
 
-SQLite overrides include `SQLITE_ROOT`, `SQLITE_DB_PATH`,
-`SQLITE_SERVER_ADDRESS`, `SQLITE_ALLOWED_HOSTS`, `SQLITE_CORS_ORIGINS`, and
-`SQLITE_CSRF_TRUSTED_ORIGINS`.
+SQLite overrides include `SQLITE_ROOT`, `SQLITE_DB_PATH`, `SQLITE_SERVER_ADDRESS`, `SQLITE_ALLOWED_HOSTS`, `SQLITE_CORS_ORIGINS`, and `SQLITE_CSRF_TRUSTED_ORIGINS`.
 
 ## API layout
 
@@ -114,9 +109,7 @@ SQLite overrides include `SQLITE_ROOT`, `SQLITE_DB_PATH`,
 /api/v1/admin/history/ Administrative history
 ```
 
-Unknown API paths return an API-shaped 404. Unknown non-API paths fall back to
-the compiled SPA when `frontend/dist/` exists. Vue and Android depend on the
-standard response envelope, session cookies, and Django CSRF behavior.
+Unknown API paths return API-envelope 404 responses; other paths fall back to compiled SPA if `frontend/dist/` exists. Vue/Android require standard envelope, session cookies and Django CSRF.
 
 ## Structure
 
@@ -136,18 +129,13 @@ apps/
 config/              Django settings, routing, WSGI, and ASGI
 ```
 
-Cross-model or transactional logic belongs in services. Important invariants are
-also represented by model constraints.
+Cross-model or transactional logic belongs in services. Important invariants are also represented by model constraints.
 
 ## Imports, exports, and PDFs
 
-Flat exports are intended for editing/review. Portable state packages preserve
-related taxonomy, cases, knowledge objects, identities, and optional images and
-are the lossless transfer format.
+Flat exports: editing/review. Lossless portable state: taxonomy/cases/knowledge/identities and optional images.
 
-PDF rendering embeds Noto Sans Arabic and requires WeasyPrint plus the native
-Pango/HarfBuzz/Cairo stack. It is synchronous and bounded by question count and
-total embedded image bytes; filter large banks into smaller documents.
+Synchronous PDF embeds Noto Sans Arabic; needs WeasyPrint/native Pango/HarfBuzz/Cairo. Question/image-byte caps require splitting large banks.
 
 ## Operational commands
 
@@ -166,8 +154,7 @@ python manage.py cleanup_temp_files
 python manage.py cleanup_privileged_actions
 ```
 
-`doctor` checks configuration, database/schema access, cache, PDF dependencies,
-font reachability, writable directories, the frontend build, and administrators.
+`doctor` checks configuration, database/schema access, cache, PDF dependencies, font reachability, writable directories, the frontend build, and administrators.
 
 ## Production
 
@@ -180,10 +167,7 @@ pnpm build
 cd ../backend
 ```
 
-Use Gunicorn behind an HTTPS reverse proxy. Configure secure cookies, explicit
-hosts/origins, trusted proxy handling, a shared cache, persistent media, backups,
-and scheduled cleanup/sweeper commands. Do not use `runserver` or SQLite in
-production. See `DEPLOYMENT.md` for the complete guide.
+Production: Gunicorn behind HTTPS proxy; secure cookies, explicit hosts/origins, trusted proxy handling, shared cache, persistent media/backups and scheduled cleanup/sweepers. Never production `runserver`/SQLite. Guide: `docs/DEPLOYMENT.md`.
 
 ## Troubleshooting
 
@@ -197,8 +181,9 @@ production. See `DEPLOYMENT.md` for the complete guide.
 
 ## Working documents
 
-- `Agents.md` — local contributor constraints
-- `workPlan.md` — current planned work
-- `workDone.md` — completed work log
-- `DEPLOYMENT.md` — detailed deployment guide
+See the [documentation index](docs/README.md) for all supporting guides.
 
+- [Agents.md](Agents.md) — local contributor constraints
+- [workPlan.md](docs/workPlan.md) — current planned work
+- [workDone.md](docs/workDone.md) — completed work log
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md) — detailed deployment guide

@@ -25,16 +25,12 @@ class QuestionTagsField(serializers.CharField):
 
     def to_internal_value(self, data):
         if isinstance(data, list):
-            names = []
-            for item in data:
-                if not isinstance(item, str) or not item.strip() or len(item.strip()) > 50:
-                    raise serializers.ValidationError(
-                        'Tags must be nonblank text values of at most 50 characters.'
-                    )
-                name = item.strip()
-                if name not in names:
-                    names.append(name)
-            return names
+            if any(not isinstance(item, str) for item in data):
+                raise serializers.ValidationError('Tags must be text values.')
+            names = serializers.ListField(
+                child=serializers.CharField(max_length=50, allow_blank=False),
+            ).run_validation(data)
+            return list(dict.fromkeys(names))
         return super().to_internal_value(data)
 
 

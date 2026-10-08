@@ -14,6 +14,7 @@ admin surface.
 """
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import SessionAuthentication
 
 from django.contrib import admin
 from django.contrib.auth.views import redirect_to_login
@@ -46,6 +47,9 @@ class LoginView(APIView):
     throttle_classes = [LoginCredentialsRateThrottle, LoginIpRateThrottle]
 
     def post(self, request):
+        # SessionAuthentication skips anonymous users, so explicitly enforce
+        # CSRF for the request that creates their authenticated session.
+        SessionAuthentication().enforce_csrf(request)
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

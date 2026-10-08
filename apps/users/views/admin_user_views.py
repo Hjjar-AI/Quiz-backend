@@ -76,7 +76,7 @@ def _set_password_and_log(request, user, password, *, mode):
     """
     user.set_password(password)
     user.must_change_password = True
-    user.save()
+    user.save(update_fields=['password', 'must_change_password'])
 
     if user.id == request.user.id:
         update_session_auth_hash(request, user)

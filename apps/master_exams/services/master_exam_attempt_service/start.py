@@ -10,9 +10,10 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.questions.models import Question
+from apps.users.models import User
 from apps.questions.payloads import build_grading_snapshot, exam_question_payload
 
-from ...models import MasterExamAttempt
+from ...models import MasterExam, MasterExamAttempt
 from .helpers import _grace_seconds
 
 
@@ -51,11 +52,18 @@ def _shuffle_preserving_case_groups(question_ids):
     return flat
 
 
+@transaction.atomic
 def start(user, exam, is_preview=False):
-    now = timezone.now()
-
     if is_preview:
         return _start_preview(user, exam)
+
+    # Serialize start-time gates and question freezing with lifecycle and
+    # composition writes; the view's exam instance may already be stale.
+    User.objects.select_for_update().only('id').get(pk=user.pk)
+    exam = MasterExam.objects.select_for_update().filter(pk=exam.pk).first()
+    if exam is None:
+        raise ValueError('EXAM_NOT_FOUND')
+    now = timezone.now()
 
     # ── Status gate (security) ─────────────────────────────────
     #

@@ -244,7 +244,7 @@ class AdminTagMergeView(APIView):
         sources_by_name = {tag.name: tag for tag in sources}
         for raw_src_name in source_tags:
             src_name = str(raw_src_name).strip()
-            src = sources_by_name.get(src_name)
+            src = sources_by_name.pop(src_name, None)
             if src is None:
                 continue
 
@@ -268,6 +268,11 @@ class AdminTagMergeView(APIView):
                     planner.target_tags.add(target)
                     planner.target_tags.remove(src)
                     plans_migrated += 1
+
+                # Knowledge objects share this taxonomy too. Preserve their
+                # associations before deleting the source tag's through rows.
+                for knowledge_object in src.knowledge_objects.all():
+                    knowledge_object.tags.add(target)
 
                 # 3. Move QuestionTag rows, preserving the
                 #    (question, tag) unique constraint.

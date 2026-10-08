@@ -21,6 +21,7 @@ write.
 """
 import logging
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F, Max
 
@@ -30,6 +31,24 @@ from apps.core.audit import log_privileged_action
 from ...models import MasterExam, MasterExamQuestion
 
 logger = logging.getLogger(__name__)
+
+
+def _locked_editable_exam(exam, expected_version=None):
+    """Check lifecycle and revision against the row all exam writers lock."""
+    locked = MasterExam.objects.select_for_update().filter(pk=exam.pk).first()
+    if locked is None:
+        raise ValueError('EXAM_NOT_FOUND')
+    if not locked.can_edit_now:
+        raise ValueError('EXAM_WINDOW_STARTED')
+    if expected_version is not None and locked.version != int(expected_version):
+        raise ValueError('MODIFIED_BY_ANOTHER_USER')
+    return locked
+
+
+def _check_question_limit(count):
+    cap = getattr(settings, 'MASTER_EXAM_MAX_QUESTIONS', 200)
+    if count > cap:
+        raise ValueError(f'الحد الأقصى {cap} سؤال.')
 
 
 def _cas_bump_version(exam, expected_version):
@@ -65,9 +84,9 @@ def _cas_bump_version(exam, expected_version):
     return exam.version
 
 
+@transaction.atomic
 def add_questions(exam, question_ids, request=None, expected_version=None):
-    if not exam.can_edit_now:
-        raise ValueError('EXAM_WINDOW_STARTED')
+    exam = _locked_editable_exam(exam, expected_version)
 
     existing_ids = set(
         exam.exam_questions.values_list('question_id', flat=True)
@@ -86,6 +105,7 @@ def add_questions(exam, question_ids, request=None, expected_version=None):
 
     if not cleaned:
         return exam
+    _check_question_limit(len(existing_ids) + len(cleaned))
 
     caller = getattr(request, 'user', None) if request is not None else None
     visible_qs = Question.objects.filter(id__in=cleaned)
@@ -115,20 +135,20 @@ def add_questions(exam, question_ids, request=None, expected_version=None):
         )
 
     if request is not None:
-        log_privileged_action(
+        transaction.on_commit(lambda: log_privileged_action(
             request,
             action='master_exam.add_questions',
             target=exam,
             target_repr=exam.name,
             details={'count': len(cleaned), 'version': exam.version},
-        )
+        ))
 
     return exam
 
 
+@transaction.atomic
 def remove_question(exam, question_id, request=None, expected_version=None):
-    if not exam.can_edit_now:
-        raise ValueError('EXAM_WINDOW_STARTED')
+    exam = _locked_editable_exam(exam, expected_version)
 
     try:
         qid = int(question_id)
@@ -148,20 +168,20 @@ def remove_question(exam, question_id, request=None, expected_version=None):
         pass
 
     if request is not None:
-        log_privileged_action(
+        transaction.on_commit(lambda: log_privileged_action(
             request,
             action='master_exam.remove_question',
             target=exam,
             target_repr=exam.name,
             details={'question_id': qid, 'version': exam.version},
-        )
+        ))
 
     return exam
 
 
+@transaction.atomic
 def reorder_questions(exam, ordered_ids, request=None, expected_version=None):
-    if not exam.can_edit_now:
-        raise ValueError('EXAM_WINDOW_STARTED')
+    exam = _locked_editable_exam(exam, expected_version)
 
     current = list(
         exam.exam_questions.values_list('question_id', flat=True)
@@ -194,21 +214,22 @@ def reorder_questions(exam, ordered_ids, request=None, expected_version=None):
         )
 
     if request is not None:
-        log_privileged_action(
+        transaction.on_commit(lambda: log_privileged_action(
             request,
             action='master_exam.reorder',
             target=exam,
             target_repr=exam.name,
             details={'count': len(requested), 'version': exam.version},
-        )
+        ))
 
     return exam
 
 
+@transaction.atomic
 def add_draft(exam, draft_payload, author, request=None, expected_version=None):
-
-    if not exam.can_edit_now:
-        raise ValueError('EXAM_WINDOW_STARTED')
+    exam = _locked_editable_exam(exam, expected_version)
+    _check_question_limit(exam.exam_questions.count() + 1)
+    draft_payload = dict(draft_payload)
 
     case_key = draft_payload.pop('case_key', None)
     case_stem = draft_payload.pop('case_stem', None)
@@ -252,7 +273,7 @@ def add_draft(exam, draft_payload, author, request=None, expected_version=None):
         )
 
     if request is not None:
-        log_privileged_action(
+        transaction.on_commit(lambda: log_privileged_action(
             request,
             action='master_exam.add_draft',
             target=draft,
@@ -262,6 +283,6 @@ def add_draft(exam, draft_payload, author, request=None, expected_version=None):
                 'exam_name': exam.name,
                 'version': exam.version,
             },
-        )
+        ))
 
     return draft

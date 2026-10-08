@@ -7,7 +7,7 @@
 #     pip install -r requirements.txt
 #
 # System libraries that these wheels depend on (libpango, libcairo,
-# libmysqlclient, libmagic, etc.) are documented in DEPLOYMENT.md § 1.
+# libmysqlclient, libmagic, etc.) are documented in docs/DEPLOYMENT.md § 1.
 # A missing system library does not prevent pip install; it surfaces
 # at import time and is reported by `manage.py doctor`.
 #
@@ -35,9 +35,10 @@ django-filter==26.1
 django-jazzmin==3.0.5
 
 # ── Database driver ─────────────────────────────────────────────────────────
-# Required by `django.db.backends.mysql` in config/settings.py.
+# Required only when DB_ENGINE selects MariaDB/MySQL.
+# PostgreSQL uses psycopg or psycopg2 instead; SQLite needs neither driver.
 # Needs `default-libmysqlclient-dev build-essential pkg-config` on
-# Debian/Ubuntu at compile time. See DEPLOYMENT.md § 1.
+# Debian/Ubuntu at compile time. See docs/DEPLOYMENT.md § 1.
 #
 # Compiler-free alternative: replace with `PyMySQL` and add
 #     import pymysql; pymysql.install_as_MySQLdb()
@@ -53,7 +54,7 @@ xlrd==2.0.2
 # ── PDF export ──────────────────────────────────────────────────────────────
 # Backs apps/questions/services/exporting/pdf_export.py.
 # Requires libpango-1.0-0, libpangoft2-1.0-0, libharfbuzz0b, libcairo2,
-# libgdk-pixbuf-2.0-0, libffi at runtime. See DEPLOYMENT.md § 1.
+# libgdk-pixbuf-2.0-0, libffi at runtime. See docs/DEPLOYMENT.md § 1.
 # The app starts and runs without them; only `fmt=pdf` returns 500.
 weasyprint==66.0
 

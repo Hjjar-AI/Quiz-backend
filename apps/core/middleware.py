@@ -3,6 +3,7 @@ import logging
 import time
 
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.contrib.auth import logout
 from django.utils import timezone
 
 from apps.users.models import ActiveSession
@@ -162,5 +163,17 @@ class AutoRenewMiddleware:
     def __call__(self, request):
         if request.user.is_authenticated and request.user.renew_if_eligible():
             request.user.save(update_fields=['expires_at'])
+        if request.user.is_authenticated and request.user.is_expired:
+            # Expiry applies to existing sessions too, including accounts
+            # whose expiry was shortened by an administrator after login.
+            logout(request)
+            if request.path_info.startswith('/api/'):
+                return JsonResponse({
+                    'code': 401,
+                    'message': 'انتهت صلاحية الحساب.',
+                    'details': {'reason': 'ACCOUNT_EXPIRED'},
+                }, status=401)
+            if request.path_info.startswith('/admin/'):
+                return HttpResponseRedirect('/admin/login/')
         response = self.get_response(request)
         return response

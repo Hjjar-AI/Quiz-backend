@@ -281,6 +281,7 @@ class BackupService:
             'questions.QuestionTag',
             'questions.Question',
             'questions.ClinicalCase',
+            'questions.KnowledgeObject',
             'questions.Category',
             'questions.Tag',
             'exams.Blueprint',
@@ -294,16 +295,7 @@ class BackupService:
                 model = apps.get_model(model_name)
                 model.objects.all().delete()
 
-            with connection.cursor() as cursor:
-                if _is_sqlite():
-                    from ._sqlite_reference import reset_autoincrement
-                    reset_autoincrement(cursor, models_to_clear)
-                elif _is_mariadb():
-                    for model_name in models_to_clear:
-                        model = apps.get_model(model_name)
-                        table_name = model._meta.db_table
-                        cursor.execute(
-                            f"ALTER TABLE `{table_name}` AUTO_INCREMENT = 1"
-                        )
+            # Keep identifiers monotonic. MariaDB ALTER TABLE implicitly
+            # commits, breaking this deletion transaction's rollback guarantee.
 
         return {'message': 'تم مسح قاعدة البيانات'}

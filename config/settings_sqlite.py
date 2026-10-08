@@ -1,8 +1,7 @@
 """Local SQLite settings used by :mod:`start_sqlite`.
 
-The regular settings module remains the MariaDB / Memcached (or Redis)
-configuration used by the normal launcher. This overlay is
-intentionally single-process: SQLite and LocMemCache are convenient
+The regular settings module selects its database and shared cache from .env.
+This overlay is intentionally single-process: SQLite and LocMemCache are convenient
 for a self-contained local instance, but neither is intended for a
 multi-worker deployment.
 
@@ -85,12 +84,20 @@ from pathlib import Path
 # when backend/.env contains production values. Set this before
 # importing the base settings because that module validates
 # SECRET_KEY and ALLOWED_HOSTS while it is imported.
+os.environ['DB_ENGINE'] = 'sqlite'
 os.environ['DEBUG'] = 'True'
+# The base module validates cache configuration before this overlay can
+# replace it. SQLite always uses LocMemCache, regardless of production .env.
+os.environ['CACHE_TYPE'] = 'MemcachedCache'
 
 from .settings import *  # noqa: E402,F401,F403
 
 
 DEBUG = True
+# This launcher runs Django's HTTP development server. A production .env
+# must not make browsers silently discard its session/CSRF cookies.
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 # ``sslserver`` is a MariaDB/deployment convenience and is not used by
 # start_sqlite.py (which invokes Django's ordinary runserver). Keeping it
@@ -143,6 +150,19 @@ else:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = _sqlite_cors_origins
 
+_frontend_origins = [
+    origin.strip().rstrip('/')
+    for origin in os.environ.get(
+        'SQLITE_FRONTEND_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173',
+    ).split(',')
+    if origin.strip()
+]
+for _origin in _frontend_origins:
+    if not _origin.startswith(('http://', 'https://')):
+        raise ValueError('Frontend origins must include http:// or https://.')
+    if _origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(_origin)
+
 _sqlite_csrf_raw = os.environ.get('SQLITE_CSRF_TRUSTED_ORIGINS')
 if _sqlite_csrf_raw is not None:
     CSRF_TRUSTED_ORIGINS = [
@@ -150,6 +170,7 @@ if _sqlite_csrf_raw is not None:
         for origin in _sqlite_csrf_raw.split(',')
         if origin.strip()
     ]
+
 else:
     # Same-origin requests need no trusted-origin entry. Preserve only
     # valid cross-origin URLs from the CORS configuration.
@@ -158,6 +179,10 @@ else:
         for origin in CORS_ALLOWED_ORIGINS
         if origin.startswith(('http://', 'https://'))
     ]
+
+for _origin in _frontend_origins:
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
 
 
 # ── Filesystem isolation root ───────────────────────────────────────
@@ -236,6 +261,13 @@ CACHES = {
 # MariaDB server unchanged.
 SESSION_COOKIE_NAME = 'sqlite_sessionid'
 CSRF_COOKIE_NAME = 'sqlite_csrftoken'
+# Independent SQLite files on the same browser host need separate cookies,
+# even when their servers use different ports. Keep legacy default names.
+if _database_path.resolve() != (BASE_DIR / 'SQLite' / 'db.sqlite3').resolve():
+    import hashlib
+    _instance_suffix = hashlib.sha256(str(_database_path.resolve()).encode()).hexdigest()[:12]
+    SESSION_COOKIE_NAME += '_' + _instance_suffix
+    CSRF_COOKIE_NAME += '_' + _instance_suffix
 
 
 # ── Filesystem isolation ────────────────────────────────────────────

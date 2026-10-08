@@ -191,7 +191,9 @@ class ClinicalCase(InvariantValidationMixin, TimeStampedModel):
 
     def validate_invariants(self):
         require(
-            isinstance(self.stem, str) and len(self.stem) <= CASE_STEM_MAX_LENGTH,
+            self.stem is None or (
+                isinstance(self.stem, str) and len(self.stem) <= CASE_STEM_MAX_LENGTH
+            ),
             'stem', f'Case stem must be text of at most {CASE_STEM_MAX_LENGTH} characters.',
         )
 

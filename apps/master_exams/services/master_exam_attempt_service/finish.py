@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
+from apps.users.models import User
 
 
 from ...models import MasterExam, MasterExamAttempt
@@ -26,6 +27,9 @@ def _finish_locked(attempt, forced):
     now = timezone.now()
 
     with transaction.atomic():
+        # Learning side effects lock this learner too. Acquire it before the
+        # attempt, matching ordinary session start/answer/finish operations.
+        User.objects.select_for_update().only('id').get(pk=attempt.user_id)
         fresh = (
             MasterExamAttempt.objects
             .select_for_update()

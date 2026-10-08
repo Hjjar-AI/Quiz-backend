@@ -114,6 +114,8 @@ import there would raise ``AppRegistryNotReady``.
 
 import os
 import sys
+import json
+import subprocess
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -145,15 +147,27 @@ _REQUIRED_MODULES = (
     'pandas',
     'openpyxl',
     'PIL',
+    'dotenv',
 )
+
+# Each group requires at least one installed module (e.g. PostgreSQL drivers).
+_REQUIRED_MODULE_GROUPS = ()
 
 
 _LAUNCHER_FLAGS = {
+    '--diagnose': 'diagnose',
     '--seed-pro-users': 'seed_pro_users',
     '--force-pro-users': 'force_pro_users',
     '--no-setup': 'no_setup',
     '--no-prompt': 'no_prompt',
     '--allow-threading': 'allow_threading',
+}
+
+_VALUE_FLAGS = {
+    '--venv': 'QUIZ_VENV',
+    '--db-path': 'SQLITE_DB_PATH',
+    '--data-root': 'SQLITE_ROOT',
+    '--frontend-origin': 'SQLITE_FRONTEND_ORIGINS',
 }
 
 _DEFAULT_HOST = 'localhost'
@@ -178,7 +192,15 @@ def _split_argv(argv):
     flags = {value: False for value in _LAUNCHER_FLAGS.values()}
     positional = []
 
-    for token in argv:
+    tokens = iter(argv)
+    for token in tokens:
+        option, separator, inline = token.partition('=')
+        if option in _VALUE_FLAGS:
+            value = inline if separator else next(tokens, '')
+            if not value or value.startswith('--'):
+                raise SystemExit(f'{option} requires a value. See --help.')
+            os.environ[_VALUE_FLAGS[option]] = value
+            continue
         if token in _LAUNCHER_FLAGS:
             flags[_LAUNCHER_FLAGS[token]] = True
         elif token in ('--help', '-h'):
@@ -195,14 +217,15 @@ def _split_argv(argv):
 
 def _print_help():
     print(__doc__)
+    print('Additional startup options:')
+    print('  --diagnose                   Report configuration/dependencies only; no setup/server.')
+    print('  --venv PATH                  Select a virtualenv or Python executable.')
+    print('  --db-path PATH               Select the SQLite database file.')
+    print('  --data-root PATH             Isolate database/media/backups under this directory.')
+    print('  --frontend-origin URL[,URL]  Trust these browser dev-server origins.')
 
 
-def _ensure_runtime():
-    """Re-exec with the project virtualenv when dependencies are missing."""
-    missing = [name for name in _REQUIRED_MODULES if find_spec(name) is None]
-    if not missing:
-        return
-
+def _runtime_candidates():
     backend_dir = Path(__file__).resolve().parent
     project_dir = backend_dir.parent
     candidates = []
@@ -221,7 +244,7 @@ def _ensure_runtime():
 
     if os.environ.get('QUIZ_VENV'):
         add_venv(os.environ['QUIZ_VENV'])
-    # DEPLOYMENT.md creates .venv while the shell is in backend/. Keep
+    # docs/DEPLOYMENT.md creates .venv while the shell is in backend/. Keep
     # repository-root layouts as fallbacks for existing installations.
     add_venv(backend_dir / 'venv')
     add_venv(backend_dir / '.venv')
@@ -229,22 +252,94 @@ def _ensure_runtime():
     add_venv(project_dir / '.venv')
     add_venv(Path.home() / 'Environments' / 'quizenv')
 
+    return list(dict.fromkeys(candidates))
+
+
+def _runtime_missing(interpreter=None):
+    if interpreter is None:
+        missing = [name for name in _REQUIRED_MODULES if find_spec(name) is None]
+        missing.extend(' or '.join(group) for group in _REQUIRED_MODULE_GROUPS
+                       if not any(find_spec(name) is not None for name in group))
+        return missing
+    probe = subprocess.run([
+        str(interpreter), '-c',
+        'import importlib.util,json; print(json.dumps([n for n in '
+        + repr(_REQUIRED_MODULES)
+        + ' if importlib.util.find_spec(n) is None] + [" or ".join(g) for g in '
+        + repr(_REQUIRED_MODULE_GROUPS)
+        + ' if not any(importlib.util.find_spec(n) is not None for n in g)]))',
+    ], capture_output=True, text=True, timeout=10)
+    if probe.returncode:
+        raise ValueError('Interpreter could not check dependencies')
+    missing = json.loads(probe.stdout)
+    if not isinstance(missing, list):
+        raise ValueError('Unexpected dependency check result')
+    return missing
+
+
+def _ensure_runtime(launcher_path=None):
+    """Choose a complete environment before re-exec; never bounce between venvs."""
+    missing = _runtime_missing()
+    if not missing and not os.environ.get('QUIZ_VENV'):
+        return
     current = Path(sys.executable).absolute()
+    candidates = _runtime_candidates()
+    if os.environ.get('QUIZ_VENV'):
+        root = Path(os.environ['QUIZ_VENV']).expanduser()
+        candidates = [root] if root.is_file() else [
+            root / 'bin' / 'python', root / 'bin' / 'python3', root / 'Scripts' / 'python.exe',
+        ]
     for candidate in candidates:
         if not candidate.is_file() or not os.access(candidate, os.X_OK):
             continue
         if candidate.absolute() == current:
+            if not missing:
+                return
+            continue
+        try:
+            candidate_missing = _runtime_missing(candidate)
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            continue
+        if candidate_missing:
             continue
         os.execv(
             str(candidate),
-            [str(candidate), str(Path(__file__).resolve()), *sys.argv[1:]],
+            [str(candidate), str(Path(launcher_path or __file__).resolve()), *sys.argv[1:]],
         )
 
     raise SystemExit(
-        'Missing Python packages: '
-        + ', '.join(missing)
-        + '. Activate the Quiz virtual environment or set QUIZ_VENV.'
+        'No complete Python environment found'
+        + (': missing ' + ', '.join(missing) if missing else ' in the selected QUIZ_VENV')
+        + '. Run --diagnose; install the matching requirements in your chosen environment.'
     )
+
+
+def _diagnose(runserver_args):
+    """Read-only checks; deliberately avoid importing Django settings/setup."""
+    print(f'Python: {sys.executable}')
+    missing = _runtime_missing()
+    print('Current Python dependencies: ' + (', '.join(missing) + ' missing' if missing else 'ready'))
+    for candidate in _runtime_candidates():
+        if not candidate.is_file() or not os.access(candidate, os.X_OK):
+            continue
+        try:
+            candidate_missing = _runtime_missing(candidate)
+            status = ', '.join(candidate_missing) + ' missing' if candidate_missing else 'ready'
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            status = 'could not check dependencies'
+        print(f'Environment {candidate}: {status}')
+    root = Path(os.environ.get('SQLITE_ROOT', str(_BACKEND_DIR / 'SQLite'))).expanduser()
+    if not root.is_absolute():
+        root = _BACKEND_DIR / root
+    database = Path(os.environ.get('SQLITE_DB_PATH', str(root / 'db.sqlite3'))).expanduser()
+    if not database.is_absolute():
+        database = _BACKEND_DIR / database
+    print(f'Database: {database} ({"exists" if database.is_file() else "not created"})')
+    print(f'Data directory: {root}')
+    print(f'Bind address: {runserver_args[0]}')
+    print('Transport: HTTP; inherited production HTTPS cookie flags are ignored.')
+    print(f'Frontend origins: {os.environ.get("SQLITE_FRONTEND_ORIGINS", "defaults from SQLite settings")}')
+    print('No database setup, seeding, migration work, or server was run.')
 
 
 def _enabled(name, default=True):
@@ -428,6 +523,10 @@ def _app_needs_makemigrations(backend_dir, app):
 
 def main():
     flags, positional = _split_argv(sys.argv[1:])
+    if flags['diagnose']:
+        flags['no_prompt'] = True
+        _diagnose(_resolve_server_address(positional, flags))
+        return
 
     # Persist launcher-only choices through Django's autoreloader, which
     # re-executes this script after the custom flags have been removed from
@@ -489,6 +588,9 @@ def main():
     database_path = settings.DATABASES['default']['NAME']
     print(f'Using SQLite database: {database_path}')
     print('Using cache: LocMemCache (single process)')
+    if os.environ.get(_RELOADER_ENV_VAR) != 'true':
+        print('Frontend: set VITE_BACKEND_PROXY_TARGET=http://127.0.0.1:'
+              + runserver_args[0].rsplit(':', 1)[-1])
 
     # Setup steps run only in the parent. The child re-exec reached
     # this point with RUN_MAIN=true and would otherwise re-run every

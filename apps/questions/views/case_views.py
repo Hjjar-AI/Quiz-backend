@@ -229,9 +229,16 @@ class CaseDetailView(APIView):
 
     def put(self, request, case_key):
         case = get_object_or_404(_visible_cases_qs(request.user), key=case_key)
+        body = ClinicalCaseSerializer(case, data={
+            field: request.data[field]
+            for field in ('stem', 'title') if field in request.data
+        }, partial=True)
+        if not body.is_valid():
+            return api_error('بيانات غير صالحة', 400, details=body.errors)
+        data = body.validated_data
 
-        if 'stem' in request.data:
-            new_stem = request.data.get('stem')
+        if 'stem' in data:
+            new_stem = data['stem']
             try:
                 updated = QuestionService.update_case_stem(
                     case.key, new_stem, request.user,
@@ -253,10 +260,10 @@ class CaseDetailView(APIView):
                 },
             )
 
-        if 'title' in request.data:
+        if 'title' in data:
             if not can_edit_case(request.user, case):
                 return api_error('غير مصرح لك بتعديل هذه الحالة', 403)
-            new_title = (request.data.get('title') or '').strip() or None
+            new_title = (data['title'] or '').strip() or None
             case.title = new_title
             case.save(update_fields=['title', 'updated_at'])
 

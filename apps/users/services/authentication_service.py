@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.utils import timezone
 
 from ..models import User, LoginAttempt
@@ -110,6 +111,19 @@ class AuthenticationService:
 
     @staticmethod
     def change_password(request, user, current_password, new_password):
+        with transaction.atomic():
+            # Recheck the current hash after any concurrent admin reset, and
+            # avoid persisting stale roles, capabilities, or learning counters.
+            user = User.objects.select_for_update().get(pk=user.pk)
+            success, message = AuthenticationService._change_password_locked(
+                user, current_password, new_password,
+            )
+        if success:
+            update_session_auth_hash(request, user)
+        return success, message
+
+    @staticmethod
+    def _change_password_locked(user, current_password, new_password):
         if not user.check_password(current_password):
             return False, 'كلمة المرور الحالية غير صحيحة'
 
@@ -120,7 +134,6 @@ class AuthenticationService:
 
         user.set_password(new_password)
         user.must_change_password = False
-        user.save()
-        update_session_auth_hash(request, user)
+        user.save(update_fields=['password', 'must_change_password'])
 
         return True, 'تم تغيير كلمة المرور بنجاح'

@@ -100,6 +100,18 @@ class QuestionService:
         from .author_reputation_service import AuthorReputationService
         AuthorReputationService.refresh_users(author_ids)
 
+    @staticmethod
+    def _lock_question_authors(question_ids):
+        # Verification recomputes these users while holding question locks.
+        # Take users first, matching the learner/session lock order.
+        from apps.users.models import User
+        author_ids = Question.objects.filter(
+            pk__in=question_ids, authored_by_id__isnull=False,
+        ).values_list('authored_by_id', flat=True)
+        list(User.objects.select_for_update().filter(
+            pk__in=author_ids,
+        ).order_by('pk').only('id'))
+
     # ── Verified/unverified transition helper ────────────────────────
     #
     # Both `bulk_verify` and `bulk_unverify` needed the same three
@@ -157,7 +169,7 @@ class QuestionService:
             instance = (
                 Question.objects
                 .select_for_update()
-                .select_related('case', 'authored_by', 'owned_by')
+                .select_related('case')
                 .filter(id=question_id)
                 .first()
             )
@@ -353,14 +365,11 @@ class QuestionService:
 
         Returns the new `verified` value.
         """
-        # Capture the author id BEFORE the flip, so the recompute
-        # below uses the same row the write just touched. `authored_by`
-        # is not modified here, but capturing early keeps the recompute
-        # call symmetric with the rest of the service layer (compare
-        # `delete_question`).
-        affected_author_id = question.authored_by_id
-
         with transaction.atomic():
+            # Toggle persisted state without overwriting concurrent content edits.
+            QuestionService._lock_question_authors([question.pk])
+            question = Question.objects.select_for_update().get(pk=question.pk)
+            affected_author_id = question.authored_by_id
             if question.verified:
                 question.verified = False
                 question.verified_by = None
@@ -370,7 +379,10 @@ class QuestionService:
                 question.verified = True
                 question.verified_by = user.username
                 question.verified_at = timezone.now()
-            question.save()
+            question.save(update_fields=[
+                'verified', 'verified_by', 'verified_at', 'verification_notes',
+                'updated_at',
+            ])
 
             # Credit the change to the author, not the owner or the
             # verifier. Verification changes the author's trust score,
@@ -399,6 +411,7 @@ class QuestionService:
     @staticmethod
     def bulk_verify(question_ids, verifier, notes):
         with transaction.atomic():
+            QuestionService._lock_question_authors(question_ids)
             count = Question.objects.filter(id__in=question_ids).update(
                 verified=True,
                 verified_by=verifier,
@@ -414,6 +427,7 @@ class QuestionService:
     @staticmethod
     def bulk_unverify(question_ids):
         with transaction.atomic():
+            QuestionService._lock_question_authors(question_ids)
             count = Question.objects.filter(id__in=question_ids).update(
                 verified=False,
                 verified_by=None,

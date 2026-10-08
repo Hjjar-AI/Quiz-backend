@@ -209,7 +209,7 @@ class Blueprint(TimeStampedModel):
         }
 
 
-class BlueprintWeight(models.Model):
+class BlueprintWeight(InvariantValidationMixin, models.Model):
     """
     Per-category weight for a Blueprint.
 
@@ -228,6 +228,14 @@ class BlueprintWeight(models.Model):
         related_name='blueprint_weights',
     )
     weight = models.FloatField()
+
+    def validate_invariants(self):
+        import math
+        require(
+            isinstance(self.weight, (int, float)) and not isinstance(self.weight, bool)
+            and math.isfinite(self.weight) and self.weight > 0,
+            'weight', 'Weight must be finite and positive.',
+        )
 
     class Meta:
         unique_together = ('blueprint', 'category')

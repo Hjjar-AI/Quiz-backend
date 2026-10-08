@@ -112,7 +112,7 @@ def renew_expired_users():
     renewed = 0
     for user in users:
         if user.renew_if_eligible():
-            user.save()
+            user.save(update_fields=['expires_at'])
             renewed += 1
     return f"{renewed} users renewed"
 

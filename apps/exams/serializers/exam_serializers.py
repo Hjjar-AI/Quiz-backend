@@ -1,5 +1,7 @@
 # backend/apps/exams/serializers/exam_serializers.py
 
+import math
+
 from rest_framework import serializers
 from django.db import transaction
 
@@ -137,13 +139,20 @@ class BlueprintSerializer(serializers.ModelSerializer):
                 weight = float(v)
             except (TypeError, ValueError):
                 raise serializers.ValidationError(f'الوزن لقيمة {k} ليس رقماً صالحاً')
+            if not math.isfinite(weight):
+                raise serializers.ValidationError(f'الوزن لقيمة {k} ليس رقماً صالحاً')
             if weight < 0:
                 raise serializers.ValidationError(f'الوزن لقيمة {k} لا يمكن أن يكون سالباً')
             if weight == 0:
                 continue
             # Coerce keys to strings here so the downstream write path
             # does not need to worry about int-vs-str key variants.
-            cleaned[str(k)] = weight
+            try:
+                category_id = int(k)
+            except (TypeError, ValueError):
+                continue
+            if category_id > 0:
+                cleaned[str(category_id)] = weight
         return cleaned
 
     @transaction.atomic
@@ -211,4 +220,6 @@ class BlueprintSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             blueprint.weight_entries.all().delete()
             if entries_to_create:
+                for entry in entries_to_create:
+                    entry.validate_invariants()
                 BlueprintWeight.objects.bulk_create(entries_to_create)

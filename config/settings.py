@@ -12,8 +12,11 @@ try:
     _env_file = BASE_DIR / '.env'
     if _env_file.exists():
         load_dotenv(_env_file)
-except ImportError:
-    pass
+except ImportError as exc:
+    if (BASE_DIR / '.env').exists():
+        raise ImproperlyConfigured(
+            'python-dotenv is required to load backend/.env. Install it in the active Python environment.'
+        ) from exc
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
@@ -128,25 +131,14 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 # ── Database configuration ─────────────────────────────────────────────
 #
-# The active backend is MariaDB / MySQL. SQLite is intentionally kept out
-# of this normal settings module: use `config.settings_sqlite` through
-# `start_sqlite.py`. Database administration services dispatch by the
-# configured connection vendor, so both settings modules share their public
-# API without changing this MariaDB configuration.
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'quiz'),
-        'USER': os.environ.get('DB_USER', 'quiz'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
-}
+# DB_ENGINE selects the backend; credentials and options come from .env.
+# Default MariaDB preserves existing installations without DB_ENGINE.
+from .database import database_config
+
+try:
+    DATABASES = {'default': database_config(os.environ, BASE_DIR)}
+except ValueError as exc:
+    raise ImproperlyConfigured(str(exc)) from exc
 
 # ── Cache configuration ────────────────────────────────────────────────
 #
