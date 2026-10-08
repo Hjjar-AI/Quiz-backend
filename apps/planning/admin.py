@@ -1,6 +1,7 @@
 # backend/apps/planning/admin.py
 
 from django.contrib import admin
+from django.db import router, transaction
 
 from .models import StudyPlanner, StudyPlannerDay
 
@@ -23,6 +24,16 @@ class StudyPlannerAdmin(admin.ModelAdmin):
     search_fields = ('user__username',)
     filter_horizontal = ('target_categories', 'target_tags')
     inlines = [StudyPlannerDayInline]
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        # Admin saves the planner before its M2M links, so acquire the same
+        # hierarchy-first lock order as the API and tag merge service.
+        using = router.db_for_write(self.model)
+        with transaction.atomic(using=using):
+            if request.method == 'POST':
+                from apps.questions.hierarchy import lock_tag_hierarchy
+                lock_tag_hierarchy(using)
+            return super().changeform_view(request, object_id, form_url, extra_context)
 
     def category_count(self, obj):
         return obj.target_categories.count()

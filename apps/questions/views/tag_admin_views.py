@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.db.models import Count, Q
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
 
 from ..models import Tag, Question, QuestionTag, TAG_NAME_MAX_LENGTH
@@ -140,7 +141,7 @@ class AdminTagRenameView(APIView):
             return api_error('الوسم الجديد موجود مسبقاً', 400)
 
         tag.name = new_name
-        tag.save()
+        tag.save(update_fields=['name'])
         log_privileged_action(request, 'tag.rename', target=tag,
                               details={'old_name': old_name})
         return api_success(message='تمت إعادة التسمية')
@@ -158,7 +159,10 @@ class AdminTagDeleteView(APIView):
     def delete(self, request, name):
         tag = get_object_or_404(Tag, name=name)
         tag_id = tag.id
-        tag.delete()
+        try:
+            tag.delete()
+        except ProtectedError:
+            return api_error('الوسم مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409)
         log_privileged_action(request, 'tag.delete', target_repr=name,
                               details={'tag_id': tag_id})
         return api_success(message='تم حذف الوسم')
@@ -189,7 +193,10 @@ class AdminTagMergeView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'questions.manage_tags'
 
+    @transaction.atomic
     def post(self, request):
+        from ..hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
         body = TagMergeSerializer(data=request.data)
         if not body.is_valid():
             return api_error('بيانات غير صالحة', 400, details=body.errors)
@@ -210,6 +217,7 @@ class AdminTagMergeView(APIView):
             return api_error(err, 400)
 
         target, _ = Tag.objects.get_or_create(name=target_name)
+        target = Tag.objects.select_for_update().get(pk=target.pk)
 
         # Lazy import — `planning.models` has no dependency on
         # `questions.models`, but keeping the import inside the method
@@ -221,16 +229,17 @@ class AdminTagMergeView(APIView):
         # Validate every source before moving anything so the operation cannot
         # partially complete and then discover a cycle.
         sources = list(
-            Tag.objects.filter(name__in={
+            Tag.objects.select_for_update().filter(name__in={
                 str(name).strip() for name in source_tags
                 if str(name).strip() and str(name).strip() != target_name
-            })
+            }).order_by('pk')
         )
         ancestor_ids = set()
         current = target
         while current is not None and current.pk not in ancestor_ids:
             ancestor_ids.add(current.pk)
-            current = current.parent
+            current = (Tag.objects.select_for_update().filter(pk=current.parent_id).first()
+                       if current.parent_id else None)
         if any(src.pk in ancestor_ids for src in sources):
             return api_error(
                 'لا يمكن دمج وسم أب ضمن أحد الوسوم التابعة له',
@@ -262,8 +271,11 @@ class AdminTagMergeView(APIView):
                 # 2. Migrate planner subscriptions.
                 affected_planners = (
                     StudyPlanner.objects
-                    .filter(target_tags=src)
-                    .distinct()
+                    .select_for_update()
+                    .filter(pk__in=StudyPlanner.target_tags.through.objects.filter(
+                        tag_id=src.pk,
+                    ).values_list('studyplanner_id', flat=True))
+                    .order_by('pk')
                 )
                 for planner in affected_planners:
                     planner.target_tags.add(target)

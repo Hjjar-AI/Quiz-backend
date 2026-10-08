@@ -6,6 +6,10 @@ from .models import Setting, PrivilegedAction, Tip
 class SettingAdmin(admin.ModelAdmin):
     list_display = ('key', 'value', 'updated_at')
 
+    def get_queryset(self, request):
+        # The hierarchy mutex is infrastructure, not an editable policy.
+        return super().get_queryset(request).exclude(key='_tag_hierarchy_lock')
+
 @admin.register(PrivilegedAction)
 class PrivilegedActionAdmin(admin.ModelAdmin):
     list_display = (

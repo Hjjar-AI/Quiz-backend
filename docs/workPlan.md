@@ -2,6 +2,8 @@
 
 ## Current priorities
 
+- Verify the four relationship fixes in `backendReview.md` against full HTTP/admin integration and isolated MariaDB/PostgreSQL concurrency: shared-draft delete versus composition/start, content deletion versus SRS/linkage, planner subscriptions versus taxonomy delete/merge, and reciprocal tag reparenting. Source corrections and disposable SQLite checks are complete; live row-lock behavior remains unverified.
+
 1. Verify end-to-end Arabic/English PDF on a host with WeasyPrint/native libraries.
 2. Check small, image-heavy, filtered, verified-only, and front-matter PDF cases.
    - Verify `pdf_mode`/`answer_layout` with DRF and real WeasyPrint: end/after-25 page breaks, question ↔ answer links in PDF viewers, Arabic shaping, long cases/images and compact quiz printing. HTML/CSS boundary/link checks passed; pagination/PDF annotations remain unverified.

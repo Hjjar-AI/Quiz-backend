@@ -5,6 +5,7 @@ import re
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from django.db.models.deletion import ProtectedError
 
 from ..models import Category, CATEGORY_NAME_MAX_LENGTH
 from ..colors import is_valid_hex_color
@@ -177,7 +178,10 @@ class CategoryDeleteView(APIView):
     def delete(self, request, category_id):
         category = get_object_or_404(Category, id=category_id)
         category_name = category.name
-        category.delete()
+        try:
+            category.delete()
+        except ProtectedError:
+            return api_error('التصنيف مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409)
         log_privileged_action(request, 'category.delete', target_repr=category_name,
                               details={'category_id': category_id})
         return api_success(message='تم حذف التصنيف')

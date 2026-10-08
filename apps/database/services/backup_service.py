@@ -270,6 +270,8 @@ class BackupService:
         # was consolidated into TestHistory, and StudyProgress was
         # dead code removed in the same release.
         models_to_clear = [
+            # Remove subscriptions before deleting their protected taxonomy.
+            'planning.StudyPlanner',
             'master_exams.MasterExamQuestion',
             'master_exams.MasterExamAttempt',
             'master_exams.MasterExamAcknowledgement',
@@ -287,7 +289,6 @@ class BackupService:
             'exams.Blueprint',
             'exams.ExamSession',
             'exams.TestHistory',
-            'planning.StudyPlanner',
         ]
 
         with transaction.atomic():

@@ -450,11 +450,18 @@ def delete(exam, delete_mode, request=None):
             author_ids.update(
                 locked.co_attendings.values_list('id', flat=True)
             )
-            drafts_to_delete = Question.objects.filter(
+            candidates = Question.objects.select_for_update().filter(
                 id__in=qids,
                 is_draft=True,
                 draft_owner_id__in=author_ids,
             )
+            candidate_ids = list(candidates.order_by('pk').values_list('id', flat=True))
+            shared_ids = list(MasterExamQuestion.objects.select_for_update().filter(
+                question_id__in=candidate_ids,
+            ).exclude(master_exam=locked).order_by('pk').values_list('question_id', flat=True))
+            drafts_to_delete = Question.objects.filter(
+                pk__in=candidate_ids,
+            ).exclude(pk__in=shared_ids)
             draft_ids = list(drafts_to_delete.values_list('id', flat=True))
             # Capture authors who authored the drafts about to be
             # deleted. Their `authored_by` set shrinks, so their
@@ -467,6 +474,7 @@ def delete(exam, delete_mode, request=None):
             )
             if draft_ids:
                 MasterExamQuestion.objects.filter(
+                    master_exam=locked,
                     question_id__in=draft_ids,
                 ).delete()
             drafts_to_delete.delete()

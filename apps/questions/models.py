@@ -4,7 +4,7 @@ import uuid
 from numbers import Integral
 
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, router, transaction
 from django.utils import timezone
 
 from apps.users.models import User
@@ -93,6 +93,12 @@ class Tag(models.Model):
     def clean(self):
         """Reject self-parenting and longer ancestry cycles."""
         super().clean()
+        self._validate_parent(self._state.db or router.db_for_read(type(self), instance=self))
+
+    def _validate_parent(self, using, locked=False):
+        ancestors = type(self).objects.using(using)
+        if locked:
+            ancestors = ancestors.select_for_update()
         if self.parent_id is None:
             return
         if self.pk is not None and self.parent_id == self.pk:
@@ -107,17 +113,25 @@ class Tag(models.Model):
                 raise ValidationError({'parent': 'Tag hierarchy cannot contain a cycle.'})
             visited.add(current_id)
             current_id = (
-                type(self).objects
+                ancestors
                 .filter(pk=current_id)
                 .values_list('parent_id', flat=True)
                 .first()
             )
 
-    def save(self, *args, **kwargs):
-        # Tag writes are rare, and validating here protects import/admin callers
-        # that do not explicitly invoke Model.full_clean().
-        self.clean()
-        return super().save(*args, **kwargs)
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        from .hierarchy import lock_tag_hierarchy
+        using = using or router.db_for_write(type(self), instance=self)
+        if update_fields is not None:
+            update_fields = frozenset(update_fields)
+            if not update_fields:
+                return
+        with transaction.atomic(using=using):
+            lock_tag_hierarchy(using)
+            if update_fields is None or {'parent', 'parent_id'}.intersection(update_fields):
+                self._validate_parent(using, locked=True)
+            return super().save(force_insert=force_insert, force_update=force_update,
+                                using=using, update_fields=update_fields)
 
     def __str__(self):
         return self.name

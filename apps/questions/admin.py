@@ -13,15 +13,27 @@ from .models import (
 )
 
 
+class PlannerTargetProtectionAdmin(admin.ModelAdmin):
+    def get_deleted_objects(self, objs, request):
+        deleted, counts, permissions, protected = super().get_deleted_objects(objs, request)
+        from apps.planning.models import StudyPlanner
+        relation = 'target_tags' if self.model is Tag else 'target_categories'
+        planners = StudyPlanner.objects.filter(**{
+            relation + '__in': [obj.pk for obj in objs],
+        }).select_related('user').distinct()
+        protected.extend(f'Study planner: {planner.user.username}' for planner in planners)
+        return deleted, counts, permissions, protected
+
+
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(PlannerTargetProtectionAdmin):
     list_display = ('name', 'uuid', 'color', 'icon', 'created_by', 'created_at')
     search_fields = ('name',)
     readonly_fields = ('uuid', 'created_at', 'updated_at')
 
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
+class TagAdmin(PlannerTargetProtectionAdmin):
     list_display = ('name', 'uuid', 'parent')
     search_fields = ('name',)
     readonly_fields = ('uuid',)

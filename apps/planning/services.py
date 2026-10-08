@@ -36,6 +36,9 @@ class StudyPlannerService:
         Both lists are treated as full replacements: whatever was
         there before is cleared and replaced with the incoming set.
         """
+        # Match tag merges: hierarchy first, then planner and its FK links.
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
         planner, _ = StudyPlanner.objects.select_for_update().get_or_create(user=user)
         old_scope = (
             set(planner.target_categories.values_list('pk', flat=True)),

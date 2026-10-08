@@ -112,3 +112,14 @@
 
 - Kept `start.py`/`manage.py` at backend root; moved SQLite launcher, interactive helper and standalone tutorial to the existing `scripts/` package. Updated delegation/imports, backend/frontend/app/data/venv path resolution, current docs/requirements comments and agent guidance. `python start.py sqlite` replaces old root SQLite commands; direct helper: `python scripts/start_sqlite.py`. Tutorial: `python scripts/startup_tutorial.py`. Setup behavior and read-only tutorial contract retained.
 - Six Python AST checks, help commands and all four interactive previews passed from backend and `/tmp`; checked root/import/venv paths, interpreter/argument forwarding and server-mode helper/.env routing (loader/dependency probes substituted). Whitespace passed. No actual servers, GUI, project data/settings reads, builds, migration/test-suite work, installs or versions changed. Live app/reloader/Windows/Termux behavior remains pending.
+# Backend model relationship review — 2026-10-08
+
+- Reviewed all backend model definitions and related production relationship paths. Recorded four unresolved findings in `backendReview.md` and follow-up work in `workPlan.md`; application code unchanged.
+- Disposable in-memory SQLite checks confirmed cross-exam shared-draft deletion, stale learning after case/knowledge deletion, and planner scope broadening after its last target disappears. Tag-cycle concurrency remains a source-derived risk. No project data, migrations/test suites, builds or dependencies were changed.
+
+## Relationship corrections — 2026-10-08
+
+- Preserved master-exam drafts shared with other exams; current-exam-only membership deletion retains other compositions/versions. Added transactional deletion signals to invalidate learning when cases/knowledge objects detach questions.
+- Protected planner targets across taxonomy API/admin/queryset deletion; users remove/replace subscriptions before deletion. API returns envelope 409 and admin previews explain protection. Intentional empty targets retain unrestricted behavior; clear ordering removes planners first.
+- Serialized tag hierarchy writes with a reserved Setting mutex; used current locked ancestry reads and atomic merges. Preserved merge associations, avoided stale parent writes during renames, and aligned planner API/admin lock ordering with merges. No schema changes.
+- Six disposable SQLite scenario groups, isolated Django model checks, production app AST parsing (219 files), and whitespace checks passed. Merge HTTP helpers and clear backup were substituted; source-extracted production leaf functions were exercised. Full DRF/admin integration and live MariaDB/PostgreSQL concurrency remain pending. No project data, migrations/test suites, builds, installs or versions changed.
