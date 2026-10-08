@@ -9,7 +9,7 @@ class UsersConfig(AppConfig):
     verbose_name = 'Users'
 
     def ready(self):
-        # Register the RoleCapabilities cache-invalidation signals.
+        # Register legacy RoleCapabilities cache cleanup after committed writes.
         # The import is inside ready() so it runs after the app
         # registry is populated; a top-level import would fire the
         # signal receiver registration during app loading, which can

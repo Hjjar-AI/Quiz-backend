@@ -5,16 +5,19 @@ from rest_framework.views import APIView
 
 from apps.core.utils import api_error, api_success
 
-from ..models import KnowledgeObject
+from ..models import KnowledgeObject, Question
 from ..serializers import KnowledgeObjectSerializer
 
 
-def _knowledge_queryset():
+def _knowledge_queryset(user):
     return (
         KnowledgeObject.objects
         .select_related('category', 'created_by')
         .prefetch_related('tags')
-        .annotate(question_count=Count('questions', distinct=True))
+        .annotate(question_count=Count(
+            'questions', distinct=True,
+            filter=Q(questions__in=Question.objects.visible_to(user)),
+        ))
     )
 
 
@@ -33,7 +36,7 @@ class KnowledgeObjectListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = _knowledge_queryset()
+        qs = _knowledge_queryset(request.user)
         search = (request.query_params.get('search') or '').strip()
         if search:
             qs = qs.filter(
@@ -70,7 +73,7 @@ class KnowledgeObjectDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
-        return get_object_or_404(_knowledge_queryset(), pk=pk)
+        return get_object_or_404(_knowledge_queryset(self.request.user), pk=pk)
 
     def get(self, request, pk):
         return api_success(data=KnowledgeObjectSerializer(self.get_object(pk)).data)
@@ -82,7 +85,7 @@ class KnowledgeObjectDetailView(APIView):
         serializer = KnowledgeObjectSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
-        instance.question_count = instance.questions.count()
+        instance.question_count = instance.questions.visible_to(request.user).count()
         return api_success(data=KnowledgeObjectSerializer(instance).data)
 
     def delete(self, request, pk):

@@ -29,7 +29,9 @@ class GroupService:
         )
 
     @staticmethod
+    @transaction.atomic
     def update_group(group, name=None, description=None, is_active=None):
+        group = Group.objects.select_for_update().get(pk=group.pk)
         if name is not None:
             group.name = name.strip()
         if description is not None:

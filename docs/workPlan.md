@@ -31,6 +31,8 @@
 
 ## Backend review — pending integration verification (2026-10-08)
 
+- Follow-up: PostgreSQL/MariaDB concurrent bookmark/report writes, API/admin repeat resolution, case/knowledge edits versus SRS, cross-case reassignment, and master start/finish/deletion. Verify role revocations/rollback across workers; request-instance permissions intentionally remain memoized until the next request.
+- With DRF: concurrent partial knowledge edits/revisions, frozen-attempt reporting, and caller-scoped knowledge/tag counts. Thirteen additional isolated scenarios passed; source-extracted count helpers do not establish HTTP integration.
 - Exercise login CSRF, token rotation, account expiry and renewal with Vue and the matching Android transport against actual HTTPS host. Old Android clients omit login CSRF and require the matching update.
 - Exercise concurrent learner lifecycle writes, master-exam composition/start/timeout, verification and content edits on isolated MariaDB; SQLite scenarios cannot prove production locking behavior.
 - With DRF installed, verify case metadata, finite/normalized blueprint weights, password resets and tag merges preserving knowledge/planner/question associations.
@@ -38,6 +40,7 @@
 
 ## Startup — pending environment verification (2026-10-08)
 
+- Interactive `start.py -i`: complete-runtime combined launch, proxy/login/media, occupied ports and Ctrl+C/companion-exit descendant cleanup on Linux/Termux/Windows. Menu/command checks passed; live app integration remains unverified. Uses existing schemas without setup/seeding.
 - Complete runtime: simultaneous SQLite/MariaDB with separate Vite ports; verify login/CSRF/media/account isolation.
 - Exercise explicit Windows/Termux virtualenvs and Termux-private data directories.
 - Verify MariaDB/cache connectivity and Vite config loading; diagnostic checks are deliberately read-only and do not establish service availability.

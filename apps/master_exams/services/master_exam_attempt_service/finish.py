@@ -24,21 +24,21 @@ def finish(attempt, forced=False):
 
 
 def _finish_locked(attempt, forced):
-    now = timezone.now()
-
     with transaction.atomic():
         # Learning side effects lock this learner too. Acquire it before the
         # attempt, matching ordinary session start/answer/finish operations.
         User.objects.select_for_update().only('id').get(pk=attempt.user_id)
+        exam = MasterExam.objects.select_for_update().get(pk=attempt.master_exam_id)
         fresh = (
             MasterExamAttempt.objects
             .select_for_update()
-            .select_related('master_exam')
             .get(pk=attempt.pk)
         )
+        fresh.master_exam = exam
         if fresh.is_complete:
             return fresh
 
+        now = timezone.now()
         is_forced = (
             forced
             or now > fresh.deadline_at + timedelta(seconds=_grace_seconds())

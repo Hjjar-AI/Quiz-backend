@@ -75,3 +75,17 @@
 - Checked documentation targets, moved content and whitespace; no builds, test-suite or migration work, dependency/version changes or runtime changes were performed.
 
 - Documentation compaction: retained commands, technical literals, dates, headings/links and checklist states; consolidated repeated prose/verification scope. Documentation/whitespace checks only.
+
+## Backend linked-logic follow-up — 2026-10-08
+
+- Serialized bookmark/report writes; retained first-resolution attribution in API/admin, with actual bulk counts and unrelated integrity failures propagated. Master reports use frozen membership.
+- Replaced shared permission caching with current DB reads plus request-instance memoization; legacy cleanup follows commit. Malformed role JSON fails closed.
+- Replaced nullable joined locks with separate ordered question/case/knowledge locks for editing/SRS. Master finish locks user → exam → attempt and checks time after locking.
+- Case resolution protects populated stems from stale callers. Knowledge/group partial edits reread locked state, preserving independent changes and current knowledge revisions. Knowledge/tag counts hide other users' drafts.
+- Thirteen new isolated in-memory scenarios and the earlier thirteen passed; AST parsing passed for 226 production Python files and whitespace checks passed. Count queries were source-extracted without DRF; knowledge serializer remains source-reviewed. No live project DB, migration/test-suite, build, installation or version work. PostgreSQL/MariaDB concurrency and full DRF integration remain pending; see `backendReview.md` and `workPlan.md`.
+
+## Interactive development launch — 2026-10-08
+
+- `python start.py -i` / `--interactive`: database selector, combined backend/frontend or backend-only launch, read-only diagnostics and command preview. Optional ports/LAN/venv/SQLite data root. Existing CLI behavior preserved; credentials remain in `.env`.
+- Combined mode sets Vite API/media proxy and browser origin per process, checks frontend prerequisites and supervises both processes with Ctrl+C/companion-exit cleanup. No backend autoreloader; frontend hot reload retained. Menu uses existing schemas and disables SQLite setup/seeding.
+- Inline menu/routing/validation/cancellation/preview checks and harmless child exit/cleanup passed; AST/whitespace passed. No real app server, database access/setup, builds, dependency installs, migration/test-suite or version work. Full Windows/Termux/runtime/frontend integration remains pending.

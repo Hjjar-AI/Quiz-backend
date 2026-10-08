@@ -9,6 +9,21 @@ KNOWLEDGE_CONTENT_FIELDS = (
 )
 
 
+def with_locked_learning_content(queryset):
+    """Lock nullable assessed relations separately, without outer-join locks.
+
+    Evaluate only inside a transaction, after locking the question rows.
+    Related rows are locked in a consistent case/knowledge and primary-key order.
+    """
+    from django.db.models import Prefetch
+    from apps.questions.models import ClinicalCase, KnowledgeObject
+
+    return queryset.prefetch_related(
+        Prefetch('case', queryset=ClinicalCase.objects.select_for_update().order_by('pk')),
+        Prefetch('knowledge_object', queryset=KnowledgeObject.objects.select_for_update().order_by('pk')),
+    )
+
+
 def knowledge_learning_content(obj):
     return {field: getattr(obj, field) for field in KNOWLEDGE_CONTENT_FIELDS}
 

@@ -33,3 +33,23 @@ Reviewed model definitions and principal API/service paths for authentication, p
 - MariaDB concurrency: simultaneous start/resume/answer/pause/finish/cleanup, verification and content edits; lock ordering was reviewed in source, but SQLite cannot establish production row-lock behavior or absence of all deadlocks.
 - Deploy compatible Android source with login CSRF enforcement. Older Android clients explicitly omit the token and will receive 403 until updated. Verify login, token rotation, cookies and expiry against actual HTTPS deployment.
 - Existing work-plan PDF/import/export and fresh-database verification gates remain pending. No migration history was audited and no schema update was created.
+- Follow-up fixes below also require live PostgreSQL/MariaDB and DRF verification.
+
+## Follow-up: concurrency, permissions and linked content — 2026-10-08
+
+| Finding | Correction and related paths |
+| --- | --- |
+| Concurrent reports could bypass MariaDB's unsupported partial unique index; bookmark toggles could race. | Feedback writes lock the learner before reading/writing feedback rows. Duplicate handling retains its savepoint and propagates unrelated integrity failures. Direct ORM writers still need equivalent serialization on MariaDB. |
+| Repeated API/admin resolutions replaced the first moderator's attribution. | Both use conditional unresolved-row updates through one service; bulk administration reports actual changes. |
+| Shared permission caching could retain revoked grants or publish rolled-back grants. | Role resolution reads the database and keeps request-instance memoization. Legacy cache cleanup waits for commit; malformed stored role JSON fails closed. This adds a role lookup per resolved user instance. |
+| Nullable joined locks fail on PostgreSQL and obscure the related rows being locked. | Question editing and SRS lock questions, then case/knowledge rows separately in ordered queries. Learning fingerprints and invalidation remain protected. Master finishing explicitly locks user → exam → attempt, matching start. |
+| A stale case instance could overwrite a populated shared stem. | Every case resolver caller now rereads/locks current state before filling an empty stem; existing populated stems are retained. |
+| Partial knowledge/group edits could write unrelated stale fields and lose concurrent changes. | Updates reread locked rows before applying the supplied fields; knowledge revisions advance from current state. |
+| Tag/knowledge counts exposed other users' private drafts. | List/detail/update counts use the same visible-question scope as question reads; verified tag counts apply both filters. Response shapes are unchanged. |
+| Master reporting used current composition rather than the attempt snapshot; finishing timed the request before waiting for locks. | Reports check frozen question IDs, matching model invariants. Finish classifies timeout and records completion time after acquiring locks. |
+
+- Thirteen additional disposable in-memory SQLite scenarios passed: bookmark state; report dedup/resolution/bulk attribution; rollback/error propagation; stale case stems; permission cache/revocation/rollback; commit-only cleanup; nullable lock-query structure; stale learning evidence; delayed finish; malformed role JSON; stale group edits; knowledge counts; tag counts. Earlier thirteen scenarios also passed again.
+- Count checks execute source-extracted production query helpers without DRF. Nullable-lock checks inspect query structure and execute on SQLite; they do not prove PostgreSQL SQL/locking or server-database concurrency. Knowledge serializer changes remain source-reviewed pending DRF.
+- AST parsing passed for 226 production Python files, excluding migration/test-suite paths; final diff whitespace checks passed.
+- Related feedback, case-resolution, permission, exam, learning, administration and Vue/Android transport callers were traced. No endpoint/request shape changed; clients need no payload changes for this pass.
+- No project database, migration/test-suite files, builds, packaging, dependency installation or versions were changed. DRF/pandas remain unavailable; live HTTP and PostgreSQL/MariaDB integration remain pending.

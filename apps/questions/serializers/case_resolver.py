@@ -15,9 +15,12 @@ Keeping it separate makes that cross-module contract visible and
 lets the helper be exercised in isolation.
 """
 
+from django.db import transaction
+
 from ..models import ClinicalCase
 
 
+@transaction.atomic
 def _resolve_case(case_key, user, *, stem=None, existing_case=None):
     """
     Resolve a case_key string to a ClinicalCase instance, creating the
@@ -34,8 +37,8 @@ def _resolve_case(case_key, user, *, stem=None, existing_case=None):
     so concurrent edits serialize on the case row rather than racing
     on individual questions.
 
-    `existing_case` is the case the question already points at, used
-    to skip the get_or_create round-trip when the key is unchanged.
+    `existing_case` remains accepted for caller compatibility. Always read
+    current state under a lock: the caller's case may have an obsolete stem.
     """
     if case_key is None:
         return None
@@ -47,21 +50,18 @@ def _resolve_case(case_key, user, *, stem=None, existing_case=None):
     if stem:
         normalized_stem = str(stem).strip() or None
 
-    if existing_case is not None and existing_case.key == key:
-        if normalized_stem and not existing_case.stem:
-            existing_case.stem = normalized_stem
-            existing_case.save(update_fields=['stem', 'updated_at'])
-        return existing_case
-
     created_by_user = user if getattr(user, 'is_authenticated', False) else None
-    case, created = ClinicalCase.objects.get_or_create(
-        key=key,
-        defaults={
-            'authored_by': created_by_user,
-            'stem': normalized_stem,
-        },
-    )
-    if not created and normalized_stem and not case.stem:
+    case = ClinicalCase.objects.select_for_update().filter(key=key).first()
+    if case is None:
+        case, created = ClinicalCase.objects.get_or_create(
+            key=key,
+            defaults={'authored_by': created_by_user, 'stem': normalized_stem},
+        )
+        if created:
+            return case
+        # get_or_create can return a row inserted by a concurrent writer.
+        case = ClinicalCase.objects.select_for_update().get(pk=case.pk)
+    if normalized_stem and not case.stem:
         case.stem = normalized_stem
         case.save(update_fields=['stem', 'updated_at'])
     return case

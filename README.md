@@ -28,7 +28,7 @@ See `docs/DEPLOYMENT.md` for production OS packages and service configuration.
 
 ## Quick start: SQLite
 
-Ports, SQLite/MariaDB switching, Termux/Windows and diagnostics: [START_HERE.md](docs/START_HERE.md). Entry points: `python start.py sqlite` or `.env`-selected `python start.py`.
+Interactive startup: `python start.py -i` chooses the database and can launch backend + frontend with matching ports/proxy. Uses existing databases without setup/seeding. Ports, database switching, Termux/Windows and diagnostics: [START_HERE.md](docs/START_HERE.md). CLI: `python start.py sqlite` or `.env`-selected `python start.py`.
 
 ```bash
 python -m venv .venv

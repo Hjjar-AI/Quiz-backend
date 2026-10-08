@@ -300,7 +300,7 @@ class MasterExamFlagView(APIView):
             return api_error('بيانات غير صالحة', 400, details=serializer.errors)
 
         question_id = serializer.validated_data['question_id']
-        in_exam = exam.exam_questions.filter(question_id=question_id).exists()
+        in_exam = question_id in (attempt.question_ids or [])
         if not in_exam:
             return api_error('السؤال ليس جزءاً من هذا الامتحان', 400)
 

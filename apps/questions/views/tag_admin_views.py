@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 
-from ..models import Tag, QuestionTag, TAG_NAME_MAX_LENGTH
+from ..models import Tag, Question, QuestionTag, TAG_NAME_MAX_LENGTH
 from ..serializers import TagRenameSerializer, TagMergeSerializer
 from apps.core.permissions import HasCapability
 from apps.core.utils import api_success, api_error
@@ -70,11 +70,12 @@ class TagListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        visible = Q(questiontag__question__in=Question.objects.visible_to(request.user))
         tags = Tag.objects.annotate(
-            count=Count('questiontag'),
+            count=Count('questiontag', filter=visible),
             verified_count=Count(
                 'questiontag__question',
-                filter=Q(questiontag__question__verified=True),
+                filter=visible & Q(questiontag__question__verified=True),
             ),
         )
         data = [

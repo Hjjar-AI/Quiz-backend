@@ -2,6 +2,18 @@
 
 Run `python` commands from `backend/`; use `python3` where needed. Absolute script paths work elsewhere; relative data paths use `backend/`.
 
+## Interactive launch
+
+```bash
+python start.py -i
+```
+
+Choose `.env`, separate SQLite, PostgreSQL or MariaDB, then backend + frontend, backend only, read-only diagnostics or command preview. Enter accepts defaults; `0` cancels menus. Optional customization covers ports, LAN browser address, Python venv and separate SQLite data directories.
+
+The combined launch sets Vite's API/media proxy and backend browser origin for the selected ports, overriding inherited frontend API/proxy settings for that process. No `.env` edits are needed; credentials remain there. Open the printed frontend URL once Vite is ready. Ctrl+C stops both processes; either process exiting stops its companion. Backend auto-reload is disabled in this menu; restart after backend source edits. Frontend hot reload remains enabled.
+
+Requires existing database/schema and installed Python dependencies; combined mode also requires pnpm and installed frontend dependencies. The menu skips SQLite schema setup/seeding and never installs dependencies or provisions databases. Use diagnostics first for startup failures. `.env` mode defaults to port 5005 even when its selected engine is SQLite; separate SQLite defaults to 5004. Existing CLI commands below retain their behavior.
+
 ## Choose the database
 
 Set the engine in `backend/.env`, alongside its credentials:

@@ -70,6 +70,9 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        # DRF may have fetched this instance before another editor committed.
+        # Apply a partial update to current state, preserving unrelated edits.
+        instance = KnowledgeObject.objects.select_for_update().get(pk=instance.pk)
         names = validated_data.pop('tag_names', None)
         validated_data['version'] = instance.version + 1
         instance = super().update(instance, validated_data)

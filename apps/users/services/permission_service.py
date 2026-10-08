@@ -17,72 +17,41 @@ the role default. This is the standard three-state model
 
 Caching
 -------
-Role defaults are cached under a per-role key for _CACHE_TTL seconds.
-The cache is invalidated explicitly when the panel updates a role via
-`invalidate_role_capabilities`. Per-user overrides are not cached here
-because Django fetches the User instance fresh on every request, so
-the override dict is always current.
-
-A per-instance memo on the User object short-circuits repeated calls
-to `user.has_capability()` inside a single request. The memo is
-deliberately attached to the instance rather than to the cache, so it
-dies with the request.
+Only the request's User instance memoizes resolved capabilities. Shared role
+caches can retain revoked grants after a transaction commits or publish grants
+that are later rolled back. Role defaults therefore read the database directly.
 """
 from django.core.cache import cache
+from django.db import transaction
 
 from ..capabilities import CAPABILITIES, DEFAULT_ROLE_CAPABILITIES
 
 
-_CACHE_KEY = 'role_caps:{role}'
-_CACHE_TTL = 300  # seconds
-
-
 def role_capabilities(role):
-    """
-    Return the resolved capability set for a role.
-
-    Reads from the cache first. On a miss, reads RoleCapabilities and
-    intersects with CAPABILITIES so a stale DB row cannot grant a
-    capability that no longer exists. Falls back to the seed constant
-    when there is no DB row at all (e.g. a fresh deployment where
-    `seed_capabilities` has not run yet).
-    """
+    """Read current role defaults, falling back only when no row exists."""
     if not role:
         return set()
-
-    key = _CACHE_KEY.format(role=role)
-    cached = cache.get(key)
-    if cached is not None:
-        return set(cached)
 
     # Lazy import to avoid a circular import at module load:
     # permission_service → models → permission_service.
     from ..models import RoleCapabilities
 
     row = RoleCapabilities.objects.filter(role=role).first()
-    if row and isinstance(row.capabilities, list):
-        caps = set(row.capabilities) & CAPABILITIES
-    else:
-        caps = set(DEFAULT_ROLE_CAPABILITIES.get(role, ()))
+    if row is None:
+        return set(DEFAULT_ROLE_CAPABILITIES.get(role, ()))
+    if not isinstance(row.capabilities, list):
+        return set()
+    # Admin/raw ORM JSON writes must not crash resolution or restore defaults.
+    return {cap for cap in row.capabilities if isinstance(cap, str) and cap in CAPABILITIES}
 
-    cache.set(key, list(caps), _CACHE_TTL)
-    return caps
 
-
-def invalidate_role_capabilities(role=None):
-    """
-    Drop the cache for one role, or every role if `role` is None.
-
-    Call this after any write to a RoleCapabilities row. The panel
-    does this automatically; a manual DB edit will not, so if you edit
-    rows directly, run `manage.py seed --only capabilities` (which invalidates
-    all roles at the end) or restart the process.
-    """
-    if role:
-        cache.delete(_CACHE_KEY.format(role=role))
-        return
-    for r in DEFAULT_ROLE_CAPABILITIES:
-        cache.delete(_CACHE_KEY.format(role=r))
+def invalidate_role_capabilities(role=None, *, using=None):
+    """Compatibility hook: remove legacy shared entries after a committed write."""
+    roles = (role,) if role else tuple(DEFAULT_ROLE_CAPABILITIES)
+    transaction.on_commit(
+        lambda: cache.delete_many([f'role_caps:{item}' for item in roles]),
+        using=using,
+    )
 
 
 def resolve_for_user(user):

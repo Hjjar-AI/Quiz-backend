@@ -4,7 +4,6 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg, Count
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 
 from apps.questions.models import Question
 from apps.questions.serializers import QuestionSerializer
@@ -344,8 +343,5 @@ class AdminResolveFlagView(APIView):
 
     def post(self, request, flag_id):
         flag = get_object_or_404(QuestionFlag, id=flag_id)
-        flag.resolved = True
-        flag.resolved_by = request.user.username
-        flag.resolved_at = timezone.now()
-        flag.save()
+        FeedbackService.resolve_flag(flag.pk, request.user)
         return api_success(message='تم حل الإبلاغ')

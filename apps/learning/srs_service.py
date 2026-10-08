@@ -9,6 +9,7 @@ from django.utils import timezone
 from .models import UserQuestionAttempt
 from .confidence import normalize_confidence, is_confident as confidence_is_high
 from apps.questions.models import Question
+from .evidence import with_locked_learning_content
 
 logger = logging.getLogger(__name__)
 
@@ -200,12 +201,10 @@ class SRSService:
         # only an existing attempt does not protect a missing row.
         from apps.users.models import User
         User.objects.select_for_update().only('id').get(pk=user.pk)
-        questions = {
-            question.pk: question
-            for question in Question.objects.select_for_update().filter(
-                pk__in=live_qids,
-            ).select_related('knowledge_object', 'case').order_by('pk')
-        }
+        locked_questions = with_locked_learning_content(
+            Question.objects.select_for_update().filter(pk__in=live_qids).order_by('pk'),
+        )
+        questions = {question.pk: question for question in locked_questions}
         now = timezone.now()
         recorded = 0
         from .evidence import question_learning_fingerprint

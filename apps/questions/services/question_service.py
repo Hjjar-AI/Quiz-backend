@@ -164,15 +164,12 @@ class QuestionService:
     @staticmethod
     def update_question(question_id, data, user):
         from ..serializers import QuestionUpdateSerializer, _resolve_case
+        from apps.learning.evidence import with_locked_learning_content
 
         with transaction.atomic():
-            instance = (
-                Question.objects
-                .select_for_update()
-                .select_related('case')
-                .filter(id=question_id)
-                .first()
-            )
+            instance = with_locked_learning_content(
+                Question.objects.select_for_update().filter(id=question_id),
+            ).first()
             if instance is None:
                 raise Question.DoesNotExist(
                     f'Question {question_id} does not exist'

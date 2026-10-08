@@ -2,6 +2,7 @@
 """Start an HTTP development server using backend/.env database settings.
 
     python start.py
+    python start.py --interactive
     python start.py env 5005 --diagnose
     python start.py env --frontend-origin http://localhost:5174
     python start.py sqlite 5004 --data-root /path/to/local-data
@@ -25,6 +26,9 @@ from config.database import database_engine
 
 def main():
     argv = sys.argv[1:]
+    if argv in (['--interactive'], ['-i']):
+        from interactive_launch import main as interactive_main
+        raise SystemExit(interactive_main())
     if argv and argv[0] in {'--help', '-h'}:
         print(__doc__)
         return
