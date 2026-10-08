@@ -46,6 +46,15 @@
   for files/cache/cookies and production versus HTTP development behavior.
 - Keep startup portable across virtualenvs, machines and Termux. Diagnostics must
   avoid database writes/setup; do not run setup implicitly during debugging.
+- Fresh SQLite setup: normal `python start.py sqlite` generates initial migrations
+  only for model apps without migration files, then applies migrations and runs
+  setup/seeding. If the database and app migration folders were removed, this creates
+  the schema from current models; separate additive migrations are unnecessary for
+  that fresh workflow. If migration files remain, deleting the database alone does
+  not generate migrations for model changes. `manage.py runserver` and interactive
+  `python start.py -i` skip schema setup. Explain these distinctions without running
+  setup or migration work unless explicitly requested; never infer verified schema
+  readiness from deletion or source checks. See [startup](docs/START_HERE.md).
 - PostgreSQL configuration exists; live integration and database administration
   support remain separate pending work. Check [startup](docs/START_HERE.md) and
   [review limits](docs/backendReview.md) before claiming backend support.
