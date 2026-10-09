@@ -51,6 +51,14 @@ class KnowledgeObjectListCreateView(APIView):
         category = request.query_params.get('category')
         if category:
             qs = qs.filter(category_id=category)
+        qs = qs.order_by('title', 'pk')
+        if 'page' in request.query_params or 'per_page' in request.query_params:
+            items, meta = paginate(qs, request)
+            return api_success(data={
+                'items': KnowledgeObjectSerializer(items, many=True).data,
+                'count': meta['total'], **meta,
+            })
+        # Existing autocomplete callers retain their bounded response contract.
         return api_success(data={
             'items': KnowledgeObjectSerializer(qs[:500], many=True).data,
             'count': qs.count(),

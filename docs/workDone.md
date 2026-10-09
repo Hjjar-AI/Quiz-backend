@@ -62,3 +62,11 @@ New ContentWriteReceipt has a caller-scoped unique operation UUID, action, canon
 Category/Case fields and ContentWriteReceipt require matching fresh schema and clients; no schema setup/migrations/database action was performed. Normal fresh SQLite startup with old app migration folders removed can generate initial schema; deleting only the database while old migration files remain is insufficient. Source checks do not establish live database locking, deadlock behavior across all ORM writers, HTTP or client/device correctness.
 
 Production source AST/whitespace checks only; suites/builds/setup/migrations were not run.
+
+## 2026-10-09 full Android content-management pagination
+
+Case and knowledge-object list endpoints now accept page/per_page for complete browsing with stable key/PK and title/PK ordering, existing filters/visibility and shared bounded page sizes. Responses include total/page/per_page/total_pages; knowledge count remains available. Requests without pagination parameters retain the legacy autocomplete contract and limits, keeping current Vue/native pickers compatible.
+
+Android management Next/Previous now fetch server pages and render the returned batch directly. Search starts at page 1; retry retains the requested page and filters while failures preserve the previous readable page, counts, selections and editor drafts. Refresh after deletion retries the last available page when the old page is beyond the new total. Pagination controls and handlers retain recovery/permission/uncertain-write guards. The page count label is bilingual.
+
+Verification: two affected Python production ASTs, native lexical/resource/XML/bilingual-placeholder checks and CRLF-aware whitespace checks passed. No builds/compilation, automated suites, migrations, database/setup/data generation or live HTTP/device checks. This pagination change needs matching backend/native source but introduces no schema changes. Verify datasets beyond 100 cases/500 knowledge objects, searches/filter changes, failed next-page requests/retry, final-page deletion and retained drafts against the running backend.

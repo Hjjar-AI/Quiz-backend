@@ -14,7 +14,7 @@ from ..serializers import (
     QuestionSerializer,
 )
 from ..services import QuestionService
-from apps.core.utils import api_success, api_error
+from apps.core.utils import api_success, api_error, paginate
 from apps.core.audit import log_privileged_action
 from ..case_policy import can_edit_case
 
@@ -95,7 +95,8 @@ class CaseListView(APIView):
 
     Query params:
         search  — substring match against key or title (>= 1 char)
-        limit   — capped at 100, default 50
+        limit   — legacy picker cap of 100, default 50
+        page/per_page — opt into complete paginated browsing
 
     QUESTION COUNT SCOPING
     ----------------------
@@ -145,8 +146,11 @@ class CaseListView(APIView):
                 Q(key__icontains=search) | Q(title__icontains=search),
             )
 
-        total = qs.count()
-        items = qs.order_by('key')[:limit]
+        qs = qs.order_by('key', 'pk')
+        if 'page' in request.query_params or 'per_page' in request.query_params:
+            items, meta = paginate(qs, request)
+        else:
+            items, meta = qs[:limit], {'total': qs.count()}
 
         serializer = ClinicalCaseSerializer(
             items, many=True,
@@ -154,7 +158,7 @@ class CaseListView(APIView):
         )
         return api_success(data={
             'items': serializer.data,
-            'total': total,
+            **meta,
         })
 
 
