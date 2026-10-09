@@ -11,6 +11,19 @@ from ..filters import filter_questions
 class QuestionService:
 
     @staticmethod
+    def _authorize_current(question, user, action):
+        from django.http import Http404
+        from rest_framework.exceptions import PermissionDenied
+        any_cap = f'questions.{action}_any'
+        own_cap = f'questions.{action}_own'
+        if user.has_capability(any_cap):
+            return
+        if not Question.objects.visible_to(user).select_for_update().filter(pk=question.pk).exists():
+            raise Http404
+        if not (user.has_capability(own_cap) and question.owned_by_id == user.pk):
+            raise PermissionDenied()
+
+    @staticmethod
     def _visible_qs(user=None):
         """
         Base queryset for every read path in this service.
@@ -175,6 +188,8 @@ class QuestionService:
                     f'Question {question_id} does not exist'
                 )
 
+            QuestionService._authorize_current(instance, user, 'edit')
+
             # The serializer validates and (for the case FK and tags)
             # mutates the instance in place. We do NOT call .save()
             # through the serializer for the version-bump path — the
@@ -279,7 +294,7 @@ class QuestionService:
         return instance
 
     @staticmethod
-    def delete_question(question_id):
+    def delete_question(question_id, user, *, expected_version):
         """
         Delete a question and refresh every affected author's cached
         reputation counters.
@@ -308,17 +323,14 @@ class QuestionService:
         `authored_by` FK on the deleted row is gone by the time the
         recompute runs.
         """
-        question = Question.objects.get(id=question_id)
-
-        affected_author_ids = []
-        if question.authored_by_id is not None and not question.is_draft:
-            # A draft never contributed to the counter, so deleting
-            # one cannot change it — skip the recompute in that case.
-            affected_author_ids.append(question.authored_by_id)
-
+        from django.shortcuts import get_object_or_404
         with transaction.atomic():
+            question = get_object_or_404(Question.objects.select_for_update(), pk=question_id)
+            QuestionService._authorize_current(question, user, 'delete')
+            from apps.core.revisions import check_revision
+            check_revision(question.version, expected_version)
+            affected_author_ids = [question.authored_by_id] if question.authored_by_id is not None and not question.is_draft else []
             question.delete()
-
         if affected_author_ids:
             QuestionService._recompute_author_trust(affected_author_ids)
 

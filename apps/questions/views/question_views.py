@@ -6,6 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
+from apps.core.revisions import expected_revision
 from ..models import Question
 from ..serializers import (
     QuestionSerializer,
@@ -286,7 +287,7 @@ class QuestionDetailView(APIView):
         from django.db.models import ProtectedError
 
         try:
-            QuestionService.delete_question(question_id)
+            QuestionService.delete_question(question_id, request.user, expected_version=expected_revision(request))
         except ProtectedError:
             return api_error(
                 'هذا السؤال مستخدم في امتحان رئيسي — احذفه من الامتحان أولاً',

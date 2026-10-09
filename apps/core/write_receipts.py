@@ -45,4 +45,7 @@ class ContentReceiptView(APIView):
             raise Http404
         # Only the caller's operation identity; content uses its ordinary
         # independent visibility/ownership gates when subsequently fetched.
-        return api_success(data={'action': receipt.action, 'target_id': receipt.target_id})
+        from apps.questions.models import Category, KnowledgeObject
+        target_model = {'category.create': Category, 'knowledge.create': KnowledgeObject}.get(receipt.action)
+        exists = target_model is not None and target_model.objects.filter(pk=receipt.target_id).exists()
+        return api_success(data={'action': receipt.action, 'target_id': receipt.target_id, 'target_exists': exists})

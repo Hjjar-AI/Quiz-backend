@@ -1,3 +1,5 @@
+from django.db import transaction
+from apps.core.revisions import expected_revision, check_revision
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -97,10 +99,14 @@ class KnowledgeObjectDetailView(APIView):
         instance.question_count = instance.questions.visible_to(request.user).count()
         return api_success(data=KnowledgeObjectSerializer(instance).data)
 
+    @transaction.atomic
     def delete(self, request, pk):
-        instance = self.get_object(pk)
+        # Match linked-content lock ordering before taking the parent row.
+        list(Question.objects.select_for_update().filter(knowledge_object_id=pk).order_by('pk').values_list('pk', flat=True))
+        instance = get_object_or_404(KnowledgeObject.objects.select_for_update(), pk=pk)
         if not _may_manage(request.user, instance):
             return api_error('غير مصرح لك بحذف هذا الهدف المعرفي', 403)
+        check_revision(instance.version, expected_revision(request))
         instance.delete()
         return api_success(message='تم حذف الهدف المعرفي')
 

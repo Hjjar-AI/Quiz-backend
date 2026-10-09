@@ -19,3 +19,9 @@ Run environment/system checks only when authorized and dependencies are availabl
 Verify the new category/case/tag/settings revision contracts and category/knowledge creation receipts with matching clients, fresh schema and real lost-response/concurrent HTTP writes; see [contract log](learningConsistency.md). Source implementation is complete; runtime/schema verification is pending.
 
 Full Android case/knowledge management pagination is implemented in source. Verify large result sets, page failures/retry, searches and deleted final pages with matching backend/app; see the latest [work log](workDone.md).
+
+## 2026-10-09 project rescan follow-up
+
+The [new source review](../../Android/docs/projectRescan.md) identifies seven additional bounded gaps: web account-generation guards; orphan pending-create/form association; transactional question ownership checks; knowledge-delete revisions; terminal/deleted receipt recovery; web conflict resolution; learner case pagination/read retention. All seven are now addressed in source; remaining checks are runtime release gates.
+
+The seven rescan findings are source-complete. Validate coordinated DELETE/receipt contracts, account-switch cancellation, conflict review, orphan-save recovery and learner paging; see the latest [work log](workDone.md).
