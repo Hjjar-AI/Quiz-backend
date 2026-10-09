@@ -14,3 +14,7 @@ Earlier AST/source/isolated SQLite checks are preserved in the archive and do no
 ## 2026-10-09 cross-client source comparison
 
 Compared current production routes and analytics/content/result/export contracts with Vue actions and Android services/screens/DTOs. Confirmed backend supports the remaining native analytics gate/period, export order and author-rank payload; recorded UI gaps in [Android review](../../Android/docs/functionalityReview.md). Compacted work records and corrected stale unconditional migration-readiness wording. Documentation only; no production fixes, deployment, database writes, build, suites, migrations or version changes.
+
+## 2026-10-09 agent guidance maintenance
+
+Compacted shared working rules without relaxing explicit build/suite/migration/version restrictions; added source-evidenced cross-client review and bounded-completion guidance. Captured uncertain toggle/create recovery, structured errors and dependent/profile freshness; Android also records compiler-signature/opt-in/cancellation/visibility checks. Frontend AGENTS now links its detailed instructions. Documentation links and whitespace checked; no production or runtime work.

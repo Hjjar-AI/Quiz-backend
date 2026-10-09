@@ -2,29 +2,32 @@
 
 ## Working rules
 
-- Read applicable parent/local agent instructions, [workPlan](docs/workPlan.md) and
-  [workDone](docs/workDone.md); check the working tree and affected folders first.
-- Trace related production code and callers before fixing a defect; keep models,
-  services, permissions, configuration and client contracts consistent. Prefer
-  critical, focused corrections that address the cause and preserve existing behavior.
-- Preserve unrelated/current user edits. Do not commit unless requested. Continue
-  authorized work without repeated confirmation; ask only for missing decisions.
-- Do not inspect, review, edit or create migration files without an explicit migration
-  request. Fresh-project/model edits do not authorize migration work.
-- Do not inspect, review or run test suites without an explicit test-work request;
-  exclude test directories and test-named files from source-content searches.
-- Do not run Gradle, builds, compilation or packaging without explicit permission;
-  supplied logs or user-run builds are not authorization. Change versions only
-  when explicitly requested.
-- Simple scripts and source/XML/AST/whitespace checks are allowed. Report their
-  actual scope; do not claim builds, runtime/device checks or database concurrency.
-- If known five-hour usage reaches 20% remaining, finish the bounded step and stop.
-- Keep only `start.py` and Django `manage.py` as root Python entry points; place
-  supporting launch/tutorial utilities in `scripts/`, updating paths and callers.
-- Keep root README/Agents files discoverable; supporting Markdown belongs in `docs/`.
-  Update links when moving docs. Record remaining work in the plan and completed
-  portions/limits in the work log; keep implementation separate from verification.
-- Communicate concisely in English unless asked otherwise; state changes and limits.
+- Read applicable instructions and [workPlan](docs/workPlan.md)/[workDone](docs/workDone.md)
+  first; inspect current production source and the working tree. Preserve unrelated
+  edits and existing authorization; do not commit unless requested.
+- Trace affected contracts and callers before making focused corrections. Do not
+  invent endpoints, permissions, idempotency or verification evidence.
+- No migration inspection/changes/setup, automated-suite inspection/work, or
+  Gradle/build/compilation/packaging without an explicit request. Supplied logs and
+  user-run builds authorize source troubleshooting, not agent-run builds. No version
+  changes unless requested. Production study/exam modules are application source;
+  exclude actual suites and migration directories from content searches.
+- Lightweight production-source/XML/AST/whitespace checks are allowed. State their
+  scope; source completion does not establish compilation, HTTP/device behavior,
+  accessibility, deployed schema or database concurrency.
+- Reviews must trace reachable controls, DTOs/serializers, gates/ownership, retained
+  state and failure/recovery paths across affected clients. Endpoint inventories and
+  old Markdown alone are insufficient. Distinguish shared client defects, native
+  omissions, backend limits and deployment/runtime gates. Report prioritized findings
+  with source evidence; completing a bounded list does not prove full parity.
+- Keep remaining work in the plan and completed work/checks/limits in the log.
+  Compact stale records with linked archives; keep supporting Markdown in `docs/`
+  and root instructions discoverable. Preserve intentional policies when compacting.
+- Continue authorized work; ask only for missing decisions. Communicate concise
+  findings and limits in English unless requested otherwise. If a visible five-hour
+  allowance reaches 20% remaining, finish the current step and stop; never infer usage.
+- Keep only `start.py` and Django `manage.py` as root Python entry points; put
+  supporting launch/tutorial utilities in `scripts/` and update callers.
 
 ## Backend invariants
 
@@ -36,6 +39,10 @@
   Keep Arabic/English consistent and import/export formats backward-compatible.
 - Verify affected Vue/Android callers directly; document coordinated deployment
   requirements when a contract or authentication change needs matching clients.
+- Preserve safe field-validation details and semantic error reasons in the response
+  envelope. Distinguish rejected writes from unknown client outcomes; toggle/create
+  endpoints are not retry-safe merely because they are transactional. Document actual
+  reconciliation/receipt support and its absence without inventing guarantees.
 - Keep PDF theme names, palette seeds and aliases aligned with the frontend theme
   registry/bootstrap/locales. Renames must preserve existing export requests;
   honor intentional theme-aware print colors. See the [theme guide](../frontend/docs/theme-guidelines.md).
