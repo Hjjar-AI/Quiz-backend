@@ -52,6 +52,7 @@ urlpatterns = [
         views.RoleCapabilitiesListView.as_view(),
         name='admin-permissions-roles',
     ),
+    path('admin/permissions/users/', views.PermissionUserLookupView.as_view(), name='admin-permissions-user-lookup'),
     path(
         'admin/permissions/users/<int:user_id>/',
         views.UserCapabilitiesView.as_view(),

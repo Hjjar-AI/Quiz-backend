@@ -77,3 +77,9 @@
 - After authorized schema readiness, verify signed pack caller/visibility/closed-book guards, rich snapshots and bounded image/file responses. Exercise tampered/cross-user packs, full answer coverage/ranges/confidence/elapsed limits, active sessions, deleted/changed/inaccessible assessed content and current capabilities.
 - Verify production-database concurrent identical/altered/cross-user completion UUID uploads; effects/history/receipt must commit or roll back together, and identical retry after response loss or History deletion must never apply another learning event. Verify normal session identity collisions, upload-day semantics, receipts/History backup/state imports/restore/clear and account deletion. Match the Android immutable body/explicit sync/retained local results.
 - Deploy schema-free own-session endpoints with live SessionStore checks: database/cached-db/cache/file engines, current-session missing tracking, auth-hash/expiry/password resets/secret rotation, opaque handles/cross-user/CSRF/password throttles, malformed handle, current/other revocation and in-flight requests. Stateless signed-cookie engines must return unsupported. Presence tracking is not a hardware-device attestation.
+
+
+## Local learner schema and permission lookup — verification remaining, 2026-10-09
+
+- Read-only inspection confirmed local `SQLite/db.sqlite3` has unique history source-session identity and the offline receipt identity/payload columns. Earlier migration gates still apply to any other database missing these structures; no migration work was performed. Remote deployment and runtime/concurrency remain unverified.
+- Reload/deploy the schema-free `GET auth/admin/permissions/users/` lookup with Android: permission-only accounts, non-stub filtering, name/username search, stable bounded pagination, inactive/empty results and denial without admin.permissions. Existing account-management writes still require admin.users.

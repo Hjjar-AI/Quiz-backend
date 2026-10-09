@@ -1,11 +1,12 @@
 # backend/apps/users/views/permission_views.py
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 
 from apps.core.permissions import HasCapability
-from apps.core.utils import api_error, api_success
+from apps.core.utils import api_error, api_success, paginate
 from apps.core.audit import log_privileged_action
 
 from ..capabilities import (
@@ -228,3 +229,14 @@ class UserCapabilitiesView(_PermissionsAdminView):
             },
             message='تم تحديث صلاحيات المستخدم',
         )
+
+class PermissionUserLookupView(_PermissionsAdminView):
+    """Minimal account picker under admin.permissions; no account management data."""
+
+    def get(self, request):
+        users = User.objects.filter(is_stub=False).order_by('username', 'id')
+        search = str(request.query_params.get('search', '')).strip()
+        if search:
+            users = users.filter(Q(username__icontains=search) | Q(full_name__icontains=search))
+        page, meta = paginate(users.values('id', 'username', 'full_name', 'role', 'is_active'), request)
+        return api_success(data={'items': list(page), **meta})

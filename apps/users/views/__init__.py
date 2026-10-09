@@ -24,6 +24,7 @@ from .admin_user_views import (
 from .permission_views import (
     RoleCapabilitiesListView,
     UserCapabilitiesView,
+    PermissionUserLookupView,
 )
 
 __all__ = [
@@ -44,5 +45,6 @@ __all__ = [
     # Capability panel
     'RoleCapabilitiesListView',
     'UserCapabilitiesView',
+    'PermissionUserLookupView',
 ]
 from .session_views import OwnSessionsView, RevokeOwnSessionView
