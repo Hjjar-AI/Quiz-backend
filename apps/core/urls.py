@@ -3,6 +3,7 @@
 from django.urls import path
 
 from . import views
+from .write_receipts import ContentReceiptView
 
 # NOTE ON THE IMPORT BELOW
 # ------------------------
@@ -19,6 +20,7 @@ from apps.questions.views import RefreshAuthorRanksView
 
 
 urlpatterns = [
+    path('recovery/operations/<uuid:operation_id>/', ContentReceiptView.as_view(), name='content-write-receipt'),
     path('health/', views.HealthView.as_view(), name='health'),
     path('config/', views.PublicConfigView.as_view(), name='public-config'),
     path('tips/', views.TipsView.as_view(), name='tips'),

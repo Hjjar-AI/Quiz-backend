@@ -60,6 +60,7 @@ Adding a new sentinel:
 # — i.e. a concurrent delete. The correct client response is the
 # same one a plain `get_object_or_404` miss would produce.
 _MASTER_EXAM_ERROR_MESSAGES = {
+    'EXAM_PARTICIPATION_CHANGED': ('تغيرت قائمة المشاركين. حدّث الامتحان قبل إعادة محاولة الحذف.', 409),
     # ── Start-time gates ─────────────────────────────────────────
     'WINDOW_NOT_OPEN':          ('لم تفتح نافذة الامتحان بعد.', 400),
     'WINDOW_CLOSED':            ('انتهت نافذة الامتحان ولا يُسمح بامتحان بديل.', 400),

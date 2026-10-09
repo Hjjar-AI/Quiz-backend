@@ -214,16 +214,17 @@ class OfflineCompletionView(APIView):
                     if prior.user_id != user.pk or prior.request_fingerprint != fingerprint:
                         return api_error('تعارض معرّف المزامنة', 409)
                     return api_success(data=prior.response)
-                occurred_at = values.get('occurred_at', timezone.now())
+                received_now = timezone.now()
+                occurred_at = values.get('occurred_at', received_now)
                 if 'occurred_at' in values:
                     from django.utils.dateparse import parse_datetime
                     issued = parse_datetime(pack.get('issued_at', ''))
-                    if issued is None or occurred_at < issued or occurred_at > timezone.now() + timedelta(minutes=5):
+                    if issued is None or issued > received_now or occurred_at < issued or occurred_at > received_now + timedelta(minutes=5):
                         return api_error('وقت التدريب خارج حدود الحزمة. تحقق من ساعة الجهاز.', 400,
                                          details={'occurred_at': ['Invalid offline learning time.']})
                     if any(row.get('answered_at') and (row['answered_at'] < issued or row['answered_at'] > occurred_at) for row in answers):
                         return api_error('أوقات الإجابات غير صالحة.', 400)
-                    occurred_at = min(occurred_at, timezone.now())
+                    occurred_at = min(occurred_at, received_now)
                 if TestHistory.objects.filter(source_session_id=identity).exists() or ExamSession.objects.filter(session_id=identity).exists():
                     return api_error('تعارض معرّف المزامنة', 409)
                 rows = list(with_locked_learning_content(Question.objects.visible_to(user)
@@ -236,7 +237,7 @@ class OfflineCompletionView(APIView):
                     return api_error('تغيّرت الأسئلة، احتفظ بالنتائج محليًا وأعد التنزيل للتدريب الجديد', 409)
                 indexed = {row['question_id']: row for row in answers}
                 slots = {str(index): {'answer': indexed[qid]['answer'], 'confidence': indexed[qid]['confidence'],
-                    'answered_at': indexed[qid]['answered_at'].isoformat() if indexed[qid].get('answered_at') and pack.get('issued_at') else None}
+                    'answered_at': min(indexed[qid]['answered_at'], occurred_at).isoformat() if indexed[qid].get('answered_at') and pack.get('issued_at') else None}
                     for index, qid in enumerate(ids)}
                 graded = ExamService.grade_exam(ids, slots, question_snapshots=pack['snapshots'])
                 ExamService.record_completion_side_effects(user, graded['questions'],

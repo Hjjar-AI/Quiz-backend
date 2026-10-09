@@ -64,3 +64,8 @@ _tag_targets = StudyPlanner.target_tags.through
 m2m_changed.connect(lock_planner_targets, sender=_tag_targets, dispatch_uid='lock_planner_tag_targets')
 m2m_changed.connect(lock_planner_targets, sender=StudyPlanner.target_categories.through,
                     dispatch_uid='lock_planner_category_targets')
+
+@receiver(post_delete, sender=Tag)
+def bump_deleted_tag_revision(sender, instance, using, **kwargs):
+    from apps.core.revisions import bump_revision
+    bump_revision('_tag_hierarchy_lock', using)

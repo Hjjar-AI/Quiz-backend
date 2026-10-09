@@ -283,6 +283,7 @@ class BackupService:
             'learning.QuestionExposure',
             'learning.OfflineQuestionGrant',
             'core.QuestionWriteReceipt',
+            'core.ContentWriteReceipt',
             'exams.OfflineCompletion',
             'feedback.Bookmark',
             'feedback.QuestionFlag',

@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.core.write_receipts import create_with_receipt
 from apps.core.utils import api_error, api_success, paginate
 
 from ..models import KnowledgeObject, Question
@@ -60,7 +61,7 @@ class KnowledgeObjectListCreateView(APIView):
             return api_error('غير مصرح لك بإنشاء أهداف معرفية', 403)
         serializer = KnowledgeObjectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        instance = serializer.save(created_by=request.user)
+        instance = create_with_receipt(request, 'knowledge.create', KnowledgeObject, lambda: serializer.save(created_by=request.user))
         instance.question_count = 0
         return api_success(
             data=KnowledgeObjectSerializer(instance).data,

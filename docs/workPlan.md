@@ -15,3 +15,5 @@ Updated 2026-10-09. Detailed integration scenarios: [archive](archive/2026-10-09
 - Verify PostgreSQL connectivity/ORM/session/cache integration with compatible driver and existing database. Native PostgreSQL provisioning/backup/restore administration remains unsupported and requires separate scope.
 
 Run environment/system checks only when authorized and dependencies are available. No migration inspection/work, suites, builds or version changes without explicit request. Keep destructive operator verification deliberate and isolated.
+
+Verify the new category/case/tag/settings revision contracts and category/knowledge creation receipts with matching clients, fresh schema and real lost-response/concurrent HTTP writes; see [contract log](learningConsistency.md). Source implementation is complete; runtime/schema verification is pending.

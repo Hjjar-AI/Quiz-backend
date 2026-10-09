@@ -17,7 +17,7 @@ class CaseSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = ClinicalCase
         fields = [
-            'id', 'uuid', 'key', 'title', 'stem',
+            'id', 'uuid', 'version', 'key', 'title', 'stem',
             'authored_by', 'authored_by_username',
         ]
         read_only_fields = fields
@@ -76,12 +76,12 @@ class ClinicalCaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClinicalCase
         fields = [
-            'id', 'uuid', 'key', 'title', 'stem', 'question_count',
+            'id', 'uuid', 'version', 'key', 'title', 'stem', 'question_count',
             'authored_by', 'authored_by_username',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
-            'id', 'uuid',
+            'id', 'uuid', 'version',
             'authored_by', 'authored_by_username',
             'created_at', 'updated_at', 'question_count',
         ]

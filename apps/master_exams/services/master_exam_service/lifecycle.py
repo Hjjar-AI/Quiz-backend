@@ -428,7 +428,17 @@ def delete(exam, delete_mode, request=None):
     exam_name = None
 
     with transaction.atomic():
+        # History insertion references learner rows. Acquire those before the
+        # exam, matching finish/start and avoiding FK-lock inversion at archive.
+        from apps.users.models import User
+        participant_ids = set(exam.attempts.values_list('user_id', flat=True))
+        list(User.objects.select_for_update().filter(pk__in=participant_ids).order_by('pk').values_list('pk', flat=True))
         locked = _locked_exam(exam.pk)
+        current_ids = set(locked.attempts.select_for_update().values_list('user_id', flat=True))
+        if not current_ids.issubset(participant_ids):
+            # Do not acquire a newly discovered learner while holding the exam.
+            # No writes have occurred; let an explicit retry collect fresh IDs.
+            raise ValueError('EXAM_PARTICIPATION_CHANGED')
 
         if not locked.can_be_deleted:
             raise ValueError('CANNOT_DELETE_PUBLISHED_TO_BANK')

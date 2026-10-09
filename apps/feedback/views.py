@@ -151,6 +151,11 @@ class FlagQuestionView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, question_id):
+        _visible_question_or_404(request.user, question_id)
+        flag = QuestionFlag.objects.filter(user=request.user, question_id=question_id, resolved=False).first()
+        return api_success(data={'reported': flag is not None, 'reason': flag.reason if flag else None})
+
     def post(self, request, question_id):
         body = FlagQuestionSerializer(data=request.data)
         if not body.is_valid():

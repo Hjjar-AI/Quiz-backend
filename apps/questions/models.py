@@ -44,7 +44,12 @@ class QuestionManager(models.Manager.from_queryset(QuestionQuerySet)):
     pass
 
 
-class Category(TimeStampedModel):
+from apps.core.model_validation import RevisionedSaveMixin
+
+
+class Category(RevisionedSaveMixin, TimeStampedModel):
+    version = models.PositiveIntegerField(default=1)
+    revision_fields = ('name', 'description', 'color', 'icon')
     uuid = models.UUIDField(
         default=uuid.uuid4,
         unique=True,
@@ -130,14 +135,24 @@ class Tag(models.Model):
             lock_tag_hierarchy(using)
             if update_fields is None or {'parent', 'parent_id'}.intersection(update_fields):
                 self._validate_parent(using, locked=True)
-            return super().save(force_insert=force_insert, force_update=force_update,
-                                using=using, update_fields=update_fields)
+            previous = type(self).objects.using(using).select_for_update().filter(pk=self.pk).first() if self.pk else None
+            changed = previous is None or (
+                (update_fields is None or 'name' in update_fields) and previous.name != self.name
+            ) or (
+                (update_fields is None or {'parent', 'parent_id'}.intersection(update_fields)) and previous.parent_id != self.parent_id
+            )
+            result = super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+            if changed:
+                from apps.core.revisions import bump_revision
+                bump_revision('_tag_hierarchy_lock', using)
+            return result
+
 
     def __str__(self):
         return self.name
 
 
-class ClinicalCase(InvariantValidationMixin, TimeStampedModel):
+class ClinicalCase(RevisionedSaveMixin, InvariantValidationMixin, TimeStampedModel):
     """
     A clinical vignette shared by a set of questions.
 
@@ -154,6 +169,9 @@ class ClinicalCase(InvariantValidationMixin, TimeStampedModel):
     drive permissions or reputation — see the two-FK design on
     Question for where those live.
     """
+    version = models.PositiveIntegerField(default=1)
+    revision_fields = ('title', 'stem')
+
     uuid = models.UUIDField(
         default=uuid.uuid4,
         unique=True,

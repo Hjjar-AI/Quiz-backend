@@ -1,5 +1,7 @@
 # backend/apps/questions/views/case_views.py
 
+from django.db import transaction
+from apps.core.revisions import expected_revision, check_revision
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
@@ -227,52 +229,23 @@ class CaseDetailView(APIView):
         ).data
         return api_success(data=case_data)
 
+    @transaction.atomic
     def put(self, request, case_key):
-        case = get_object_or_404(_visible_cases_qs(request.user), key=case_key)
-        body = ClinicalCaseSerializer(case, data={
-            field: request.data[field]
-            for field in ('stem', 'title') if field in request.data
-        }, partial=True)
-        if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
-        data = body.validated_data
+        visible = get_object_or_404(_visible_cases_qs(request.user), key=case_key)
+        list(Question.objects.select_for_update().filter(case=visible).order_by('pk').values_list('pk', flat=True))
+        case = ClinicalCase.objects.select_for_update().get(pk=visible.pk)
+        if not can_edit_case(request.user, case):
+            return api_error('غير مصرح لك بتعديل هذه الحالة', 403)
+        check_revision(case.version, expected_revision(request))
+        body = ClinicalCaseSerializer(case, data={field: request.data[field] for field in ('stem', 'title') if field in request.data}, partial=True)
+        body.is_valid(raise_exception=True)
+        for field, value in body.validated_data.items():
+            setattr(case, field, value.strip() or None if isinstance(value, str) else value)
+        case.save(update_fields=set(body.validated_data) | {'updated_at'})
+        log_privileged_action(request, 'case.update', target=case)
+        return api_success(data=ClinicalCaseSerializer(case, context={'request': request}).data)
 
-        if 'stem' in data:
-            new_stem = data['stem']
-            try:
-                updated = QuestionService.update_case_stem(
-                    case.key, new_stem, request.user,
-                )
-                case.refresh_from_db()
-            except PermissionError:
-                return api_error('غير مصرح لك بتعديل نص هذه الحالة', 403)
-
-            # Audit row — byte-identical to the one CaseStemUpdateView.post
-            # writes for the same operation.
-            log_privileged_action(
-                request,
-                action='case.stem_update',
-                target=None,
-                target_repr=f'case:{case_key}',
-                details={
-                    'updated_count': updated,
-                    'stem_length': len(new_stem or ''),
-                },
-            )
-
-        if 'title' in data:
-            if not can_edit_case(request.user, case):
-                return api_error('غير مصرح لك بتعديل هذه الحالة', 403)
-            new_title = (data['title'] or '').strip() or None
-            case.title = new_title
-            case.save(update_fields=['title', 'updated_at'])
-
-        return api_success(
-            data=ClinicalCaseSerializer(
-                case, context={'request': request},
-            ).data,
-        )
-
+    @transaction.atomic
     def delete(self, request, case_key):
         if not request.user.has_capability('questions.edit_case_stem_any'):
             return api_error('غير مصرح لك بحذف هذه الحالة', 403)
@@ -290,6 +263,9 @@ class CaseDetailView(APIView):
         # the count of questions the caller could actually see is
         # the number this endpoint is entitled to disclose — see
         # the class docstring for the leak this closes.
+        list(Question.objects.select_for_update().filter(case=case).order_by('pk').values_list('pk', flat=True))
+        case = ClinicalCase.objects.select_for_update().get(pk=case.pk)
+        check_revision(case.version, expected_revision(request))
         affected = _visible_questions_in_case(request.user, case.id).count()
         stored_key = case.key
         case.delete()
@@ -312,6 +288,7 @@ class CaseStemUpdateView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, case_key):
         serializer = CaseStemUpdateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -328,7 +305,7 @@ class CaseStemUpdateView(APIView):
 
         try:
             updated = QuestionService.update_case_stem(
-                case_key, new_stem, request.user,
+                case_key, new_stem, request.user, expected_version=expected_revision(request),
             )
         except PermissionError:
             return api_error('غير مصرح لك بتعديل نص هذه الحالة', 403)
@@ -357,6 +334,6 @@ class CaseStemUpdateView(APIView):
             message = 'تم تحديث نص الحالة (لا توجد أسئلة مرتبطة حالياً)'
 
         return api_success(
-            data={'updated': updated, 'case_stem': new_stem},
+            data={'updated': updated, 'case_stem': new_stem, 'version': ClinicalCase.objects.get(key=case_key).version},
             message=message,
         )

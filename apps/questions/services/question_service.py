@@ -625,7 +625,8 @@ class QuestionService:
     # ═══════════════════════════════════════════════════════════════════
 
     @staticmethod
-    def update_case_stem(case_key, new_stem, user):
+    @transaction.atomic
+    def update_case_stem(case_key, new_stem, user, *, expected_version):
         """
         Replace the shared clinical vignette on a case.
 
@@ -683,8 +684,16 @@ class QuestionService:
 
         case = ClinicalCase.objects.filter(key=case_key).first()
         if case is None:
-            return 0
+            from django.http import Http404
+            raise Http404
 
+        from apps.core.revisions import check_revision
+        list(Question.objects.select_for_update().filter(case=case).order_by('pk').values_list('pk', flat=True))
+        case = ClinicalCase.objects.select_for_update().filter(pk=case.pk).first()
+        if case is None:
+            from django.http import Http404
+            raise Http404
+        check_revision(case.version, expected_version)
         from apps.questions.case_policy import can_edit_case
         if not can_edit_case(user, case):
             raise PermissionError('CASE_STEM_NOT_AUTHOR')

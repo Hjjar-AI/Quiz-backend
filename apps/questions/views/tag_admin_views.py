@@ -1,5 +1,6 @@
 # backend/apps/questions/views/tag_admin_views.py
 
+from apps.core.revisions import expected_revision, check_revision, settings_revision, lock_revision
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
@@ -98,8 +99,10 @@ class AdminTagTreeView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'questions.manage_tags'
 
+    @transaction.atomic
     def get(self, request):
-        tags = Tag.objects.all()
+        version = settings_revision('_tag_hierarchy_lock')
+        tags = list(Tag.objects.all())
         tag_map = {
             tag.id: {'id': tag.id, 'name': tag.name, 'children': []}
             for tag in tags
@@ -112,7 +115,8 @@ class AdminTagTreeView(APIView):
                 parent = tag_map.get(tag.parent_id)
                 if parent:
                     parent['children'].append(tag_map[tag.id])
-        return api_success(data={'tree': roots})
+        check_revision(settings_revision('_tag_hierarchy_lock'), version)
+        return api_success(data={'tree': roots, 'version': version})
 
 
 class AdminTagRenameView(APIView):
@@ -124,7 +128,11 @@ class AdminTagRenameView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'questions.manage_tags'
 
+    @transaction.atomic
     def post(self, request, old_name):
+        from ..hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
         body = TagRenameSerializer(data=request.data)
         if not body.is_valid():
             return api_error('بيانات غير صالحة', 400, details=body.errors)
@@ -156,7 +164,11 @@ class AdminTagDeleteView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'questions.manage_tags'
 
+    @transaction.atomic
     def delete(self, request, name):
+        from ..hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
         tag = get_object_or_404(Tag, name=name)
         tag_id = tag.id
         try:
@@ -197,6 +209,7 @@ class AdminTagMergeView(APIView):
     def post(self, request):
         from ..hierarchy import lock_tag_hierarchy
         lock_tag_hierarchy()
+        check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
         body = TagMergeSerializer(data=request.data)
         if not body.is_valid():
             return api_error('بيانات غير صالحة', 400, details=body.errors)

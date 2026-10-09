@@ -16,7 +16,6 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    current_streak = serializers.IntegerField(source='active_streak', read_only=True)
     """
     Read serializer for a User.
 
@@ -37,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
     on the model; they follow `questions_count` / `trust_score`,
     which are recomputed from `authored_by`.
     """
+    current_streak = serializers.IntegerField(source='active_streak', read_only=True)
     author_rank = serializers.CharField(read_only=True)
     author_rank_label_ar = serializers.CharField(read_only=True)
 

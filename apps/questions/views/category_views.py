@@ -1,6 +1,9 @@
 # backend/apps/questions/views/category_views.py
 
 import re
+from django.db import transaction
+from apps.core.revisions import expected_revision, check_revision
+from apps.core.write_receipts import create_with_receipt
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -83,8 +86,6 @@ class CategoryCreateView(APIView):
                 f'اسم التصنيف يجب ألا يتجاوز {CATEGORY_NAME_MAX_LENGTH} حرفاً',
                 400,
             )
-        if Category.objects.filter(name=name).exists():
-            return api_error('التصنيف موجود مسبقاً', 400)
 
         color = _validate_color(data.get('color'), default='#667eea')
         if color is None:
@@ -100,13 +101,18 @@ class CategoryCreateView(APIView):
                 400,
             )
 
-        category = Category.objects.create(
-            name=name,
-            description=data.get('description'),
-            color=color,
-            icon=icon,
-            created_by=request.user.username,
-        )
+        def create():
+            from rest_framework.exceptions import ValidationError
+            if Category.objects.filter(name=name).exists():
+                raise ValidationError({'name': ['التصنيف موجود مسبقاً']})
+            return Category.objects.create(
+                name=name,
+                description=data.get('description'),
+                color=color,
+                icon=icon,
+                created_by=request.user.username,
+            )
+        category = create_with_receipt(request, 'category.create', Category, create)
         log_privileged_action(request, 'category.create', target=category)
         return api_success(
             data=CategorySerializer(category).data,
@@ -122,8 +128,10 @@ class CategoryUpdateView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'categories.manage'
 
+    @transaction.atomic
     def put(self, request, category_id):
-        category = get_object_or_404(Category, id=category_id)
+        category = get_object_or_404(Category.objects.select_for_update(), id=category_id)
+        check_revision(category.version, expected_revision(request))
         data = request.data
 
         new_name = _coerce_name(data.get('name'), fallback=category.name)
@@ -175,8 +183,10 @@ class CategoryDeleteView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'categories.manage'
 
+    @transaction.atomic
     def delete(self, request, category_id):
-        category = get_object_or_404(Category, id=category_id)
+        category = get_object_or_404(Category.objects.select_for_update(), id=category_id)
+        check_revision(category.version, expected_revision(request))
         category_name = category.name
         try:
             category.delete()

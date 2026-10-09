@@ -95,3 +95,22 @@ class InvariantValidationMixin:
             )
             self.invariants_saved(previous, saved)
             return result
+
+
+class RevisionedSaveMixin:
+    revision_fields = ()
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        using = using or router.db_for_write(type(self), instance=self)
+        if update_fields is not None and not update_fields:
+            return
+        with transaction.atomic(using=using):
+            previous = type(self).objects.using(using).select_for_update().filter(pk=self.pk).first() if self.pk else None
+            fields = set(update_fields) if update_fields is not None else None
+            changed = previous is not None and any(
+                (fields is None or field in fields) and getattr(previous, field) != getattr(self, field)
+                for field in self.revision_fields)
+            self.version = (previous.version + int(changed)) if previous else 1
+            if fields is not None:
+                fields.add('version')
+            return super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=fields)

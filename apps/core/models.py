@@ -36,6 +36,18 @@ class QuestionWriteReceipt(models.Model):
         constraints = [models.UniqueConstraint(fields=['user', 'operation_id'], name='question_write_receipt_unique')]
 
 
+class ContentWriteReceipt(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    operation_id = models.UUIDField()
+    action = models.CharField(max_length=30)
+    request_fingerprint = models.CharField(max_length=64)
+    target_id = models.PositiveBigIntegerField(null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'operation_id'], name='content_write_receipt_unique')]
+
+
 class Setting(models.Model):
     key = models.CharField(max_length=50, primary_key=True)
     value = models.TextField()

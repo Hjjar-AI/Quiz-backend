@@ -22,6 +22,7 @@ from .models import (
     Tip,
 )
 from .runtime_settings import DEFAULT_RUNTIME_SETTINGS
+from .revisions import expected_revision, check_revision, settings_revision, lock_revision, bump_revision
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,8 @@ class AdminSettingsView(APIView):
             key: stored.get(key, DEFAULT_RUNTIME_SETTINGS[key])
             for key in self.KNOWN_KEYS
         }
+        raw_version = stored.get('_runtime_settings_revision', '1')
+        payload['version'] = int(raw_version) if raw_version.isdecimal() else 1
         return api_success(data=payload)
 
     def post(self, request):
@@ -194,15 +197,18 @@ class AdminSettingsView(APIView):
 
         updated = []
         with transaction.atomic():
+            current_version = lock_revision('_runtime_settings_revision')
+            check_revision(current_version, expected_revision(request))
             for key, value in cleaned.items():
                 Setting.objects.update_or_create(
                     key=key,
                     defaults={'value': value},
                 )
                 updated.append(key)
+            new_version = bump_revision('_runtime_settings_revision')
 
         return api_success(
-            data={'updated': updated},
+            data={'updated': updated, 'version': new_version},
             message='تم تحديث الإعدادات',
         )
 
