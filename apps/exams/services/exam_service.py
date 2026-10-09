@@ -1078,7 +1078,7 @@ class ExamService:
 
 class BlueprintService:
     @staticmethod
-    def select_question_ids(blueprint, count, filters=None):
+    def select_question_ids(blueprint, count, filters=None, user=None):
         from math import floor, isfinite
 
         from django.db.models import Count as DjCount
@@ -1087,6 +1087,8 @@ class BlueprintService:
         if count <= 0:
             return []
 
+        from .question_selection import question_exposure_scores, select_varied_question_ids
+        exposure = question_exposure_scores(user)
         base = QuestionService.get_questions(filters, user=None)
         weights = {
             entry.category_id: entry.weight
@@ -1094,11 +1096,7 @@ class BlueprintService:
         }
 
         if not weights:
-            return list(
-                base
-                .order_by('?')
-                .values_list('id', flat=True)[:count]
-            )
+            return select_varied_question_ids(base, count, user=user, exposure=exposure)
 
         normalized = {}
         for cid, w in weights.items():
@@ -1110,11 +1108,7 @@ class BlueprintService:
                 normalized[cid] = weight
 
         if not normalized:
-            return list(
-                base
-                .order_by('?')
-                .values_list('id', flat=True)[:count]
-            )
+            return select_varied_question_ids(base, count, user=user, exposure=exposure)
 
         # Relative weights are scale invariant. Scaling first prevents finite
         # inputs such as 1e308 from overflowing during summation/allocation.
@@ -1151,23 +1145,13 @@ class BlueprintService:
             avail = available.get(cid, 0)
             take = min(target, avail)
             if take > 0:
-                ids = list(
-                    base
-                    .filter(category_id=cid)
-                    .order_by('?')
-                    .values_list('id', flat=True)[:take]
-                )
+                ids = select_varied_question_ids(base.filter(category_id=cid), take, user=user, exposure=exposure)
                 selected.extend(ids)
                 selected_set.update(ids)
 
         if len(selected) < count:
             remaining = count - len(selected)
-            extras = list(
-                base
-                .exclude(id__in=selected_set)
-                .order_by('?')
-                .values_list('id', flat=True)[:remaining]
-            )
+            extras = select_varied_question_ids(base.exclude(id__in=selected_set), remaining, user=user, exposure=exposure)
             selected.extend(extras)
 
         import random

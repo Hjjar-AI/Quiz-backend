@@ -48,6 +48,7 @@ from apps.core.utils import (
 from apps.questions.models import Question
 from apps.questions.services import QuestionService
 from apps.learning.srs_service import SRSService
+from ..services.question_selection import select_varied_question_ids
 
 
 def _session_progress_payload(session):
@@ -116,7 +117,7 @@ class StartSessionView(APIView):
             max_quiz = getattr(settings, 'MAX_QUIZ_QUESTIONS', 200)
             count = safe_int(data.get('limit'), 50, minimum=1, maximum=max_quiz)
             assembled = BlueprintService.select_question_ids(
-                blueprint, count, filters=filters,
+                blueprint, count, filters=filters, user=request.user,
             )
             if not assembled:
                 return api_error('لا توجد أسئلة كافية مطابقة للنموذج', 404)
@@ -185,9 +186,9 @@ class StartSessionView(APIView):
                 filters['tag'] = tag
 
             questions = QuestionService.get_questions(
-                filters, limit=limit, offset=0, user=None,
+                filters, user=None,
             )
-            question_ids = list(questions.values_list('id', flat=True))
+            question_ids = select_varied_question_ids(questions, limit, user=request.user)
 
             if not question_ids:
                 return api_error('لا توجد أسئلة متاحة', 404)

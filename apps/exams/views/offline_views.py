@@ -31,6 +31,7 @@ MAX_IMAGE_BYTES = 1024 * 1024
 
 
 class PackRequest(serializers.Serializer):
+    full_bank = serializers.BooleanField(default=False)
     question_ids = serializers.ListField(child=serializers.IntegerField(min_value=1, max_value=2**63 - 1), allow_empty=False)
 
     def validate_question_ids(self, value):
@@ -75,9 +76,11 @@ class OfflineCatalogView(APIView):
     Pack generation rechecks access, grading readiness and closed-book restrictions.
     """
     permission_classes = [HasCapability]
-    required_capability = 'tests.start'
+    required_capability = 'tests.download_full_bank'
 
     def get(self, request):
+        if not request.user.has_capability('tests.start'):
+            return api_error('ليس لديك صلاحية لهذا الإجراء.', 403)
         query = OfflineCatalogQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
         values = query.validated_data
@@ -107,6 +110,8 @@ class OfflinePackView(APIView):
     def post(self, request):
         body = PackRequest(data=request.data)
         body.is_valid(raise_exception=True)
+        if body.validated_data['full_bank'] and not request.user.has_capability('tests.download_full_bank'):
+            return api_error('ليس لديك صلاحية لتنزيل بنك الأسئلة كاملًا.', 403)
         ids = body.validated_data['question_ids']
         with transaction.atomic():
             User.objects.select_for_update().only('id').get(pk=request.user.pk)

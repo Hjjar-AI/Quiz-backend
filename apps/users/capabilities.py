@@ -93,6 +93,8 @@ CAPABILITIES = frozenset({
     # 'tests.view_all_history'— the cross-user read.
     # 'tests.use_blueprint'   — blueprint-based exam assembly.
     'tests.start',
+    # Full-bank download defaults on for moderators, off for members.
+    'tests.download_full_bank',
     'tests.use_blueprint',
     'tests.view_own_history',
     'tests.view_all_history',
@@ -181,6 +183,7 @@ CAPABILITY_GROUPS = (
     )),
     ('Tests & study', (
         'tests.start',
+        'tests.download_full_bank',
         'tests.use_blueprint',
         'tests.view_own_history',
         'tests.view_all_history',
@@ -268,6 +271,7 @@ _MODERATOR = _MEMBER | frozenset({
     'questions.manage_tags',
     'categories.manage',
     # Test extras unlocked by moderator status
+    'tests.download_full_bank',
     'tests.use_blueprint',
     'tests.view_all_history',
     # Master exam authoring
