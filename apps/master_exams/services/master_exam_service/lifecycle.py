@@ -485,6 +485,20 @@ def delete(exam, delete_mode, request=None):
             # flag is unchanged, so no author counter is affected.
             pass
 
+        # Preserve immutable learner results before the exam FK cascades. Do not
+        # replay learning side effects; the existing event ledger already owns them.
+        from apps.exams.models import TestHistory
+        for attempt in locked.attempts.filter(is_complete=True).iterator():
+            TestHistory.objects.get_or_create(source_session_id=attempt.session_id, defaults={
+                'user_id': attempt.user_id, 'mode': 'exam', 'tag': (attempt.exam_name_snapshot or exam_name)[:100],
+                'total_questions': attempt.total_questions, 'answered_count': attempt.answered_count,
+                'correct_count': attempt.correct_count, 'accuracy': attempt.accuracy,
+                'time_spent': max(0, int((attempt.finished_at - attempt.started_at).total_seconds())),
+                'started_at': attempt.started_at, 'completed_at': attempt.finished_at,
+                'results': (attempt.results or {}).get('questions', []),
+                'master_metadata': {'exam_id': locked.pk, 'exam_name': attempt.exam_name_snapshot,
+                                    'weighted_score': attempt.weighted_score, 'forced_finish': attempt.forced_finish},
+            })
         locked.delete()
 
     # Recompute any authors whose authored-question set changed as a

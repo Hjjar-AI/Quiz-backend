@@ -6,6 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
+from .write_receipts import read_receipt, write_question
 from ..models import Question
 from ..serializers import (
     QuestionSerializer,
@@ -147,6 +148,10 @@ class QuestionListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if 'operation_id' in request.query_params:
+            if not request.user.has_capability('questions.create'):
+                return api_error('غير مصرح لك', 403)
+            return read_receipt(request, 'create')
         filters = {}
         for key in ['tag', 'category', 'difficulty', 'verified', 'search']:
             if key in request.query_params:
@@ -186,12 +191,7 @@ class QuestionListView(APIView):
     def post(self, request):
         if not request.user.has_capability('questions.create'):
             return api_error('غير مصرح لك', 403)
-        question = QuestionService.create_question(request.data, request.user)
-        return api_success(
-            data=QuestionSerializer(question, context={'request': request}).data,
-            message='تم إنشاء السؤال',
-            code=201,
-        )
+        return write_question(request, 'create')
 
 
 class QuestionDetailView(APIView):
@@ -341,18 +341,12 @@ class QuestionDuplicateView(APIView):
         if not request.user.has_capability('questions.duplicate'):
             return api_error('غير مصرح لك', 403)
 
-        original = get_object_or_404(
-            Question.objects.select_related('case').visible_to(request.user),
-            id=question_id,
-        )
+        return write_question(request, 'duplicate', question_id)
 
-        new_q = QuestionService.duplicate_question(original, request.user)
-
-        return api_success(
-            data=QuestionSerializer(new_q, context={'request': request}).data,
-            message='تم نسخ السؤال',
-            code=201,
-        )
+    def get(self, request, question_id):
+        if not request.user.has_capability('questions.duplicate'):
+            return api_error('غير مصرح لك', 403)
+        return read_receipt(request, 'duplicate', question_id)
 
 
 class QuestionBatchView(APIView):

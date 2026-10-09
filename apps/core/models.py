@@ -23,6 +23,19 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class QuestionWriteReceipt(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    operation_id = models.UUIDField()
+    action = models.CharField(max_length=20)
+    source_question_id = models.PositiveBigIntegerField(null=True)
+    request_fingerprint = models.CharField(max_length=64)
+    question = models.ForeignKey('questions.Question', null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'operation_id'], name='question_write_receipt_unique')]
+
+
 class Setting(models.Model):
     key = models.CharField(max_length=50, primary_key=True)
     value = models.TextField()

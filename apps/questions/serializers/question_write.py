@@ -95,6 +95,14 @@ class QuestionCreateSerializer(_QuestionWriteFields):
 
         attrs['choices'] = cleaned
 
+        try:
+            normalize_translations(
+                attrs.get('translations', self.instance.translations if self.instance else {}),
+                max_choices=MAX_CHOICES,
+                base_choice_count=len(attrs.get('choices', self.instance.choices if self.instance else [])),
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({'translations': str(exc)}) from exc
         return normalize_case_fields(attrs)
 
     def create(self, validated_data):
@@ -130,10 +138,8 @@ class QuestionUpdateSerializer(_QuestionWriteFields):
     EXPECTED VERSION (optimistic locking)
     -------------------------------------
     `expected_version` is the client's snapshot of `Question.version`.
-    It is optional. When supplied, `QuestionService.update_question`
-    CASes the version column before writing and rejects a stale value
-    with a 409 ("modified by another user"). When omitted, the write
-    proceeds unconditionally and the version is still bumped.
+    It is required for every update, including partial updates. The service
+    compares it under the row lock and rejects stale content with HTTP 409.
 
     Declared here rather than on `_QuestionWriteFields` so that the
     create serializer does not accept a key it has no use for — the
@@ -142,7 +148,7 @@ class QuestionUpdateSerializer(_QuestionWriteFields):
     for a future reader who assumes every write path honours it.
     """
 
-    expected_version = serializers.IntegerField(required=False, allow_null=True)
+    expected_version = serializers.IntegerField(required=True, min_value=1)
 
     class Meta:
         model = Question
@@ -158,6 +164,8 @@ class QuestionUpdateSerializer(_QuestionWriteFields):
         # every failure as a plain string. The shared helper's
         # `field='correct_answer'` hint is deliberately ignored here
         # so the DRF response shape matches the original.
+        if 'expected_version' not in attrs:
+            raise serializers.ValidationError({'expected_version': ['This field is required for updates.']})
         #
         # SINGLE SOURCE OF TRUTH (fix — validation.py owns the message)
         # -------------------------------------------------------------
@@ -194,4 +202,12 @@ class QuestionUpdateSerializer(_QuestionWriteFields):
             if range_error is not None:
                 raise serializers.ValidationError(range_error['message'])
 
+        try:
+            normalize_translations(
+                attrs.get('translations', self.instance.translations if self.instance else {}),
+                max_choices=MAX_CHOICES,
+                base_choice_count=len(attrs.get('choices', self.instance.choices if self.instance else [])),
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({'translations': str(exc)}) from exc
         return normalize_case_fields(attrs)

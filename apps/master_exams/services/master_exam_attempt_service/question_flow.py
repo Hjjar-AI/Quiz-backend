@@ -60,6 +60,8 @@ def current_question(attempt):
     payload['translations'] = without_translation_explanations(
         payload.get('translations'),
     )
+    from apps.learning.exposure import record_presentation
+    record_presentation(attempt.user_id, f'master:{attempt.session_id}', question.pk, snapshot)
     saved = attempt.answers.get(str(question.id)) or {}
     return {
         'index': attempt_qids.index(question.id),

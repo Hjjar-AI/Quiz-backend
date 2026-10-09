@@ -9,7 +9,6 @@ from django.utils import timezone
 from .models import UserQuestionAttempt
 from .confidence import normalize_confidence, is_confident as confidence_is_high
 from apps.questions.models import Question
-from .evidence import with_locked_learning_content
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,6 @@ def _apply_review(
 
     first_review = not attempt.attempts
     due_review = attempt.next_due is None or now >= attempt.next_due
-    previous_correct = attempt.last_correct
 
     attempt.attempts = (attempt.attempts or 0) + 1
     attempt.last_correct = is_correct
@@ -60,7 +58,7 @@ def _apply_review(
 
     # Early practice still records the answer, but cannot earn spaced-review
     # credit, increase ease, or postpone an already scheduled review.
-    if is_correct and previous_correct and not first_review and not due_review:
+    if is_correct and not first_review and not due_review:
         return attempt
 
     if is_correct and confident:
@@ -90,6 +88,7 @@ def _apply_review(
     attempt.ease_factor = max(EASE_FLOOR, round(ease, 3))
 
     if policy == 'standard':
+        attempt.relearning = False
         attempt.repetitions = (attempt.repetitions or 0) + 1
         attempt.interval_days = _next_interval(
             attempt.repetitions,
@@ -103,6 +102,7 @@ def _apply_review(
         # current misconception to disappear from review for too long.
         attempt.repetitions = 0
         attempt.interval_days = 0
+        attempt.relearning = True
 
     if policy == 'standard':
         attempt.next_due = now + timedelta(days=attempt.interval_days)
@@ -132,7 +132,7 @@ class SRSService:
         'last_correct', 'last_confidence', 'last_error_reason',
         'last_confidence_score',
         'last_answered_at',
-        'ease_factor', 'interval_days', 'repetitions', 'next_due',
+        'ease_factor', 'interval_days', 'repetitions', 'next_due', 'relearning',
     )
 
     # ── Due-filter helper — single source of truth ────────────────
@@ -159,87 +159,6 @@ class SRSService:
         return SRSService._apply_due_filter(
             SRSService._visible_attempts(user), now=now,
         )
-
-    @staticmethod
-    @transaction.atomic
-    def record_attempts_bulk(user, results):
-        """
-        Persist one review per answered question.
-
-        LIVE-QUESTION FILTER (fix — deleted-mid-session crash)
-        ------------------------------------------------------
-        A session graded from a frozen snapshot can legitimately
-        contain a question whose `Question` row has since been
-        deleted — the snapshot is self-sufficient for GRADING, but
-        `UserQuestionAttempt.question_id` is a non-null FK to the
-        live row, and inserting a dangling id raises IntegrityError
-        inside the finish transaction.
-        """
-        if not results:
-            return 0
-
-        answered = [r for r in results if r.get('user_answer') is not None]
-        if not answered:
-            return 0
-
-        requested_qids = [
-            r['question_id'] for r in answered if r.get('question_id')
-        ]
-        if not requested_qids:
-            return 0
-
-        live_qids = set(
-            Question.objects
-            .filter(id__in=requested_qids)
-            .values_list('id', flat=True)
-        )
-        answered = [r for r in answered if r['question_id'] in live_qids]
-        if not answered:
-            return 0
-
-        # Serialize reviews for a learner, including first inserts. Locking
-        # only an existing attempt does not protect a missing row.
-        from apps.users.models import User
-        User.objects.select_for_update().only('id').get(pk=user.pk)
-        locked_questions = with_locked_learning_content(
-            Question.objects.select_for_update().filter(pk__in=live_qids).order_by('pk'),
-        )
-        questions = {question.pk: question for question in locked_questions}
-        now = timezone.now()
-        recorded = 0
-        from .evidence import question_learning_fingerprint
-        for result in answered:
-            question = questions.get(result['question_id'])
-            if question is None:
-                continue
-            # A frozen exam may still grade old content correctly, but that
-            # answer cannot establish mastery of the edited live question.
-            fingerprint = result.get('learning_fingerprint')
-            if 'learning_fingerprint' in result and fingerprint is None:
-                # Legacy frozen sessions have no concept provenance. Grade
-                # them normally, but wait for a new review to establish SRS.
-                continue
-            if fingerprint is not None:
-                if fingerprint != question_learning_fingerprint(question):
-                    continue
-            elif any(
-                result.get(field) != getattr(question, field)
-                for field in ('question', 'choices', 'correct_answer')
-                if field in result
-            ):
-                continue
-            attempt, _ = UserQuestionAttempt.objects.select_for_update().get_or_create(
-                user=user, question=question,
-            )
-            _apply_review(
-                attempt, bool(result.get('is_correct')),
-                normalize_confidence(result.get('confidence_score', result.get('confidence', 3))),
-                error_reason=result.get('error_reason'), now=now,
-            )
-            attempt.save(update_fields=SRSService._REVIEW_FIELDS)
-            recorded += 1
-
-        return recorded
 
     @staticmethod
     def due_question_ids(user, limit=None):

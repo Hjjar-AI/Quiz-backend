@@ -7,6 +7,7 @@ from ..knowledge_validation import normalize_knowledge_translations
 
 
 class KnowledgeObjectSerializer(serializers.ModelSerializer):
+    expected_version = serializers.IntegerField(min_value=1, required=False, write_only=True)
     source_page = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     tags = serializers.StringRelatedField(many=True, read_only=True)
@@ -26,7 +27,7 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
             'id', 'uuid', 'title', 'learning_objective', 'canonical_answer',
             'key_facts', 'misconceptions', 'category', 'category_name',
             'tags', 'tag_names', 'source_document', 'source_page',
-            'translations', 'status', 'version', 'last_revised_at',
+            'translations', 'status', 'version', 'expected_version', 'last_revised_at',
             'created_by', 'created_by_username', 'question_count',
             'created_at', 'updated_at',
         ]
@@ -63,6 +64,7 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        validated_data.pop('expected_version', None)
         names = validated_data.pop('tag_names', None)
         instance = super().create(validated_data)
         self._set_tags(instance, names)
@@ -73,6 +75,12 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
         # DRF may have fetched this instance before another editor committed.
         # Apply a partial update to current state, preserving unrelated edits.
         instance = KnowledgeObject.objects.select_for_update().get(pk=instance.pk)
+        from apps.core.exceptions import RevisionConflict
+        expected = validated_data.pop('expected_version', None)
+        if expected is None:
+            raise serializers.ValidationError({'expected_version': ['This field is required for updates.']})
+        if expected != instance.version:
+            raise RevisionConflict()
         names = validated_data.pop('tag_names', None)
         validated_data['version'] = instance.version + 1
         instance = super().update(instance, validated_data)

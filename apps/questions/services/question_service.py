@@ -211,7 +211,7 @@ class QuestionService:
             case_key_present = 'case_key' in validated
             case_key = validated.pop('case_key', None)
             case_stem = validated.pop('case_stem', None)
-            expected_version = validated.pop('expected_version', None)
+            expected_version = validated.pop('expected_version')
 
             if case_key_present:
                 instance.case = _resolve_case(
@@ -239,20 +239,15 @@ class QuestionService:
             ):
                 update_fields['last_revised_at'] = timezone.localdate()
 
-            if expected_version:
-                rows = Question.objects.filter(
-                    pk=question_id,
-                    version=int(expected_version),
-                ).update(**update_fields)
-                if rows == 0:
-                    raise ValueError("Question was modified by another user")
-            else:
-                Question.objects.filter(pk=question_id).update(**update_fields)
+            rows = Question.objects.filter(pk=question_id, version=expected_version).update(**update_fields)
+            if rows == 0:
+                raise ValueError("Question was modified by another user")
 
             instance.refresh_from_db()
 
             if previous_learning != question_learning_fingerprint(instance):
                 invalidate_question_learning([instance.pk], using=instance._state.db)
+                instance.refresh_from_db()
 
             if tags_str is not None:
                 instance.tags.clear()

@@ -129,6 +129,8 @@ def start(user, exam, is_preview=False):
                 exam_name_snapshot=exam.name,
             )
 
+        from apps.learning.exposure import record_allocations
+        record_allocations(user, attempt.grading_snapshot)
         return attempt
     except IntegrityError:
         if is_makeup:

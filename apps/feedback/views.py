@@ -40,6 +40,17 @@ class BookmarkToggleView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, question_id):
+        _visible_question_or_404(request.user, question_id)
+        return api_success(data={'added': Bookmark.objects.filter(user=request.user, question_id=question_id).exists()})
+
+    def put(self, request, question_id):
+        _visible_question_or_404(request.user, question_id)
+        added = request.data.get('added')
+        if not isinstance(added, bool):
+            return api_error('حالة المفضلة غير صالحة', 400)
+        return api_success(data={'added': FeedbackService.set_bookmark(request.user.id, question_id, added)})
+
     def post(self, request, question_id):
         _visible_question_or_404(request.user, question_id)
         added = FeedbackService.toggle_bookmark(request.user.id, question_id)

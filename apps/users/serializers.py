@@ -16,6 +16,7 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    current_streak = serializers.IntegerField(source='active_streak', read_only=True)
     """
     Read serializer for a User.
 

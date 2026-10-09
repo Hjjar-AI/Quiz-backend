@@ -152,6 +152,7 @@ class AdminGroupDetailView(APIView):
 
         group = GroupService.update_group(
             group,
+            expected_version=body.validated_data['expected_version'],
             name=body.validated_data.get('name'),
             description=body.validated_data.get('description'),
             is_active=body.validated_data.get('is_active'),

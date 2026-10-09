@@ -277,6 +277,13 @@ class BackupService:
             'master_exams.MasterExamAcknowledgement',
             'master_exams.MasterExam',
             'learning.UserQuestionAttempt',
+            'learning.LearningEvent',
+            'learning.LearningDay',
+            'learning.QuestionPresentation',
+            'learning.QuestionExposure',
+            'learning.OfflineQuestionGrant',
+            'core.QuestionWriteReceipt',
+            'exams.OfflineCompletion',
             'feedback.Bookmark',
             'feedback.QuestionFlag',
             'feedback.QuestionRating',
@@ -298,5 +305,7 @@ class BackupService:
 
             # Keep identifiers monotonic. MariaDB ALTER TABLE implicitly
             # commits, breaking this deletion transaction's rollback guarantee.
+            from apps.users.models import User
+            User.objects.all().update(last_study_date=None, current_streak=0, longest_streak=0)
 
         return {'message': 'تم مسح قاعدة البيانات'}

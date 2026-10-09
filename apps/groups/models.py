@@ -8,6 +8,7 @@ from apps.users.models import User
 
 
 class Group(TimeStampedModel):
+    version = models.PositiveIntegerField(default=1)
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
 

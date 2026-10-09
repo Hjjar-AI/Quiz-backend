@@ -357,21 +357,18 @@ class User(InvariantValidationMixin, AbstractBaseUser, PermissionsMixin):
         return str(self.id)
 
     def record_study_day(self):
-        today = timezone.localdate()
+        from apps.learning.events import learning_streaks
         using = self._state.db or 'default'
-        fields = ['last_study_date', 'current_streak', 'longest_streak']
         with transaction.atomic(using=using):
             current = type(self).objects.using(using).select_for_update().get(pk=self.pk)
-            if current.last_study_date != today:
-                if current.last_study_date == today - timedelta(days=1):
-                    current.current_streak += 1
-                else:
-                    current.current_streak = 1
-                current.last_study_date = today
-                current.longest_streak = max(current.longest_streak, current.current_streak)
-                current.save(using=using, update_fields=fields)
-            for field in fields:
-                setattr(self, field, getattr(current, field))
+            values = learning_streaks(current)
+            type(self).objects.using(using).filter(pk=self.pk).update(**values)
+            for field, value in values.items():
+                setattr(self, field, value)
+
+    @property
+    def active_streak(self):
+        return self.current_streak if self.last_study_date and (timezone.localdate() - self.last_study_date).days <= 1 else 0
 
 
 class RoleCapabilities(models.Model):

@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.core import signing
@@ -45,6 +46,7 @@ class OfflineAnswer(serializers.Serializer):
     question_id = serializers.IntegerField(min_value=1)
     answer = serializers.IntegerField(min_value=1)
     confidence = serializers.IntegerField(min_value=1, max_value=3)
+    answered_at = serializers.DateTimeField(required=False)
 
 
 class CompletionRequest(serializers.Serializer):
@@ -52,6 +54,7 @@ class CompletionRequest(serializers.Serializer):
     token = serializers.CharField(max_length=MAX_PACK_BYTES * 2, trim_whitespace=False)
     answers = OfflineAnswer(many=True, allow_empty=False)
     time_spent = serializers.IntegerField(min_value=0, max_value=7 * 24 * 60 * 60)
+    occurred_at = serializers.DateTimeField(required=False)
 
     def validate_answers(self, value):
         if len(value) > 200 or len({row['question_id'] for row in value}) != len(value):
@@ -115,6 +118,13 @@ class OfflinePackView(APIView):
         ids = body.validated_data['question_ids']
         with transaction.atomic():
             User.objects.select_for_update().only('id').get(pk=request.user.pk)
+            from apps.learning.models import OfflineQuestionGrant
+            grants = OfflineQuestionGrant.objects.filter(user=request.user)
+            existing = set(grants.filter(question_id_snapshot__in=ids).values_list('question_id_snapshot', flat=True))
+            maximum_selected = max(1, int(getattr(settings, 'OFFLINE_SELECTED_QUESTION_LIMIT', 200)))
+            if not request.user.has_capability('tests.download_full_bank') and grants.count() + len(set(ids) - existing) > maximum_selected:
+                return api_error('وصلت إلى حد الأسئلة المنزلة. اطلب صلاحية تنزيل البنك كاملًا.', 403,
+                                 details={'reason': 'OFFLINE_DOWNLOAD_LIMIT', 'limit': maximum_selected})
             rows = list(with_locked_learning_content(Question.objects.visible_to(request.user)
                 .select_for_update().filter(id__in=ids).order_by('pk')).prefetch_related('category', 'tags'))
             if len(rows) != len(ids):
@@ -151,12 +161,16 @@ class OfflinePackView(APIView):
                         return api_error('التنزيل كبير جدًا، اختر أسئلة أقل', 400)
             except (OSError, ValueError, KeyError):
                 return api_error('تعذّر تجهيز المواد دون اتصال', 409)
-            payload = {'schema': 1, 'user_id': request.user.pk, 'pack_id': str(uuid.uuid4()),
+            issued_at = timezone.now().isoformat()
+            payload = {'schema': 1, 'issued_at': issued_at, 'user_id': request.user.pk, 'pack_id': str(uuid.uuid4()),
                        'question_ids': ids, 'snapshots': snapshots}
             token = signing.dumps(payload, salt=SALT, compress=True)
-            data = {'id': payload['pack_id'], 'token': token, 'questions': questions, 'images': images}
+            data = {'id': payload['pack_id'], 'issued_at': issued_at, 'token': token, 'questions': questions, 'images': images}
             if len(json.dumps(data, ensure_ascii=False).encode('utf-8')) > MAX_PACK_BYTES:
                 return api_error('التنزيل كبير جدًا، اختر أسئلة أقل', 400)
+            OfflineQuestionGrant.objects.bulk_create([
+                OfflineQuestionGrant(user=request.user, question_id_snapshot=qid) for qid in ids if qid not in existing
+            ])
         return api_success(data=data)
 
 
@@ -182,11 +196,16 @@ class OfflineCompletionView(APIView):
             return api_error('يجب إنهاء كل أسئلة التدريب قبل المزامنة', 400)
         if any(row['answer'] > len(pack['snapshots'][str(row['question_id'])]['choices']) for row in answers):
             return api_error('إجابة غير صالحة', 400)
+        if any(row.get('answered_at') for row in answers) and 'occurred_at' not in values:
+            return api_error('وقت إكمال التدريب مطلوب.', 400)
         identity = str(values['completion_id'])
-        fingerprint = hashlib.sha256(json.dumps({
-            'pack_id': pack['pack_id'], 'answers': sorted(answers, key=lambda row: row['question_id']),
+        receipt_body = {
+            'pack_id': pack['pack_id'], 'answers': sorted([{key: value.isoformat() if key == 'answered_at' else value for key, value in row.items()} for row in answers], key=lambda row: row['question_id']),
             'time_spent': values['time_spent'],
-        }, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        }
+        if 'occurred_at' in values:
+            receipt_body['occurred_at'] = values['occurred_at'].isoformat()
+        fingerprint = hashlib.sha256(json.dumps(receipt_body, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         try:
             with transaction.atomic():
                 user = User.objects.select_for_update().get(pk=request.user.pk)
@@ -195,6 +214,16 @@ class OfflineCompletionView(APIView):
                     if prior.user_id != user.pk or prior.request_fingerprint != fingerprint:
                         return api_error('تعارض معرّف المزامنة', 409)
                     return api_success(data=prior.response)
+                occurred_at = values.get('occurred_at', timezone.now())
+                if 'occurred_at' in values:
+                    from django.utils.dateparse import parse_datetime
+                    issued = parse_datetime(pack.get('issued_at', ''))
+                    if issued is None or occurred_at < issued or occurred_at > timezone.now() + timedelta(minutes=5):
+                        return api_error('وقت التدريب خارج حدود الحزمة. تحقق من ساعة الجهاز.', 400,
+                                         details={'occurred_at': ['Invalid offline learning time.']})
+                    if any(row.get('answered_at') and (row['answered_at'] < issued or row['answered_at'] > occurred_at) for row in answers):
+                        return api_error('أوقات الإجابات غير صالحة.', 400)
+                    occurred_at = min(occurred_at, timezone.now())
                 if TestHistory.objects.filter(source_session_id=identity).exists() or ExamSession.objects.filter(session_id=identity).exists():
                     return api_error('تعارض معرّف المزامنة', 409)
                 rows = list(with_locked_learning_content(Question.objects.visible_to(user)
@@ -206,14 +235,16 @@ class OfflineCompletionView(APIView):
                 if any(question_learning_fingerprint(row) != pack['snapshots'][str(row.pk)]['learning_fingerprint'] for row in rows):
                     return api_error('تغيّرت الأسئلة، احتفظ بالنتائج محليًا وأعد التنزيل للتدريب الجديد', 409)
                 indexed = {row['question_id']: row for row in answers}
-                slots = {str(index): {'answer': indexed[qid]['answer'], 'confidence': indexed[qid]['confidence']}
-                         for index, qid in enumerate(ids)}
+                slots = {str(index): {'answer': indexed[qid]['answer'], 'confidence': indexed[qid]['confidence'],
+                    'answered_at': indexed[qid]['answered_at'].isoformat() if indexed[qid].get('answered_at') and pack.get('issued_at') else None}
+                    for index, qid in enumerate(ids)}
                 graded = ExamService.grade_exam(ids, slots, question_snapshots=pack['snapshots'])
-                ExamService.record_completion_side_effects(user, graded['questions'])
+                ExamService.record_completion_side_effects(user, graded['questions'],
+                    source_key=f'offline:{identity}', occurred_at=occurred_at)
                 history = ExamService.save_history(user, 'study', 'Offline practice',
                     graded['total_questions'], graded['answered_count'], graded['correct_count'],
-                    graded['accuracy'], values['time_spent'], timezone.now(), graded['questions'],
-                    source_session_id=identity)
+                    graded['accuracy'], values['time_spent'], occurred_at - timedelta(seconds=values['time_spent']), graded['questions'],
+                    source_session_id=identity, completed_at=occurred_at)
                 result = ExamService.completed_result(history)
                 OfflineCompletion.objects.create(completion_id=identity, user=user,
                     request_fingerprint=fingerprint, response=result)

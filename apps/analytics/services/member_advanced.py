@@ -11,13 +11,13 @@ Both functions read the caller's own data only; the id is supplied
 by the view from `request.user.id`, never from a query parameter.
 """
 
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 
 from django.utils import timezone
 
 from apps.users.models import User
 from apps.learning.mastery import category_mastery_rows
-from apps.exams.services.activity import daily_activity
+from apps.exams.services.activity import daily_activity, group_activity
 
 
 def get_category_mastery(user_id, min_attempts=1, top=12):
@@ -52,16 +52,19 @@ def get_streak_history(user_id, days=30):
             'date': iso,
             'sessions': entry['sessions'],
             'questions': entry['questions'],
+            **{key: entry.get(key, 0) for key in ('unique_questions', 'unique_concepts', 'due_reviews', 'mastery_gain')},
         })
         current += one_day
 
     user = User.objects.filter(id=user_id).first()
+    metrics = group_activity([user_id], timezone.make_aware(datetime.combine(cutoff, time.min))).get(user_id, {})
 
     return {
         'days': day_list,
-        'current_streak': (user.current_streak or 0) if user else 0,
+        'current_streak': (user.current_streak or 0) if user and user.last_study_date and (now - user.last_study_date).days <= 1 else 0,
         'longest_streak': (user.longest_streak or 0) if user else 0,
-        'active_days': sum(1 for d in day_list if d['sessions'] > 0),
+        'active_days': sum(1 for d in day_list if d['questions'] > 0),
         'total_sessions': sum(d['sessions'] for d in day_list),
         'total_questions': sum(d['questions'] for d in day_list),
+        **{key: metrics.get(key, 0) for key in ('unique_questions', 'unique_concepts', 'due_reviews', 'mastery_gain')},
     }

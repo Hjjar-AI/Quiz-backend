@@ -31,7 +31,7 @@ class TestHistorySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'username', 'full_name', 'mode', 'tag',
             'total_questions', 'answered_count', 'correct_count', 'accuracy', 'time_spent',
-            'completed_at',
+            'completed_at', 'master_metadata',
         ]
         read_only_fields = ['id', 'user', 'completed_at']
 

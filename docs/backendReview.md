@@ -1,5 +1,7 @@
 # Backend logic and model review — 2026-10-08
 
+Latest model/learning assessment and pending findings: [2026-10-09 review](backendLearningReview.md). The corrected findings below are historical work records, not an unimplemented defect list.
+
 ## Additional relationship review — findings corrected (2026-10-08)
 
 - High: `master_exam_service/lifecycle.py` deletes all `MasterExamQuestion` memberships for drafts selected by one exam's delete operation, including memberships in other exams. Their composition changes without a version bump, and the shared question disappears. Preserve drafts referenced by another exam and restrict detachment to the exam being deleted.

@@ -128,7 +128,7 @@ class MyStreakView(APIView):
     def get(self, request):
         u = request.user
         return api_success(data={
-            'current_streak': u.current_streak or 0,
+            'current_streak': u.active_streak or 0,
             'longest_streak': u.longest_streak or 0,
             'last_study_date': u.last_study_date.isoformat() if u.last_study_date else None,
         })
@@ -178,6 +178,6 @@ class ActivityHeatmapView(APIView):
             'total_questions': total_questions,
             'active_days': active_days,
             'max_daily': max_daily,
-            'current_streak': user.current_streak or 0,
+            'current_streak': user.active_streak or 0,
             'longest_streak': user.longest_streak or 0,
         })

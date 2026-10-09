@@ -50,9 +50,13 @@ class UserQuestionAttempt(InvariantValidationMixin, models.Model):
     interval_days = models.IntegerField(default=0)
     repetitions = models.IntegerField(default=0)
     next_due = models.DateTimeField(null=True, blank=True, db_index=True)
+    relearning = models.BooleanField(default=False)
+
 
     def validate_invariants(self):
         validate_counts(self, 'attempts', 'wrong_count', 'interval_days', 'repetitions')
+        require(not self.relearning or self.repetitions == 0,
+                'relearning', 'Relearning must not retain a successful repetition chain.')
         require(
             self.wrong_count <= self.attempts,
             'wrong_count', 'Wrong answers cannot exceed attempts.',
@@ -142,3 +146,80 @@ class UserQuestionAttempt(InvariantValidationMixin, models.Model):
     def __str__(self):
         mark = '✓' if self.last_correct else '✗'
         return f"{self.user.username} · Q{self.question_id} · {mark}"
+
+
+class LearningEvent(models.Model):
+    """Immutable historical evidence, independent of deletable exam history."""
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    question = models.ForeignKey('questions.Question', null=True, on_delete=models.SET_NULL)
+    original_question_id = models.PositiveBigIntegerField()
+    source_key = models.CharField(max_length=100)
+    fingerprint = models.CharField(max_length=64, blank=True)
+    occurred_at = models.DateTimeField()
+    received_at = models.DateTimeField(default=timezone.now)
+    category_id_snapshot = models.PositiveBigIntegerField(null=True)
+    concept_id_snapshot = models.PositiveBigIntegerField(null=True)
+    tag_names = models.JSONField(default=list)
+    is_correct = models.BooleanField()
+    confidence_score = models.PositiveSmallIntegerField(default=3)
+    error_reason = models.CharField(max_length=20, null=True)
+    current_content = models.BooleanField(default=False)
+    spaced_credit = models.BooleanField(default=False)
+    mastery_delta = models.FloatField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=['user', 'source_key', 'original_question_id'], name='learning_event_identity'),
+            models.CheckConstraint(condition=models.Q(original_question_id__gt=0), name='learning_event_positive_qid'),
+            models.CheckConstraint(condition=models.Q(confidence_score__gte=1, confidence_score__lte=3), name='learning_event_confidence'),
+            models.CheckConstraint(condition=models.Q(occurred_at__lte=models.F('received_at')), name='learning_event_time_order')]
+        indexes = [models.Index(fields=['user', 'occurred_at'], name='learning_user_time_idx'),
+                   models.Index(fields=['user', 'question', 'fingerprint', 'occurred_at'], name='learning_content_time_idx')]
+
+
+class QuestionExposure(models.Model):
+    """Durable aggregates for one assessed version, retained across session deletion."""
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    question = models.ForeignKey('questions.Question', on_delete=models.CASCADE)
+    fingerprint = models.CharField(max_length=64)
+    allocated = models.PositiveIntegerField(default=0)
+    presented = models.PositiveIntegerField(default=0)
+    answered = models.PositiveIntegerField(default=0)
+    last_allocated_at = models.DateTimeField(null=True)
+    last_presented_at = models.DateTimeField(null=True)
+    last_answered_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=['user', 'question', 'fingerprint'], name='exposure_user_content_unique')]
+        indexes = [models.Index(fields=['user', 'question'], name='exposure_user_question_idx')]
+
+
+class OfflineQuestionGrant(models.Model):
+    """Distinct selected-download budget; independent of client bulk flags."""
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    question_id_snapshot = models.PositiveBigIntegerField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=['user', 'question_id_snapshot'], name='offline_user_question_grant')]
+
+
+class QuestionPresentation(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    question = models.ForeignKey('questions.Question', on_delete=models.CASCADE)
+    source_key = models.CharField(max_length=100)
+    fingerprint = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(
+            fields=['user', 'source_key', 'question'], name='presentation_source_unique')]
+
+
+class LearningDay(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    date = models.DateField()
+    questions_answered = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'date'], name='learning_day_user_unique')]

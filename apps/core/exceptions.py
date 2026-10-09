@@ -1,7 +1,13 @@
 # backend/apps/core/exceptions.py
 
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, APIException
 from rest_framework.views import exception_handler
+
+
+class RevisionConflict(APIException):
+    status_code = 409
+    default_detail = 'تغيرت البيانات. حدّث النسخة وقارن تعديلاتك قبل الحفظ.'
+    default_code = 'revision_conflict'
 
 
 def custom_exception_handler(exc, context):

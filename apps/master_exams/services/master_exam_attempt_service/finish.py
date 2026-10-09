@@ -54,6 +54,7 @@ def _finish_locked(attempt, forced):
                 continue
             index_answers[str(idx)] = {
                 'answer': raw.get('answer'),
+                'answered_at': raw.get('answered_at'),
                 'confidence': raw.get('confidence', 3),
                 'error_reason': raw.get('error_reason'),
             }
@@ -79,7 +80,7 @@ def _finish_locked(attempt, forced):
             if denominator else 0.0
         )
 
-        ExamService.record_completion_side_effects(fresh.user, result['questions'])
+        ExamService.record_completion_side_effects(fresh.user, result['questions'], source_key=f'master:{fresh.session_id}', occurred_at=now)
 
         fresh.results = result
         fresh.correct_count = result['correct_count']

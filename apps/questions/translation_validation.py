@@ -13,7 +13,7 @@ LOCALE_PATTERN = re.compile(r'^[a-z]{2,3}(?:-[A-Z]{2})?$')
 TRANSLATION_FIELDS = frozenset({'question', 'choices', 'explanation'})
 
 
-def normalize_translations(value, *, max_choices=8):
+def normalize_translations(value, *, max_choices=8, base_choice_count=None):
     """Return a normalized translations dict or raise ``ValueError``."""
     if value in (None, ''):
         return {}
@@ -30,6 +30,8 @@ def normalize_translations(value, *, max_choices=8):
             locale += f'-{locale_parts[1].upper()}'
         if not LOCALE_PATTERN.fullmatch(locale):
             raise ValueError(f'Invalid translation locale: {raw_locale!r}')
+        if locale in normalized:
+            raise ValueError(f'Duplicate translation locale: {locale}')
         if not isinstance(raw_content, dict):
             raise ValueError(f'Translation {locale} must be an object')
         unknown = set(raw_content) - TRANSLATION_FIELDS
@@ -52,7 +54,11 @@ def normalize_translations(value, *, max_choices=8):
             not isinstance(choice, str) for choice in choices
         ):
             raise ValueError(f'Translation {locale} choices must be a list of strings')
-        choices = [choice.strip() for choice in choices if choice.strip()]
+        if any(not choice.strip() for choice in choices):
+            raise ValueError(f'Translation {locale} choices must not contain blanks')
+        choices = [choice.strip() for choice in choices]
+        if choices and base_choice_count is not None and len(choices) != base_choice_count:
+            raise ValueError(f'Translation {locale} choices must match the base option count and order')
 
         if not question and not explanation and not choices:
             continue

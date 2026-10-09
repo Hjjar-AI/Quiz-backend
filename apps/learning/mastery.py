@@ -1,6 +1,7 @@
 """Shared, conservative mastery scoring for learner-facing reports."""
 
 from collections import defaultdict
+from math import ceil
 
 from django.db.models import Count
 
@@ -46,16 +47,16 @@ def mastery_summary(attempts, total_questions):
 
 
 def concept_mastery_summary(attempts, total_questions):
-    """Keep concept evidence independent of the number of available variants.
-
-    Average all attempted variants so contradictory answers lower confidence;
-    unseen variants affect coverage only.
-    """
+    """Average variants, but require breadth before assigning mastered status."""
     attempts = list(attempts)
     summary = mastery_summary(attempts, total_questions)
-    summary['score'] = round(
-        sum(attempt_mastery_score(attempt) for attempt in attempts) / len(attempts), 1,
-    ) if attempts else 0.0
+    score = (sum(attempt_mastery_score(a) for a in attempts) / len(attempts)) if attempts else 0.0
+    total = max(int(total_questions or 0), 1)
+    required = max(min(total, 3), ceil(total / 2))
+    qualified = sum(attempt_mastery_score(a) >= 80 for a in attempts) >= required
+    summary['score'] = round(score if qualified else min(score, 79.9), 1)
+    summary['evidence_qualified'] = qualified
+    summary['required_variants'] = required
     return summary
 
 

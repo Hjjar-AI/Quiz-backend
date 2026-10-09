@@ -25,6 +25,8 @@ and are not gated by ``tests.start``.
 """
 
 from django.conf import settings
+from django.db import transaction
+from apps.users.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -71,12 +73,17 @@ class StartSessionView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'tests.start'
 
+    @transaction.atomic
     def post(self, request, mode):
         valid_modes = {value for value, _ in ExamSession.MODE_CHOICES}
         if mode not in valid_modes:
             return api_error('وضع غير صالح', 400)
 
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
         data = request.data
+        strategy = data.get('selection_strategy', 'coverage')
+        if strategy not in ('coverage', 'balanced', 'review'):
+            return api_error('طريقة اختيار الأسئلة غير صالحة', 400)
         question_ids = data.get('question_ids')
         blueprint = None
         blueprint_id = data.get('blueprint_id')
@@ -117,7 +124,7 @@ class StartSessionView(APIView):
             max_quiz = getattr(settings, 'MAX_QUIZ_QUESTIONS', 200)
             count = safe_int(data.get('limit'), 50, minimum=1, maximum=max_quiz)
             assembled = BlueprintService.select_question_ids(
-                blueprint, count, filters=filters, user=request.user,
+                blueprint, count, filters=filters, user=request.user, strategy=strategy,
             )
             if not assembled:
                 return api_error('لا توجد أسئلة كافية مطابقة للنموذج', 404)
@@ -188,7 +195,7 @@ class StartSessionView(APIView):
             questions = QuestionService.get_questions(
                 filters, user=None,
             )
-            question_ids = select_varied_question_ids(questions, limit, user=request.user)
+            question_ids = select_varied_question_ids(questions, limit, user=request.user, strategy=strategy)
 
             if not question_ids:
                 return api_error('لا توجد أسئلة متاحة', 404)

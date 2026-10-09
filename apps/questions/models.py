@@ -302,6 +302,7 @@ class KnowledgeObject(InvariantValidationMixin, TimeStampedModel):
 
 
 class Question(InvariantValidationMixin, TimeStampedModel):
+    stats_fingerprint = models.CharField(max_length=64, blank=True, default='')
     DIFFICULTY_CHOICES = [
         ('easy', 'Easy'),
         ('medium', 'Medium'),
@@ -553,6 +554,12 @@ class Question(InvariantValidationMixin, TimeStampedModel):
         # the correct-answer index to a different choice. Imports may retain
         # duplicates for moderation, so duplicate handling stays with callers.
         from .validation import clean_and_validate_choices
+        from .translation_validation import normalize_translations
+
+        try:
+            normalize_translations(self.translations, base_choice_count=len(self.choices or []))
+        except ValueError as exc:
+            raise ValidationError({'translations': str(exc)}) from exc
 
         require(isinstance(self.choices, list), 'choices', 'Choices must be a list.')
         require(

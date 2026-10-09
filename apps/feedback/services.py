@@ -12,6 +12,16 @@ class FeedbackService:
 
     @staticmethod
     @transaction.atomic
+    def set_bookmark(user_id, question_id, added):
+        User.objects.select_for_update().only('id').get(pk=user_id)
+        if added:
+            Bookmark.objects.get_or_create(user_id=user_id, question_id=question_id)
+        else:
+            Bookmark.objects.filter(user_id=user_id, question_id=question_id).delete()
+        return added
+
+    @staticmethod
+    @transaction.atomic
     def toggle_bookmark(user_id, question_id):
         User.objects.select_for_update().only('id').get(pk=user_id)
         bookmark = Bookmark.objects.select_for_update().filter(

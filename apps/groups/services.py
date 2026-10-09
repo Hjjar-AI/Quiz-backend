@@ -30,14 +30,18 @@ class GroupService:
 
     @staticmethod
     @transaction.atomic
-    def update_group(group, name=None, description=None, is_active=None):
+    def update_group(group, name=None, description=None, is_active=None, expected_version=None):
         group = Group.objects.select_for_update().get(pk=group.pk)
+        from apps.core.exceptions import RevisionConflict
+        if expected_version is not None and expected_version != group.version:
+            raise RevisionConflict()
         if name is not None:
             group.name = name.strip()
         if description is not None:
             group.description = description.strip() or None
         if is_active is not None:
             group.is_active = bool(is_active)
+        group.version += 1
         group.save()
         return group
 
@@ -114,7 +118,7 @@ class LeaderboardService:
         session_map = group_activity(member_ids, cutoff)
 
         users = User.objects.filter(id__in=member_ids).only(
-            'id', 'username', 'full_name', 'current_streak', 'longest_streak'
+            'id', 'username', 'full_name', 'current_streak', 'longest_streak', 'last_study_date'
         )
 
         rows = []
@@ -129,8 +133,9 @@ class LeaderboardService:
                 'questions_answered': answered,
                 'correct_count': correct,
                 'sessions': s.get('sessions') or 0,
+                **{key: s.get(key, 0) for key in ('unique_questions', 'unique_concepts', 'due_reviews', 'mastery_gain')},
                 'accuracy': round((correct / answered) * 100, 1) if answered else 0.0,
-                'current_streak': u.current_streak or 0,
+                'current_streak': u.active_streak or 0,
                 'longest_streak': u.longest_streak or 0,
             })
         rows.sort(key=lambda r: (-r['questions_answered'], -r['accuracy']))

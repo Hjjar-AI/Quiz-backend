@@ -14,7 +14,7 @@ class GroupMembershipSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
     full_name = serializers.CharField(source='user.full_name', read_only=True)
-    current_streak = serializers.IntegerField(source='user.current_streak', read_only=True)
+    current_streak = serializers.IntegerField(source='user.active_streak', read_only=True)
     longest_streak = serializers.IntegerField(source='user.longest_streak', read_only=True)
     role = serializers.CharField(source='user.role', read_only=True)
     is_active = serializers.BooleanField(source='user.is_active', read_only=True)
@@ -40,11 +40,11 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = [
-            'id', 'name', 'description', 'is_active',
+            'id', 'name', 'description', 'is_active', 'version',
             'created_by', 'created_at', 'updated_at',
             'member_count', 'members',
         ]
-        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'member_count', 'members']
+        read_only_fields = ['id', 'version', 'created_by', 'created_at', 'updated_at', 'member_count', 'members']
 
     def get_member_count(self, obj):
         return _member_count(obj)
@@ -56,7 +56,7 @@ class GroupListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ['id', 'name', 'description', 'member_count']
+        fields = ['id', 'name', 'description', 'member_count', 'version']
 
     def get_member_count(self, obj):
         return _member_count(obj)
@@ -76,6 +76,7 @@ class GroupCreateSerializer(serializers.Serializer):
 
 
 class GroupUpdateSerializer(serializers.Serializer):
+    expected_version = serializers.IntegerField(min_value=1)
     name = serializers.CharField(max_length=100, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False)

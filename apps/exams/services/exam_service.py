@@ -205,6 +205,9 @@ class ExamService:
                 grading_snapshot=build_grading_snapshot(question_ids),
             )
 
+            from apps.learning.exposure import record_allocations
+            record_allocations(user, session.grading_snapshot)
+
         return session
 
     @staticmethod
@@ -270,6 +273,8 @@ class ExamService:
             payload['verified'] = question.verified
             payload['verified_by'] = question.verified_by
 
+        from apps.learning.exposure import record_presentation
+        record_presentation(session.user_id, f'ordinary:{session.session_id}', qid, snapshot)
         saved_answer = ExamService._saved_answer(session, index)
         saved_pre_answer = ExamService._saved_pre_answer(session, index)
         may_show_feedback = (
@@ -476,6 +481,7 @@ class ExamService:
                     # the user's latest choice, which preserves ordinary exam
                     # review/navigation semantics.
                     if 'first_answer' not in slot:
+                        slot['first_answered_at'] = timezone.now().isoformat()
                         slot['first_answer'] = answer
                         slot['first_confidence'] = normalized_confidence
                         slot['first_error_reason'] = error_reason
@@ -500,6 +506,7 @@ class ExamService:
                         # so it legitimately arrives in a later request.
                         slot['first_error_reason'] = error_reason
 
+                    slot['answered_at'] = timezone.now().isoformat()
                     slot['answer'] = answer
                     slot['confidence'] = normalized_confidence
                     # Navigation and confidence-only saves omit the reason;
@@ -541,6 +548,7 @@ class ExamService:
         if snapshot:
             return {
                 'learning_fingerprint': snapshot.get('learning_fingerprint'),
+                'knowledge_object_id': snapshot.get('knowledge_object_id'),
                 'id': question.id if question is not None else None,
                 'correct_answer': snapshot.get('correct_answer'),
                 'question': snapshot.get('question'),
@@ -559,6 +567,7 @@ class ExamService:
         from apps.learning.evidence import question_learning_fingerprint
         return {
             'learning_fingerprint': question_learning_fingerprint(question),
+            'knowledge_object_id': question.knowledge_object_id,
             'id': question.id,
             'correct_answer': question.correct_answer,
             'question': question.question,
@@ -632,7 +641,9 @@ class ExamService:
                     confidence_fragile += 1
 
             results.append({
+                'answered_at': raw.get('first_answered_at' if use_first_attempt else 'answered_at') if isinstance(raw, dict) else None,
                 'learning_fingerprint': merged.get('learning_fingerprint'),
+                'knowledge_object_id': merged.get('knowledge_object_id'),
                 'question_id': merged['id'] if merged['id'] is not None else qid,
                 'question': merged['question'],
                 'choices': merged['choices'],
@@ -710,31 +721,14 @@ class ExamService:
         return explanation, (answer == correct), feedback_translations
 
     @staticmethod
-    def update_question_stats(results):
-        with transaction.atomic():
-            for r in sorted(results, key=lambda row: row.get('question_id') or 0):
-                if r['user_answer'] is None:
-                    continue
-                # A deleted question cannot be updated. The snapshot
-                # still grades correctly; only the stat counters lose
-                # the entry, which is the honest outcome — there is no
-                # row left to increment.
-                if r.get('question_id') is None:
-                    continue
-                updates = {'times_answered': F('times_answered') + 1}
-                if r['is_correct']:
-                    updates['times_correct'] = F('times_correct') + 1
-                Question.objects.filter(id=r['question_id']).update(**updates)
-
-    @staticmethod
     @transaction.atomic
-    def record_completion_side_effects(user, results):
-        User.objects.select_for_update().only('id').get(pk=user.pk)
-        ExamService.update_question_stats(results)
-        SRSService.record_attempts_bulk(user, results)
+    def record_completion_side_effects(user, results, *, source_key, occurred_at=None):
+        from apps.learning.events import record_events
         from apps.planning.services import StudyPlannerService
-        StudyPlannerService.record_learning_progress(user, results)
-        if any(r.get('user_answer') is not None for r in results):
+        User.objects.select_for_update().only('id').get(pk=user.pk)
+        newly_recorded = record_events(user, results, source_key, occurred_at)
+        if newly_recorded:
+            StudyPlannerService.record_learning_progress(user, newly_recorded, occurred_at=occurred_at)
             user.record_study_day()
 
     @staticmethod
@@ -794,6 +788,7 @@ class ExamService:
         ExamService.record_completion_side_effects(
             session.user,
             result['questions'],
+            source_key=f'ordinary:{session.session_id}',
         )
         for index, _, slot in pending:
             slot['learning_recorded'] = True
@@ -885,7 +880,7 @@ class ExamService:
             )
 
             if locked.mode not in ('study', 'recall'):
-                ExamService.record_completion_side_effects(user, result['questions'])
+                ExamService.record_completion_side_effects(user, result['questions'], source_key=f'ordinary:{locked.session_id}')
             ExamService.save_history(
                 user,
                 locked.mode,
@@ -917,7 +912,7 @@ class ExamService:
     @staticmethod
     def save_history(
         user, mode, tag, total_questions, answered_count, correct_count,
-        accuracy, time_spent, started_at=None, results=None, *, source_session_id=None,
+        accuracy, time_spent, started_at=None, results=None, *, source_session_id=None, completed_at=None,
     ):
         """
         Write the history row for a finished session. This is now the
@@ -936,6 +931,7 @@ class ExamService:
             started_at=started_at,
             results=results or [],
             source_session_id=source_session_id,
+            completed_at=completed_at or timezone.now(),
         )
         return history
 
@@ -1078,7 +1074,7 @@ class ExamService:
 
 class BlueprintService:
     @staticmethod
-    def select_question_ids(blueprint, count, filters=None, user=None):
+    def select_question_ids(blueprint, count, filters=None, user=None, strategy='coverage'):
         from math import floor, isfinite
 
         from django.db.models import Count as DjCount
@@ -1089,6 +1085,8 @@ class BlueprintService:
 
         from .question_selection import question_exposure_scores, select_varied_question_ids
         exposure = question_exposure_scores(user)
+        from collections import Counter
+        selected_concepts = Counter()
         base = QuestionService.get_questions(filters, user=None)
         weights = {
             entry.category_id: entry.weight
@@ -1096,7 +1094,7 @@ class BlueprintService:
         }
 
         if not weights:
-            return select_varied_question_ids(base, count, user=user, exposure=exposure)
+            return select_varied_question_ids(base, count, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
 
         normalized = {}
         for cid, w in weights.items():
@@ -1108,7 +1106,7 @@ class BlueprintService:
                 normalized[cid] = weight
 
         if not normalized:
-            return select_varied_question_ids(base, count, user=user, exposure=exposure)
+            return select_varied_question_ids(base, count, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
 
         # Relative weights are scale invariant. Scaling first prevents finite
         # inputs such as 1e308 from overflowing during summation/allocation.
@@ -1145,15 +1143,14 @@ class BlueprintService:
             avail = available.get(cid, 0)
             take = min(target, avail)
             if take > 0:
-                ids = select_varied_question_ids(base.filter(category_id=cid), take, user=user, exposure=exposure)
+                ids = select_varied_question_ids(base.filter(category_id=cid), take, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
                 selected.extend(ids)
                 selected_set.update(ids)
 
         if len(selected) < count:
             remaining = count - len(selected)
-            extras = select_varied_question_ids(base.exclude(id__in=selected_set), remaining, user=user, exposure=exposure)
+            extras = select_varied_question_ids(base.exclude(id__in=selected_set), remaining, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
             selected.extend(extras)
 
-        import random
-        random.shuffle(selected)
-        return selected[:count]
+        from .question_selection import order_case_groups
+        return order_case_groups(selected)[:count]

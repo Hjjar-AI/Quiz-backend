@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .srs_service import SRSService
 from apps.questions.models import Question
+from apps.exams.services.question_selection import select_varied_question_ids
 
 
 class LearningService:
@@ -80,20 +81,16 @@ class LearningService:
                     target_filter |= Q(category_id__in=category_ids)
                 if tag_ids:
                     target_filter |= Q(tags__id__in=tag_ids)
-                planner_ids = list(
-                    Question.objects.public()
-                    .filter(target_filter)
-                    .distinct()
-                    .order_by('?')
-                    .values_list('id', flat=True)[:limit * 3]
-                )
+                planner_ids = select_varied_question_ids(
+                    Question.objects.public().filter(target_filter).distinct(), limit * 3, user=user, strategy='balanced')
         except StudyPlanner.DoesNotExist:
             planner_ids = []
 
         # 3. Fragile correct. Ordered by recency of the fragile answer.
-        fragile_ids = SRSService.fragile_question_ids(user)
+        due_set = set(srs_due_ids)
+        fragile_ids = [qid for qid in SRSService.fragile_question_ids(user) if qid in due_set]
         # 4. Current lapses, including questions that were once correct.
-        wrong_ids = SRSService.wrong_question_ids(user)
+        wrong_ids = [qid for qid in SRSService.wrong_question_ids(user) if qid in due_set]
 
         pulled = _pull(srs_due_ids, budgets['srs_due'], 'srs_due')
         deficit = budgets['srs_due'] - pulled
@@ -125,14 +122,7 @@ class LearningService:
             weak = AnalyticsService.get_user_weak_categories(user.id, min_attempts=3, top=3)
             weak_cat_ids = [w['category_id'] for w in weak if w.get('category_id')]
             if weak_cat_ids:
-                weak_qs = (
-                    Question.objects.public()
-                    .filter(category_id__in=weak_cat_ids)
-                    .exclude(id__in=seen)
-                    .order_by('?')
-                    .values_list('id', flat=True)[:budgets['weak_categories'] * 3]
-                )
-                weak_ids = list(weak_qs)
+                weak_ids = select_varied_question_ids(Question.objects.public().filter(category_id__in=weak_cat_ids).exclude(id__in=seen), budgets['weak_categories'] * 3, user=user, strategy='review')
         except Exception:
             # Analytics is a hint, not a hard dependency. If it fails
             # (empty population, missing import), skip this bucket and
@@ -146,13 +136,8 @@ class LearningService:
         # account from getting an empty session.
         if len(result) < limit:
             remaining = limit - len(result)
-            fresh_qs = (
-                Question.objects.public()
-                .exclude(id__in=seen)
-                .exclude(user_attempts__user=user)
-                .order_by('?')
-                .values_list('id', flat=True)[:remaining]
-            )
+            fresh_qs = select_varied_question_ids(Question.objects.public().exclude(id__in=seen)
+                .exclude(user_attempts__user=user), remaining, user=user)
             for qid in fresh_qs:
                 if qid in seen:
                     continue
@@ -165,12 +150,7 @@ class LearningService:
         # whenever the bank itself contains enough questions.
         if len(result) < limit:
             remaining = limit - len(result)
-            general_qs = (
-                Question.objects.public()
-                .exclude(id__in=seen)
-                .order_by('?')
-                .values_list('id', flat=True)[:remaining]
-            )
+            general_qs = select_varied_question_ids(Question.objects.public().exclude(id__in=seen), remaining, user=user, strategy='balanced')
             for qid in general_qs:
                 seen.add(qid)
                 result.append(qid)

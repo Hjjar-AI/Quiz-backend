@@ -131,6 +131,7 @@ def build_grading_snapshot(question_ids):
     return {
         str(question.id): {
             'learning_fingerprint': question_learning_fingerprint(question),
+            'knowledge_object_id': question.knowledge_object_id,
             'correct_answer': question.correct_answer,
             'difficulty': question.difficulty,
             'category_id': question.category_id,

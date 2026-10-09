@@ -93,41 +93,35 @@ class StudyPlannerService:
 
     @staticmethod
     @transaction.atomic
-    def record_learning_progress(user, results):
+    def record_learning_progress(user, results, occurred_at=None):
         """Credit each committed learning event, including unfinished study.
 
         Session writers call this once under their existing idempotency locks.
         The daily ledger retains progress after a session is discarded.
         """
         planner, _ = StudyPlanner.objects.select_for_update().get_or_create(user=user)
-        today = timezone.localdate()
-        if today < planner.start_date or (planner.end_date and today > planner.end_date):
-            return 0
         category_ids = set(planner.target_categories.values_list('pk', flat=True))
         tag_names = set(planner.target_tags.values_list('name', flat=True))
         targeted = bool(category_ids or tag_names)
-        count = sum(
-            1 for result in results
-            if result.get('user_answer') is not None and (
-                not targeted or result.get('category_id') in category_ids
-                or bool(set(result.get('tag_names') or []) & tag_names)
-            )
-        )
-        if count:
-            # Seed pre-existing completed activity only when no ledger exists.
-            StudyPlannerService.record_daily_progress(user)
-            StudyPlannerDay.objects.filter(planner=planner, date=today).update(
-                questions_answered=F('questions_answered') + count,
-            )
-        return count
+        counts = {}
+        for result in results:
+            day = timezone.localdate(result.get('_occurred_at') or occurred_at) if result.get('_occurred_at') or occurred_at else timezone.localdate()
+            if day < planner.start_date or (planner.end_date and day > planner.end_date):
+                continue
+            if result.get('user_answer') is not None and (not targeted or result.get('category_id') in category_ids or bool(set(result.get('tag_names') or []) & tag_names)):
+                counts[day] = counts.get(day, 0) + 1
+        for day, count in counts.items():
+            StudyPlannerDay.objects.get_or_create(planner=planner, date=day, defaults={'questions_answered': 0})
+            StudyPlannerDay.objects.filter(planner=planner, date=day).update(questions_answered=F('questions_answered') + count)
+        return sum(counts.values())
 
     @staticmethod
     @transaction.atomic
     def record_daily_progress(user):
-        """Read today's durable ledger, or initialize legacy completed activity.
+        """Read today's durable ledger, or reconstruct it from learning events.
 
-        Both ordinary and master exams contribute. When category/tag
-        targets exist, only answered result rows matching either target count.
+        Ordinary, offline and master learning contribute. When category/tag
+        targets exist, only answered events matching either target count.
         """
         today = timezone.localdate()
 
@@ -160,32 +154,11 @@ class StudyPlannerService:
             )
             is_targeted = bool(category_ids or tag_names)
 
-            regular_rows = TestHistory.objects.filter(
-                user=user, completed_at__gte=day_start, completed_at__lt=day_end,
-            ).values_list('results', 'answered_count')
-            master_rows = MasterExamAttempt.objects.filter(
-                user=user, finished_at__gte=day_start, finished_at__lt=day_end,
-                is_complete=True,
-            ).values_list('results', 'answered_count')
-
-            for stored_results, answered_count in list(regular_rows) + list(master_rows):
-                if not is_targeted:
-                    answered_today += answered_count or 0
-                    continue
-                questions = (
-                    stored_results.get('questions', [])
-                    if isinstance(stored_results, dict)
-                    else stored_results or []
-                )
-                for result in questions:
-                    if result.get('user_answer') is None:
-                        continue
-                    result_tags = set(result.get('tag_names') or [])
-                    if (
-                        result.get('category_id') in category_ids
-                        or bool(result_tags & tag_names)
-                    ):
-                        answered_today += 1
+            from apps.learning.models import LearningEvent
+            events = LearningEvent.objects.filter(user=user, occurred_at__gte=day_start, occurred_at__lt=day_end)
+            for event in events:
+                if not is_targeted or event.category_id_snapshot in category_ids or bool(set(event.tag_names) & tag_names):
+                    answered_today += 1
 
         # Fast path: the (planner, date) row exists. A single UPDATE
         # against the indexed pair.

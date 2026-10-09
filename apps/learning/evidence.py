@@ -25,13 +25,22 @@ def with_locked_learning_content(queryset):
 
 
 def knowledge_learning_content(obj):
-    return {field: getattr(obj, field) for field in KNOWLEDGE_CONTENT_FIELDS}
+    content = {field: getattr(obj, field) for field in KNOWLEDGE_CONTENT_FIELDS}
+    content['translations'] = {
+        locale: {field: value.get(field) for field in KNOWLEDGE_CONTENT_FIELDS}
+        for locale, value in (obj.translations or {}).items() if isinstance(value, dict)
+    }
+    return content
 
 
 def question_learning_fingerprint(question):
     content = {
         'question': question.question, 'choices': question.choices,
         'correct_answer': question.correct_answer,
+        'translations': {
+            locale: {field: value.get(field) for field in ('question', 'choices')}
+            for locale, value in (question.translations or {}).items() if isinstance(value, dict)
+        },
         'knowledge_object_id': question.knowledge_object_id,
         'knowledge': (
             knowledge_learning_content(question.knowledge_object)
@@ -47,4 +56,9 @@ def question_learning_fingerprint(question):
 
 def invalidate_question_learning(question_ids, using='default'):
     from .models import UserQuestionAttempt
-    UserQuestionAttempt.objects.using(using).filter(question_id__in=question_ids).delete()
+    from apps.questions.models import Question
+    ids = list(question_ids)
+    UserQuestionAttempt.objects.using(using).filter(question_id__in=ids).delete()
+    Question.objects.using(using).filter(pk__in=ids).update(
+        times_answered=0, times_correct=0, stats_fingerprint='',
+    )
