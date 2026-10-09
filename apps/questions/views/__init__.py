@@ -35,6 +35,7 @@ from .reputation_views import (
 from .knowledge_object_views import (
     KnowledgeObjectListCreateView,
     KnowledgeObjectDetailView,
+    KnowledgeObjectQuestionsView,
 )
 
 __all__ = [
@@ -63,4 +64,5 @@ __all__ = [
     'RefreshAuthorRanksView',
     'KnowledgeObjectListCreateView',
     'KnowledgeObjectDetailView',
+    'KnowledgeObjectQuestionsView',
 ]

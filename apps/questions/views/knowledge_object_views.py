@@ -3,10 +3,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.core.utils import api_error, api_success
+from apps.core.utils import api_error, api_success, paginate
 
 from ..models import KnowledgeObject, Question
-from ..serializers import KnowledgeObjectSerializer
+from ..serializers import KnowledgeObjectSerializer, QuestionSerializer
 
 
 def _knowledge_queryset(user):
@@ -94,3 +94,20 @@ class KnowledgeObjectDetailView(APIView):
             return api_error('غير مصرح لك بحذف هذا الهدف المعرفي', 403)
         instance.delete()
         return api_success(message='تم حذف الهدف المعرفي')
+
+
+class KnowledgeObjectQuestionsView(APIView):
+    """Caller-visible linked questions, including authorized drafts, with normal pagination."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        get_object_or_404(KnowledgeObject, pk=pk)
+        questions = (Question.objects.visible_to(request.user).filter(knowledge_object_id=pk)
+                     .select_related('category', 'authored_by', 'owned_by', 'case', 'knowledge_object')
+                     .prefetch_related('tags').order_by('id'))
+        page, meta = paginate(questions, request)
+        page = list(page)
+        cache = QuestionSerializer.build_case_sibling_cache(page, request.user)
+        return api_success(data={'items': QuestionSerializer(page, many=True, context={
+            'request': request, 'case_sibling_cache': cache,
+        }).data, **meta})

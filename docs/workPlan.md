@@ -83,3 +83,8 @@
 
 - Read-only inspection confirmed local `SQLite/db.sqlite3` has unique history source-session identity and the offline receipt identity/payload columns. Earlier migration gates still apply to any other database missing these structures; no migration work was performed. Remote deployment and runtime/concurrency remain unverified.
 - Reload/deploy the schema-free `GET auth/admin/permissions/users/` lookup with Android: permission-only accounts, non-stub filtering, name/username search, stable bounded pagination, inactive/empty results and denial without admin.permissions. Existing account-management writes still require admin.users.
+
+
+## Native knowledge linked questions — integration pending, 2026-10-09
+
+- Reload matching source and verify GET knowledge-objects/{pk}/questions/ with Android: existing pagination, draft/retired objects, authorized draft questions versus hidden foreign drafts, closed-book snapshots, deleted object/questions and local last-page clamping. Implementation is schema-free; source AST/whitespace checks do not establish HTTP/runtime behavior.

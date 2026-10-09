@@ -18,6 +18,8 @@ urlpatterns = [
         name='knowledge-object-detail',
     ),
 
+    path('knowledge-objects/<int:pk>/questions/', views.KnowledgeObjectQuestionsView.as_view(), name='knowledge-object-questions'),
+
     # ── Cases ─────────────────────────────────────────────────────────
     path('cases/', views.CaseListView.as_view(), name='case-list'),
     path('cases/<str:case_key>/', views.CaseDetailView.as_view(), name='case-detail'),
