@@ -6,7 +6,6 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from .write_receipts import read_receipt, write_question
 from ..models import Question
 from ..serializers import (
     QuestionSerializer,
@@ -16,6 +15,7 @@ from ..serializers import (
     QuestionImageUploadSerializer,
 )
 from ..services import QuestionService
+from .write_receipts import read_receipt, write_question
 from apps.core.permissions import HasCapability
 from apps.core.utils import (
     api_success,

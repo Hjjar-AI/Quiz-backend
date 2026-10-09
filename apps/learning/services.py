@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from .srs_service import SRSService
 from apps.questions.models import Question
-from apps.exams.services.question_selection import select_varied_question_ids
 
 
 class LearningService:
@@ -27,6 +26,7 @@ class LearningService:
             limit = 20
         limit = max(1, min(limit, 200))
 
+        from apps.exams.services.question_selection import select_varied_question_ids
         budgets = {
             'srs_due': max(1, int(limit * 0.35)),
             'planner_targets': int(limit * 0.25),
