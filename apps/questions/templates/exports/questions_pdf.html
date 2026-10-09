@@ -87,7 +87,9 @@
         {% endif %}
         {% endif %}
         {% if separate_answers %}
-          <a class="answer-link" href="#answer-{{ q.pdf_number }}">{{ labels.view_answer }}</a>
+          <span class="answer-link-container">
+            <a class="answer-link" href="#answer-{{ q.pdf_number }}">{{ labels.view_answer }}</a>
+          </span>
         {% endif %}
       </header>
 

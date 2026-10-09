@@ -547,7 +547,9 @@ def _build_pdf_sections(questions, answer_layout):
 def _pdf_layout_css(pdf_mode):
     css = """
         .answer-link, .back-link { color: inherit; text-decoration: underline; font-size: 9pt; }
-        .answer-link { margin-inline-start: auto; }
+        /* Keep the link inline inside a flex item: WeasyPrint 70 drops
+           link annotations when the anchor itself is the flex item. */
+        .answer-link-container { margin-inline-start: auto; }
         .answer-section { break-before: page; }
         .answer-section--followed { break-after: page; }
         .answer-card { break-inside: avoid; border-bottom: 1px solid #999; padding: 0.7em 0; }

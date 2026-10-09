@@ -2,6 +2,8 @@
 
 ## Current priorities
 
+- Verify a fresh Android-requested PDF after reloading the backend with the 2026-10-09 inline-link wrapper fix. Saved WeasyPrint 70.0 exports omitted all forward annotations; the correction restores both directions in isolated 66.0/70.0 renders. Fixed SQLite specimen: `exports/pdf-link-fixed-weasyprint70.pdf`. Existing PDFs must be regenerated; actual deployment/phone click verification remains pending.
+
 - Verify Ruby PDF exports match the coordinated frontend palette in both locales. AST/source palette matching passed; actual PDF rendering remains pending.
 
 - Desktop-check the guided startup tutorial on Linux/Windows/Tk: resized layout, Advanced options, sidebar/Back/Next, clipboard, menu-answer steps, LAN fields and separate help windows. Pure lesson generation, help/syntax/whitespace and headless widget checks passed; real display and actual app launch remain unverified. The tutorial stays read-only apart from clipboard copies.
