@@ -63,6 +63,43 @@ def _closed(request, rows):
     return any(serializer.get_answers_hidden(row) for row in rows)
 
 
+class OfflineCatalogQuery(serializers.Serializer):
+    after = serializers.IntegerField(min_value=0, default=0)
+    upper_bound = serializers.IntegerField(min_value=0, required=False)
+
+
+class OfflineCatalogView(APIView):
+    """Caller-visible IDs, keyset-paged for explicit full-bank offline download.
+
+    The fixed upper ID bounds additions, not edits/deletions or a database snapshot.
+    Pack generation rechecks access, grading readiness and closed-book restrictions.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'tests.start'
+
+    def get(self, request):
+        query = OfflineCatalogQuery(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        values = query.validated_data
+        visible = Question.objects.visible_to(request.user)
+        upper = values.get('upper_bound')
+        if upper is None:
+            upper = visible.order_by('-pk').values_list('pk', flat=True).first() or 0
+        maximum = max(1, min(getattr(settings, 'MAX_QUIZ_QUESTIONS', 200), 200))
+        bounded = visible.filter(pk__lte=upper)
+        rows = list(bounded.filter(pk__gt=values['after']).order_by('pk').only('pk')[:maximum + 1])
+        page = rows[:maximum]
+        serializer = QuestionSerializer(context={'request': request})
+        ids = [row.pk for row in page if not serializer.get_answers_hidden(row)]
+        return api_success(data={
+            'question_ids': ids,
+            'upper_bound': upper,
+            'next_after': page[-1].pk if len(rows) > maximum else None,
+            'total': bounded.count(),
+            'excluded': len(page) - len(ids),
+        })
+
+
 class OfflinePackView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'tests.start'

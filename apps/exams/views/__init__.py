@@ -43,4 +43,4 @@ __all__ = [
     'BlueprintDetailView',
 ]
 
-from .offline_views import OfflinePackView, OfflineCompletionView
+from .offline_views import OfflinePackView, OfflineCompletionView, OfflineCatalogView

@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('offline/catalog/', views.OfflineCatalogView.as_view(), name='offline-study-catalog'),
     path('offline/packs/', views.OfflinePackView.as_view(), name='offline-study-pack'),
     path('offline/completions/', views.OfflineCompletionView.as_view(), name='offline-study-completion'),
     path('start/<str:mode>/', views.StartSessionView.as_view(), name='start-session'),
