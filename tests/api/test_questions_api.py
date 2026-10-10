@@ -73,7 +73,7 @@ class QuestionCreateAPITests(CacheClearingTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
-        self.user = make_user('alice')
+        self.user = make_user('alice', capabilities={'questions.create': True})
         self.client.force_login(self.user)
 
     def _payload(self, **kw):
@@ -86,7 +86,7 @@ class QuestionCreateAPITests(CacheClearingTestCase):
         base.update(kw)
         return base
 
-    def test_member_can_create(self):
+    def test_member_with_explicit_grant_can_create(self):
         resp = self.client.post(
             '/api/v1/questions/', self._payload(), format='json',
         )

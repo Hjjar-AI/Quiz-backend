@@ -6,6 +6,8 @@ The seven rescan and eight deeper-review findings are source-complete. Do not re
 
 ## Pending verification
 
+- Verify `/questions/source-books/` on the running PostgreSQL backend after reload: existing null source titles should be omitted without HTTP 500, with exact valid titles/counts still available in Vue/Android. Two regressions and the 18-test question API run pass on SQLite; no application data repair is required.
+
 - Verify member creation/duplication defaults and individual admin exceptions on the deployed backend and refreshed Vue/Android profiles. Existing stored member role grants remain authoritative; disable these in the permissions panel if still enabled. Focused 49-test SQLite verification passed; live PostgreSQL/browser/device behavior remains unverified.
 
 - Verify [temporary import-limit bypass](contracts/importLimits.md) on the deployed session/cache stack and both clients: correct/wrong passwords, separate sessions, expiry at ten minutes, retained hourly quota and explicit resumption after HTTP 429. Focused SQLite/frontend checks do not establish live HTTP/device behavior.

@@ -591,6 +591,7 @@ class SourceBookListView(APIView):
         from django.db.models import Count
         books = (
             Question.objects.public()
+            .filter(source_document__isnull=False)
             .exclude(source_document='')
             .values('source_document')
             .annotate(count=Count('id'))
@@ -598,7 +599,7 @@ class SourceBookListView(APIView):
         )
         return api_success(data={'items': [
             {'name': book['source_document'], 'count': book['count']}
-            for book in books if book['source_document'].strip()
+            for book in books if (book['source_document'] or '').strip()
         ]})
 
 

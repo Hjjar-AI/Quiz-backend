@@ -2,6 +2,10 @@
 
 Updated 2026-10-10. [Remaining gates](workPlan.md) · [Historical evidence](archive/README.md).
 
+## 2026-10-10 null source-book crash
+
+Fixed the pasted `/questions/source-books/` HTTP 500: `Question.source_document` permits null, but the list called `.strip()` unconditionally. The public-bank query now excludes null titles and the output guard handles missing/blank titles safely, preserving exact valid titles/counts and private-draft exclusion. Added two API regressions for null/blank/whitespace titles, valid Arabic titles/counts and private drafts. Updated the existing question-create fixture to request the explicit member grant required by the current role-default policy. All 18 source-book/question API tests passed on isolated SQLite; Python AST and whitespace checks passed. No application data/schema changes, builds or live PostgreSQL/HTTP/client verification.
+
 ## 2026-10-10 question creation role defaults
 
 Normal members no longer receive `questions.create` or `questions.duplicate` in the code defaults. Following the user's clarification, removed the hard role restriction: admins can grant/revoke either capability per user without promotion, and stored role grants remain authoritative. Moderator/admin defaults retain both. Vue/Android already gate creation and duplication using effective profile capabilities, so no client changes are required. Existing own-question editing/deletion remains available. Existing application role rows are not rewritten by this source change; disable creation/duplication in the member role through the permissions panel if that stored role still grants them, then grant individual exceptions.
