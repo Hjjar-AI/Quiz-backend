@@ -176,7 +176,11 @@ class MasterExamCurrentQuestionView(APIView):
         if attempt.is_complete:
             return api_error('المحاولة منتهية', 400)
 
-        payload = MasterExamAttemptService.current_question(attempt)
+        try:
+            payload = MasterExamAttemptService.current_question(attempt)
+        except ValueError as e:
+            msg, status, details = exam_error_response(str(e))
+            return api_error(msg,status,details=details)
         if payload is None:
             return api_error('لا يوجد سؤال', 404)
         return api_success(data=payload)
@@ -215,6 +219,7 @@ class MasterExamSubmitAnswerView(APIView):
                 serializer.validated_data['answer'],
                 serializer.validated_data['confidence'],
                 serializer.validated_data.get('error_reason'),
+                expected_slot=serializer.validated_data['expected_slot'],session_id=serializer.validated_data['session_id'],
             )
         except ValueError as e:
             msg, status, details = exam_error_response(str(e))
@@ -222,6 +227,8 @@ class MasterExamSubmitAnswerView(APIView):
 
         return api_success(data={
             'current_question_id': attempt.current_question_id,
+            'saved_slot': attempt.answers.get(str(serializer.validated_data['question_id'])),
+            'session_id': attempt.session_id,
         })
 
 
@@ -244,6 +251,7 @@ class MasterExamGotoView(APIView):
         try:
             attempt = MasterExamAttemptService.goto_question(
                 attempt, serializer.validated_data['question_id'],
+                expected_current=serializer.validated_data['expected_current_question_id'],session_id=serializer.validated_data['session_id'],
             )
         except ValueError as e:
             msg, status, details = exam_error_response(str(e))

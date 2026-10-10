@@ -90,6 +90,8 @@ class MasterExamAttemptStatusSerializer(serializers.Serializer):
 
 
 class MasterExamSubmitAnswerSerializer(serializers.Serializer):
+    session_id = serializers.CharField()
+    expected_slot = serializers.DictField(required=True, allow_null=True)
     question_id = serializers.IntegerField(min_value=1)
     answer = serializers.IntegerField(min_value=1, max_value=MAX_CHOICES)
     confidence = serializers.JSONField(required=False, default=3)
@@ -109,6 +111,8 @@ class MasterExamSubmitAnswerSerializer(serializers.Serializer):
 
 
 class MasterExamGotoSerializer(serializers.Serializer):
+    session_id = serializers.CharField()
+    expected_current_question_id = serializers.IntegerField(required=True,allow_null=True)
     question_id = serializers.IntegerField(min_value=1)
 
 

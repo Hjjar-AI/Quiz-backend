@@ -54,15 +54,36 @@ def _shuffle_preserving_case_groups(question_ids):
 
 @transaction.atomic
 def start(user, exam, is_preview=False):
-    if is_preview:
-        return _start_preview(user, exam)
-
     # Serialize start-time gates and question freezing with lifecycle and
     # composition writes; the view's exam instance may already be stale.
-    User.objects.select_for_update().only('id').get(pk=user.pk)
+    user = User.objects.select_for_update().get(pk=user.pk)
     exam = MasterExam.objects.select_for_update().filter(pk=exam.pk).first()
     if exam is None:
         raise ValueError('EXAM_NOT_FOUND')
+    # Lock direct participation rows as well as the exam: a membership removal
+    # either commits before this check, or follows the authorized start.
+    from apps.groups.models import GroupMembership
+    list(GroupMembership.objects.select_for_update().filter(user=user).order_by('pk'))
+    list(exam.co_attendings.through.objects.select_for_update().filter(masterexam_id=exam.pk, user_id=user.pk))
+    list(exam.audience_users.through.objects.select_for_update().filter(masterexam_id=exam.pk, user_id=user.pk))
+    list(exam.audience_groups.through.objects.select_for_update().filter(masterexam_id=exam.pk).order_by('pk'))
+    from . import finish as finish_service
+    from ..master_exam_service.audience import user_can_access
+    from ...views.common import _can_manage_exam
+    from rest_framework.exceptions import PermissionDenied
+    if is_preview:
+        if not user.has_capability('master_exams.preview') or not _can_manage_exam(user, exam):
+            raise PermissionDenied()
+        return _start_preview(user, exam)
+    existing = MasterExamAttempt.objects.select_for_update().filter(master_exam=exam,user=user).order_by('-started_at','-pk').first()
+    if existing is not None:
+        if existing.is_complete:
+            raise ValueError('ALREADY_ATTEMPTED')
+        if timezone.now() > existing.deadline_at + timedelta(seconds=_grace_seconds()):
+            return finish_service.finish(existing, forced=True)
+        return existing
+    if not user_can_access(user, exam):
+        raise PermissionDenied()
     now = timezone.now()
 
     # ── Status gate (security) ─────────────────────────────────

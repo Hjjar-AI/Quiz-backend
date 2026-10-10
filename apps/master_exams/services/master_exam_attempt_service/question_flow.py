@@ -2,6 +2,13 @@
 """
 Current-question lookup, navigation, and unanswered iteration.
 """
+from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
+from apps.users.models import User
+from ...models import MasterExamAttempt
+from .helpers import _grace_seconds
+from .finish import _force_finish
 from apps.questions.models import Question
 from apps.questions.payloads import (
     exam_question_payload,
@@ -19,7 +26,29 @@ def _next_unanswered(question_ids, answers):
     return None
 
 
+class _ExpiredNavigation(Exception):
+    pass
+
+
+def _locked_active(attempt):
+    User.objects.select_for_update().get(pk=attempt.user_id)
+    fresh=MasterExamAttempt.objects.select_for_update().filter(pk=attempt.pk).first()
+    if fresh is None: raise ValueError('ATTEMPT_NOT_FOUND')
+    if fresh.is_complete: raise ValueError('ATTEMPT_ALREADY_COMPLETE')
+    if timezone.now() > fresh.deadline_at + timedelta(seconds=_grace_seconds()): raise _ExpiredNavigation()
+    return fresh
+
+
 def current_question(attempt):
+    try:
+        with transaction.atomic():
+            return _current_question_locked(_locked_active(attempt))
+    except _ExpiredNavigation:
+        _force_finish(attempt)
+        raise ValueError('TIME_EXPIRED')
+
+
+def _current_question_locked(attempt):
     attempt_qids = list(attempt.question_ids or [])
     current_id = attempt.current_question_id
     if current_id is None or current_id not in attempt_qids:
@@ -28,9 +57,6 @@ def current_question(attempt):
         )
     if current_id is None:
         current_id = attempt_qids[0] if attempt_qids else None
-    if current_id != attempt.current_question_id:
-        attempt.current_question_id = current_id
-        attempt.save(update_fields=['current_question_id'])
 
     if current_id is None:
         return None
@@ -67,15 +93,24 @@ def current_question(attempt):
         'index': attempt_qids.index(question.id),
         'total': len(attempt_qids),
         'question': payload,
+        'saved_slot': saved or None, 'session_id': attempt.session_id,'current_question_id':attempt.current_question_id,
         'saved_answer': saved.get('answer'),
         'saved_confidence': normalize_confidence(saved.get('confidence', 3)),
     }
 
 
-def goto_question(attempt, question_id):
-    attempt_qids = list(attempt.question_ids or [])
-    if question_id not in attempt_qids:
-        raise ValueError('QUESTION_NOT_IN_EXAM')
-    attempt.current_question_id = question_id
-    attempt.save(update_fields=['current_question_id'])
-    return attempt
+def goto_question(attempt, question_id, *, expected_current, session_id):
+    try:
+        with transaction.atomic():
+            fresh=_locked_active(attempt)
+            if fresh.session_id != session_id: raise ValueError('ATTEMPT_PROGRESS_CHANGED')
+            if question_id not in (fresh.question_ids or []): raise ValueError('QUESTION_NOT_IN_EXAM')
+            if fresh.current_question_id != expected_current:
+                if fresh.current_question_id == question_id: return fresh
+                raise ValueError('ATTEMPT_PROGRESS_CHANGED')
+            fresh.current_question_id=question_id
+            fresh.save(update_fields=['current_question_id'])
+            return fresh
+    except _ExpiredNavigation:
+        _force_finish(attempt)
+        raise ValueError('TIME_EXPIRED')

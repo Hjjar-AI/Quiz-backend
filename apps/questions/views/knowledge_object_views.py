@@ -89,7 +89,12 @@ class KnowledgeObjectDetailView(APIView):
     def get(self, request, pk):
         return api_success(data=KnowledgeObjectSerializer(self.get_object(pk)).data)
 
+    @transaction.atomic
     def put(self, request, pk):
+        from apps.users.models import User
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        User.objects.select_for_update().get(pk=request.user.pk)
+        lock_tag_hierarchy()
         instance = self.get_object(pk)
         if not _may_manage(request.user, instance):
             return api_error('غير مصرح لك بتعديل هذا الهدف المعرفي', 403)

@@ -1,7 +1,7 @@
 """Preserve dependent state for API, admin and queryset deletions."""
 
 from django.db.models.deletion import ProtectedError
-from django.db.models.signals import m2m_changed, post_delete, pre_delete
+from django.db.models.signals import m2m_changed, post_delete, pre_delete, pre_save, post_save
 from django.dispatch import receiver
 from apps.planning.models import StudyPlanner
 
@@ -69,3 +69,45 @@ m2m_changed.connect(lock_planner_targets, sender=StudyPlanner.target_categories.
 def bump_deleted_tag_revision(sender, instance, using, **kwargs):
     from apps.core.revisions import bump_revision
     bump_revision('_tag_hierarchy_lock', using)
+
+
+@receiver(pre_save,sender=Tag)
+def capture_planner_tag_name(sender,instance,using,**kwargs):
+    instance._old_planner_tag_name=Tag.objects.using(using).filter(pk=instance.pk).values_list('name',flat=True).first()
+
+
+@receiver(post_save,sender=Tag)
+def refresh_renamed_planner_scopes(sender,instance,using,**kwargs):
+    old=getattr(instance,'_old_planner_tag_name',None)
+    if old is None or old==instance.name: return
+    from django.db.models import F
+    from apps.planning.services import StudyPlannerService
+    for planner in StudyPlanner.objects.using(using).select_for_update().filter(target_tags=instance).order_by('pk'):
+        # _scope must exist before naming changes; preserve prior names for an
+        # initial scope created on a legacy plan in this transaction.
+        scope=StudyPlannerService._scope(planner)
+        if instance.name in scope.tag_names:
+            scope.tag_names=[old if name==instance.name else name for name in scope.tag_names]
+            scope.save(update_fields=['tag_names'])
+        StudyPlanner.objects.using(using).filter(pk=planner.pk).update(version=F('version')+1)
+        StudyPlannerService.record_scope_change(planner,retain_today=True)
+
+
+def bump_planner_taxonomy_version(sender,instance,action,reverse,model,pk_set,using,**kwargs):
+    if action not in ('pre_add','pre_remove','pre_clear','post_add','post_remove','post_clear'): return
+    from django.db.models import F
+    from apps.planning.services import StudyPlannerService
+    if action.startswith('pre_'):
+        ids=list(instance.planner_subscriptions.values_list('pk',flat=True)) if reverse and action=='pre_clear' else list(pk_set or []) if reverse else [instance.pk]
+        setattr(instance,'_planner_scope_targets',ids)
+        for planner in StudyPlanner.objects.using(using).select_for_update().filter(pk__in=ids).order_by('pk'):
+            StudyPlannerService._scope(planner)
+        return
+    ids=getattr(instance,'_planner_scope_targets',[]) if reverse else [instance.pk]
+    StudyPlanner.objects.using(using).filter(pk__in=ids).update(version=F('version')+1)
+    if not getattr(instance,'_scope_update_in_progress',False):
+        for planner in StudyPlanner.objects.using(using).select_for_update().filter(pk__in=ids).order_by('pk'):
+            StudyPlannerService.record_scope_change(planner)
+
+m2m_changed.connect(bump_planner_taxonomy_version,sender=StudyPlanner.target_tags.through,dispatch_uid='planner_tag_revision')
+m2m_changed.connect(bump_planner_taxonomy_version,sender=StudyPlanner.target_categories.through,dispatch_uid='planner_category_revision')

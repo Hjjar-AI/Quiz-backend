@@ -38,12 +38,12 @@ from .question_flow import _next_unanswered
 from .finish import _force_finish
 
 
-def submit_answer(attempt, question_id, answer, confidence=3, error_reason=None):
+def submit_answer(attempt, question_id, answer, confidence=3, error_reason=None, *, expected_slot, session_id):
     grace = timedelta(seconds=_grace_seconds())
     tolerance = timedelta(seconds=_last_answer_tolerance_seconds())
     try:
         return _submit_answer_locked(
-            attempt, question_id, answer, confidence, error_reason, grace + tolerance,
+            attempt, question_id, answer, confidence, error_reason, grace + tolerance, expected_slot, session_id,
         )
     except _AnswerTimeExpired:
         _force_finish(attempt, reason='timeout')
@@ -54,7 +54,7 @@ class _AnswerTimeExpired(Exception):
     """Leave the answer transaction before committing timeout completion."""
 
 
-def _submit_answer_locked(attempt, question_id, answer, confidence, error_reason, allowance):
+def _submit_answer_locked(attempt, question_id, answer, confidence, error_reason, allowance, expected_slot, session_id):
     with transaction.atomic():
         locked = (
             MasterExamAttempt.objects
@@ -64,6 +64,9 @@ def _submit_answer_locked(attempt, question_id, answer, confidence, error_reason
         )
         if locked is None:
             raise ValueError('ATTEMPT_NOT_FOUND')
+
+        if locked.session_id != session_id:
+            raise ValueError('ATTEMPT_PROGRESS_CHANGED')
 
         # Re-check complete under the lock: the sweeper (or a
         # concurrent finish from another tab) may have completed the
@@ -109,6 +112,11 @@ def _submit_answer_locked(attempt, question_id, answer, confidence, error_reason
                 f'إجابة غير صالحة. هذا السؤال يحتوي على {max_choice} خيارات فقط'
             )
 
+        actual = (locked.answers or {}).get(str(question_id))
+        if actual != expected_slot:
+            if actual and actual.get('answer') == answer and normalize_confidence(actual.get('confidence',3)) == normalize_confidence(confidence) and actual.get('error_reason') == error_reason:
+                return locked
+            raise ValueError('ATTEMPT_PROGRESS_CHANGED')
         new_answers = dict(locked.answers or {})
         new_answers[str(question_id)] = {
             'answer': answer,

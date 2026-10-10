@@ -271,6 +271,8 @@ class BackupService:
         # dead code removed in the same release.
         models_to_clear = [
             # Remove subscriptions before deleting their protected taxonomy.
+            'planning.StudyPlannerScopeDay',
+            'planning.StudyPlannerScope',
             'planning.StudyPlanner',
             'master_exams.MasterExamQuestion',
             'master_exams.MasterExamAttempt',

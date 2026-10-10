@@ -30,6 +30,7 @@ class StudyPlanner(InvariantValidationMixin, TimeStampedModel):
     serializer still emits the same `{date_str: count}` dict shape so
     the frontend does not need to change.
     """
+    version = models.PositiveIntegerField(default=1)
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -99,3 +100,23 @@ class StudyPlannerDay(models.Model):
             f'{self.planner.user.username} · {self.date} · '
             f'{self.questions_answered}'
         )
+
+
+class StudyPlannerScope(models.Model):
+    planner = models.ForeignKey(StudyPlanner,on_delete=models.CASCADE,related_name='scope_history')
+    reset_progress = models.BooleanField(default=True)
+    effective_at = models.DateTimeField(null=True,blank=True)
+    ended_at = models.DateTimeField(null=True,blank=True)
+    category_ids = models.JSONField(default=list)
+    tag_names = models.JSONField(default=list)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True,blank=True)
+
+
+class StudyPlannerScopeDay(models.Model):
+    scope = models.ForeignKey(StudyPlannerScope,on_delete=models.CASCADE,related_name='days')
+    date = models.DateField()
+    questions_answered = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['scope','date'],name='unique_planner_scope_day')]

@@ -176,10 +176,14 @@ class QuestionService:
 
     @staticmethod
     def update_question(question_id, data, user):
+        from apps.users.models import User
         from ..serializers import QuestionUpdateSerializer, _resolve_case
         from apps.learning.evidence import with_locked_learning_content
 
         with transaction.atomic():
+            User.objects.select_for_update().get(pk=user.pk)
+            from apps.questions.hierarchy import lock_tag_hierarchy
+            lock_tag_hierarchy()
             instance = with_locked_learning_content(
                 Question.objects.select_for_update().filter(id=question_id),
             ).first()

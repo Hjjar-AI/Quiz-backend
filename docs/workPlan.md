@@ -25,3 +25,7 @@ Full Android case/knowledge management pagination is implemented in source. Veri
 The [new source review](../../Android/docs/projectRescan.md) identifies seven additional bounded gaps: web account-generation guards; orphan pending-create/form association; transactional question ownership checks; knowledge-delete revisions; terminal/deleted receipt recovery; web conflict resolution; learner case pagination/read retention. All seven are now addressed in source; remaining checks are runtime release gates.
 
 The seven rescan findings are source-complete. Validate coordinated DELETE/receipt contracts, account-switch cancellation, conflict review, orphan-save recovery and learner paging; see the latest [work log](workDone.md).
+
+## 2026-10-09 deeper transaction/lifecycle findings
+
+The [deeper source review](../../Android/docs/deepTransactionReview.md) records eight new follow-up areas: knowledge/learning lock order, import revision reuse, master attempt resume/makeup and fresh access gates, master answer/navigation concurrency and web uncertainty handling, polling disposal/attempt scope, and planner revision/scope epochs. All eight findings are now source-complete; verify coordinated contracts, fresh planner schema and live interleavings. See the latest work log.

@@ -3,6 +3,8 @@
 import logging
 from datetime import datetime, timedelta
 
+from rest_framework import serializers
+from apps.core.revisions import expected_revision
 from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -100,10 +102,11 @@ class UpdatePlannerView(APIView):
                 if piece:
                     tag_names.append(piece)
 
-        StudyPlannerService.update_planner(
+        planner = StudyPlannerService.update_planner(
             request.user, target, category_ids, tag_names, start_date, end_date,
+            expected_version=expected_revision(request),expected_id=serializers.IntegerField(min_value=1).run_validation(data.get('expected_id')),
         )
-        return api_success(message='تم تحديث الخطة')
+        return api_success(data=StudyPlannerSerializer(planner).data,message='تم تحديث الخطة')
 
 
 class RecordProgressView(APIView):
@@ -118,7 +121,7 @@ class DeletePlannerView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request):
-        StudyPlannerService.delete_planner(request.user)
+        StudyPlannerService.delete_planner(request.user,expected_version=expected_revision(request),expected_id=serializers.IntegerField(min_value=1).run_validation(request.query_params.get('expected_id')))
         return api_success(message='تم حذف الخطة')
 
 

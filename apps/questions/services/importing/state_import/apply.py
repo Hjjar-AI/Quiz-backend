@@ -257,6 +257,13 @@ def _apply_state(
     )
 
     with transaction.atomic():
+        # Operator import can touch the entire bank. Freeze dependencies once,
+        # in the same learner/question order as completion, before parent writes.
+        from apps.users.models import User
+        list(User.objects.select_for_update().order_by('pk').values_list('pk', flat=True))
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        list(Question.objects.select_for_update().order_by('pk').values_list('pk', flat=True))
         # ── Categories ────────────────────────────────────────────
         cat_by_uuid = {}
         for entry in payload.get('categories') or []:
@@ -422,7 +429,8 @@ def _apply_state(
                 obj = KnowledgeObject.objects.create(uuid=uuid_str, **values)
                 counts['knowledge_objects_created'] += 1
             else:
-                obj = existing
+                obj = KnowledgeObject.objects.select_for_update().get(pk=existing.pk)
+                values['version'] = obj.version + 1
                 for field, value in values.items():
                     setattr(obj, field, value)
                 obj.save()
@@ -605,8 +613,7 @@ def _apply_state(
                     existing_q.times_answered = entry['times_answered']
                 if 'times_correct' in entry:
                     existing_q.times_correct = entry['times_correct']
-                if 'version' in entry:
-                    existing_q.version = entry['version']
+                existing_q.version = Question.objects.select_for_update().get(pk=existing_q.pk).version + 1
                 existing_q.save()
 
                 q = existing_q

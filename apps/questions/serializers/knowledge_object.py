@@ -74,6 +74,8 @@ class KnowledgeObjectSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # DRF may have fetched this instance before another editor committed.
         # Apply a partial update to current state, preserving unrelated edits.
+        from apps.core.model_validation import lock_assessed_dependents
+        lock_assessed_dependents(instance, instance._state.db or 'default')
         instance = KnowledgeObject.objects.select_for_update().get(pk=instance.pk)
         from apps.core.exceptions import RevisionConflict
         expected = validated_data.pop('expected_version', None)

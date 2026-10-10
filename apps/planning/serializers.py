@@ -2,10 +2,11 @@
 
 from datetime import timedelta
 
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import StudyPlanner
+from .models import StudyPlanner, StudyPlannerScopeDay
 
 
 class StudyPlannerSerializer(serializers.ModelSerializer):
@@ -36,11 +37,11 @@ class StudyPlannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudyPlanner
         fields = [
-            'id', 'target_questions_per_day', 'target_categories', 'target_tags',
+            'id', 'version', 'target_questions_per_day', 'target_categories', 'target_tags',
             'start_date', 'end_date', 'daily_progress', 'today',
         ]
         read_only_fields = [
-            'id', 'target_categories', 'target_tags', 'daily_progress',
+            'id','version', 'target_categories', 'target_tags', 'daily_progress',
             'created_at', 'updated_at',
         ]
 
@@ -56,22 +57,27 @@ class StudyPlannerSerializer(serializers.ModelSerializer):
         return list(obj.target_tags.values_list('name', flat=True))
 
     def get_daily_progress(self, obj):
-        # When the view supplied a Prefetch with `to_attr`, use the
-        # already-hydrated list and skip the query entirely. When it
-        # did not (create/update responses, tests, ad-hoc use), fall
-        # back to a single filtered query. The attribute name matches
-        # the `to_attr` set on the Prefetch in GetPlannerView.
+        today = timezone.localdate()
+        cutoff = today - timedelta(days=90)
         prefetched = getattr(obj, 'recent_days_prefetched', None)
         if prefetched is not None:
-            return {
-                d.date.isoformat(): d.questions_answered
-                for d in prefetched
-            }
+            progress = {day.date.isoformat(): day.questions_answered for day in prefetched}
+        else:
+            progress = dict((day.isoformat(), count) for day, count in
+                            obj.days.filter(date__gte=cutoff).values_list('date', 'questions_answered'))
 
-        cutoff = timezone.localdate() - timedelta(days=90)
-        rows = (
-            obj.days
-            .filter(date__gte=cutoff)
-            .values_list('date', 'questions_answered')
-        )
-        return {d.isoformat(): c for d, c in rows}
+        # Historical days retain all activity under its original scope. Today's
+        # target counts only the chain since the latest explicit scope reset.
+        # Read-time projection also restores pre-reset activity after midnight.
+        scopes = obj.scope_history
+        if not scopes.exists():
+            return progress
+        rows = StudyPlannerScopeDay.objects.filter(scope__planner=obj, date__gte=cutoff)
+        for row in rows.values('date').annotate(total=Sum('questions_answered')):
+            progress[row['date'].isoformat()] = row['total']
+        boundary = scopes.filter(reset_progress=True).order_by('-pk').first()
+        today_rows = rows.filter(date=today)
+        if boundary is not None:
+            today_rows = today_rows.filter(scope_id__gte=boundary.pk)
+        progress[today.isoformat()] = today_rows.aggregate(total=Sum('questions_answered'))['total'] or 0
+        return progress

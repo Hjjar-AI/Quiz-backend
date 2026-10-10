@@ -130,6 +130,8 @@ class AdminTagRenameView(APIView):
 
     @transaction.atomic
     def post(self, request, old_name):
+        from apps.users.models import User
+        User.objects.select_for_update().get(pk=request.user.pk)
         from ..hierarchy import lock_tag_hierarchy
         lock_tag_hierarchy()
         check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
@@ -166,6 +168,8 @@ class AdminTagDeleteView(APIView):
 
     @transaction.atomic
     def delete(self, request, name):
+        from apps.users.models import User
+        User.objects.select_for_update().get(pk=request.user.pk)
         from ..hierarchy import lock_tag_hierarchy
         lock_tag_hierarchy()
         check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
@@ -207,6 +211,8 @@ class AdminTagMergeView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        from apps.users.models import User
+        User.objects.select_for_update().get(pk=request.user.pk)
         from ..hierarchy import lock_tag_hierarchy
         lock_tag_hierarchy()
         check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
@@ -231,6 +237,9 @@ class AdminTagMergeView(APIView):
 
         target, _ = Tag.objects.get_or_create(name=target_name)
         target = Tag.objects.select_for_update().get(pk=target.pk)
+
+        affected_qids=Question.objects.filter(Q(tags__name__in=source_tags) | Q(knowledge_object__tags__name__in=source_tags)).values('pk')
+        list(Question.objects.select_for_update().filter(pk__in=affected_qids).order_by('pk').values_list('pk',flat=True))
 
         # Lazy import — `planning.models` has no dependency on
         # `questions.models`, but keeping the import inside the method
@@ -263,6 +272,7 @@ class AdminTagMergeView(APIView):
         reparented = 0
         plans_migrated = 0
         sources_processed = []
+        changed_planners=set()
 
         sources_by_name = {tag.name: tag for tag in sources}
         for raw_src_name in source_tags:
@@ -291,6 +301,10 @@ class AdminTagMergeView(APIView):
                     .order_by('pk')
                 )
                 for planner in affected_planners:
+                    from apps.planning.services import StudyPlannerService
+                    StudyPlannerService._scope(planner)
+                    changed_planners.add(planner.pk)
+                    planner._scope_update_in_progress=True
                     planner.target_tags.add(target)
                     planner.target_tags.remove(src)
                     plans_migrated += 1
@@ -316,6 +330,9 @@ class AdminTagMergeView(APIView):
 
             sources_processed.append(src_name)
 
+        from apps.planning.services import StudyPlannerService
+        for planner in StudyPlanner.objects.select_for_update().filter(pk__in=changed_planners).order_by('pk'):
+            StudyPlannerService.record_scope_change(planner,retain_today=True)
         log_privileged_action(
             request,
             'tag.merge',

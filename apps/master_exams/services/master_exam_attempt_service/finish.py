@@ -102,12 +102,14 @@ def _finish_locked(attempt, forced):
 
 def _force_finish(attempt, reason='timeout'):
     try:
-        finish(attempt, forced=True)
+        result=finish(attempt, forced=True)
         logger.info(
             'Master exam attempt %s force-finished (%s)',
             attempt.id, reason,
         )
+        return result
     except Exception:
         logger.exception(
             'Failed to force-finish master exam attempt %s', attempt.id,
         )
+        raise

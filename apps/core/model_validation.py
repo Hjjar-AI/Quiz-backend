@@ -69,6 +69,7 @@ class InvariantValidationMixin:
                 if not field.primary_key and field.attname not in self.get_deferred_fields()
             )
         with transaction.atomic(using=using):
+            lock_assessed_dependents(self, using)
             previous = None
             if self.pk is not None:
                 previous = type(self)._base_manager.using(using).select_for_update().filter(
@@ -105,6 +106,7 @@ class RevisionedSaveMixin:
         if update_fields is not None and not update_fields:
             return
         with transaction.atomic(using=using):
+            lock_assessed_dependents(self, using)
             previous = type(self).objects.using(using).select_for_update().filter(pk=self.pk).first() if self.pk else None
             fields = set(update_fields) if update_fields is not None else None
             changed = previous is not None and any(
@@ -114,3 +116,13 @@ class RevisionedSaveMixin:
             if fields is not None:
                 fields.add('version')
             return super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=fields)
+
+
+def lock_assessed_dependents(instance, using):
+    """Assessed parent writes acquire linked questions before their parent row."""
+    field = {'clinicalcase': 'case_id', 'knowledgeobject': 'knowledge_object_id'}.get(instance._meta.model_name)
+    if field and instance.pk is not None:
+        from django.apps import apps
+        Question = apps.get_model('questions', 'Question')
+        list(Question.objects.using(using).select_for_update().filter(**{field: instance.pk})
+             .order_by('pk').values_list('pk', flat=True))

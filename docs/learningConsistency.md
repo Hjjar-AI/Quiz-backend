@@ -61,3 +61,21 @@ Category/Case fields and ContentWriteReceipt require matching fresh schema and c
 ## Rescan follow-up DELETE/receipt contracts
 
 Question DELETE and knowledge-object DELETE require query expected_version, validated as an integer >=1 and compared under transactional row locks. Question services also recheck current owned_by/override after locking; visibility is re-evaluated with a locking read. Native/Vue question confirmation captures the displayed revision, and native knowledge deletion retains its editor baseline. Generic content receipt GET adds target_exists for the caller's stored category/knowledge operation, preserving action/target_id. Missing/deleted committed targets do not recreate under the same operation identity; native acknowledgement retires that identity without clearing the user's draft. No new schema fields, schema setup or runtime concurrency verification in this follow-up.
+
+## 2026-10-10 eight deeper findings fixed in source
+
+All eight bounded findings are addressed in production source; the original review remains historical evidence.
+
+- Assessed parent saves lock linked questions before parent rows; knowledge/question/tag writers and state imports coordinate their dependency locks. Existing imported questions and knowledge objects advance the locked local revision instead of adopting the source revision. Imports deliberately take broad user/question locks; large-import contention still needs measurement.
+- Master start locks fresh access relations, rechecks new-start/preview access, resumes either active normal or makeup attempts before new-start classification, and finishes expired attempts without granting extra time. Existing owned work is retained.
+- Master answers require session_id and the full expected_slot (including null), compared under lock. Identical saved intent is idempotent; conflicting saved intent returns ATTEMPT_PROGRESS_CHANGED. Navigation requires session_id and expected_current_question_id; current-question reads do not persist fallback navigation. Expiry finish failures propagate.
+- Web/native master recovery retains uncertain drafts, reads authoritative full answer slots, and requires explicit comparison/rebase/discard before another conflicting write. Web polling has disposal/cancellation generations and exam/session/store/progress ownership guards; route changes cannot adopt an old attempt response.
+- Planner update/delete requires expected_id and expected_version; successful updates return accepted configuration/revision. Both clients retain editor baselines and provide explicit conflict resolution. StudyPlannerScope/ScopeDay preserve timestamp-based historical filter attribution: explicit filter/date changes reset today's displayed progress, taxonomy rename/merge continues it, and historical days include all their original scope activity after midnight without double counting. Global learning events remain intact.
+
+Verification is production AST, JavaScript/extracted Vue script syntax, locale JSON, native lexical/XML/resource/placeholder and whitespace checking only. No builds, compilation, automated suites, migration inspection/work, setup/seeding, database writes, deployment or versions. Matching backend/web/native rollout and matching planner schema are required. Actual HTTP, database interleavings, browser/device recovery and accessibility remain release checks.
+
+### Planner schema and rollout
+
+StudyPlanner.version, StudyPlannerScope and StudyPlannerScopeDay require matching schema. For the approved fresh SQLite workflow, normal `python start.py sqlite` with old app migration folders removed generates initial schema from current models. Deleting only the database while old migration files remain does not generate later model changes. `manage.py runserver` and `python start.py -i` skip schema setup. No setup or migration actions were performed here; schema readiness remains unverified.
+
+Master answer/navigation and planner preconditions are mandatory: deploy matching clients together. A legacy native answer draft without the new baseline/session must be explicitly reviewed and rebased. Imported source revisions are not local concurrency tokens. Scope histories attribute delayed evidence by occurrence time, using frozen category/tag snapshots; they do not reinterpret earlier activity under today's filters.
