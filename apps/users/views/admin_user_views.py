@@ -527,7 +527,8 @@ class AdminUserDetailView(APIView):
 
 class AdminToggleUserView(APIView):
     """
-    Activate / deactivate one user. Requires admin password re-auth.
+    Activate / deactivate one user. Optional is_active sets explicit desired state;
+    omission retains legacy toggle behavior. Requires admin password re-auth.
 
     Refuses to toggle a stub — a stub cannot log in regardless of its
     `is_active` value, and flipping the flag is a misleading no-op.
@@ -548,6 +549,9 @@ class AdminToggleUserView(APIView):
         if error is not None:
             return error
 
+        from rest_framework import serializers
+        desired = (serializers.BooleanField().run_validation(request.data['is_active'])
+                   if 'is_active' in request.data else None)
         with transaction.atomic():
             user, other_active_admin_ids = _acquire_admin_lock_set(user_id)
             if user is None:
@@ -560,18 +564,20 @@ class AdminToggleUserView(APIView):
                     400,
                 )
 
-            if user.is_admin and user.is_active and not other_active_admin_ids:
+            next_state = not user.is_active if desired is None else desired
+            if not next_state and user.is_admin and user.is_active and not other_active_admin_ids:
                 return api_error('لا يمكن تعطيل آخر مدير في النظام', 400)
 
             previous_state = user.is_active
-            user.is_active = not user.is_active
-            user.save()
+            user.is_active = next_state
+            if previous_state != next_state:
+                user.save(update_fields=['is_active'])
 
             post_state = user.is_active
 
         log_privileged_action(
             request,
-            action='user.toggle',
+            action='user.toggle' if desired is None else 'user.set_active',
             target=user,
             target_repr=user.username,
             details={
@@ -581,7 +587,16 @@ class AdminToggleUserView(APIView):
         )
 
         status_msg = 'تم تفعيل المستخدم' if post_state else 'تم تعطيل المستخدم'
-        return api_success(message=status_msg)
+        return api_success(data={'id': user.pk, 'is_active': post_state, 'changed': previous_state != post_state}, message=status_msg)
+
+
+class AdminSetUserActiveView(AdminToggleUserView):
+    """Explicit desired-state route. Older servers reject this route without toggling."""
+
+    def post(self, request, user_id):
+        if 'is_active' not in request.data:
+            return api_error('حالة التفعيل المطلوبة إلزامية', 400)
+        return super().post(request, user_id)
 
 
 class AdminResetPasswordView(APIView):

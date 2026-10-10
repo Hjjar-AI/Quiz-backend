@@ -18,6 +18,7 @@ from .admin_user_views import (
     AdminUserListView,
     AdminUserDetailView,
     AdminToggleUserView,
+    AdminSetUserActiveView,
     AdminResetPasswordView,
     AdminActiveUsersView,
 )
@@ -40,6 +41,7 @@ __all__ = [
     'AdminUserListView',
     'AdminUserDetailView',
     'AdminToggleUserView',
+    'AdminSetUserActiveView',
     'AdminResetPasswordView',
     'AdminActiveUsersView',
     # Capability panel

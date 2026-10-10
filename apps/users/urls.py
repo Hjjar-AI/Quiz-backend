@@ -35,6 +35,7 @@ urlpatterns = [
         views.AdminToggleUserView.as_view(),
         name='admin-user-toggle',
     ),
+    path('admin/users/<int:user_id>/active/', views.AdminSetUserActiveView.as_view(), name='admin-user-set-active'),
     path(
         'admin/users/<int:user_id>/reset-password/',
         views.AdminResetPasswordView.as_view(),
