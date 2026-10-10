@@ -583,6 +583,25 @@ class UnverifiedListView(APIView):
         return api_success(data={'items': serializer.data, **meta})
 
 
+class SourceBookListView(APIView):
+    """Books available to ordinary practice; excludes private drafts."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count
+        books = (
+            Question.objects.public()
+            .exclude(source_document='')
+            .values('source_document')
+            .annotate(count=Count('id'))
+            .order_by('source_document')
+        )
+        return api_success(data={'items': [
+            {'name': book['source_document'], 'count': book['count']}
+            for book in books if book['source_document'].strip()
+        ]})
+
+
 class AvailableCountView(APIView):
     """
     Return how many questions match a prospective exam filter set.
@@ -594,11 +613,17 @@ class AvailableCountView(APIView):
         verified_only   'true' to restrict to verified questions
         use_bookmarks   'true' to restrict to the caller's bookmarks
         tags_filter     comma-separated tag names
+        source_document exact book title from /questions/source-books/
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         filters = {}
+        source_document = request.query_params.get('source_document')
+        if source_document is not None:
+            if not source_document.strip() or len(source_document) > 500:
+                return api_error('الكتاب المصدر غير صالح / Invalid source book', 400)
+            filters['source_document'] = source_document
 
         category_ids_raw = request.query_params.get('category_ids')
         if category_ids_raw:

@@ -9,6 +9,7 @@ from .question_views import (
     BulkTagUpdateView,
     UnverifiedListView,
     AvailableCountView,
+    SourceBookListView,
     QuestionImageUploadView,
 )
 from .case_views import (
@@ -48,6 +49,7 @@ __all__ = [
     'BulkTagUpdateView',
     'UnverifiedListView',
     'AvailableCountView',
+    'SourceBookListView',
     'QuestionImageUploadView',
     'CaseListView',
     'CaseDetailView',

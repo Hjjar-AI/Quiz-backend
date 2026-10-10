@@ -37,6 +37,7 @@ urlpatterns = [
     path('bulk-verify/', views.BulkVerifyView.as_view(), name='bulk-verify'),
     path('bulk-tags/', views.BulkTagUpdateView.as_view(), name='bulk-tags'),
     path('unverified/', views.UnverifiedListView.as_view(), name='unverified-list'),
+    path('source-books/', views.SourceBookListView.as_view(), name='source-book-list'),
     path('available-count/', views.AvailableCountView.as_view(), name='available-count'),
 
     path('categories/', views.CategoryListView.as_view(), name='category-list'),

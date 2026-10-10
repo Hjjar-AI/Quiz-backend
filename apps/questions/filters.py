@@ -72,6 +72,10 @@ def filter_questions(queryset, filters=None, *, export=False, verified_only=Fals
         if category_id is not None:
             queryset = queryset.filter(category_id=category_id)
 
+    source_document = filters.get('source_document')
+    if source_document:
+        queryset = queryset.filter(source_document=source_document)
+
     tag = filters.get('tag')
     if export:
         tag = (tag or '').strip()

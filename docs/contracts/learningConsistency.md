@@ -31,3 +31,8 @@ Planner update/delete requires retained `expected_id` and `expected_version`; ac
 `session_label` is descriptive; `tags_filter` and other selection inputs retain their full values. The service bounds session/history display labels to their shared model limit (currently 100 characters), using a trailing ellipsis for longer labels. Labels within the limit remain unchanged; nontext API labels return 400 before replacing a session. This requires no schema change.
 
 Android/Vue recall first save the typed pre-answer with `action=same`, then fetch choices for the same question. Question navigation/ordinary Finish wait for revealed choices and a selected answer. Keyboard choice selection after reveal and pause remain available; this client policy does not add a backend restriction to API navigation.
+
+
+### Ordinary practice by source book
+
+`GET /questions/source-books/` requires authentication and returns `{items: [{name, count}]}` for nonempty exact `Question.source_document` titles in the public practice bank (private drafts excluded). Exam/study/recall start bodies and `GET /questions/available-count/` accept optional `source_document` (nonblank string, at most 500 characters). Match the complete title exactly; commas and punctuation are literal, not tag separators. Book and other filters intersect; tag alternatives retain their existing OR semantics within the book. An explicit question-ID start with a book title rejects IDs outside that book. Existing start capability and session ownership gates are unchanged. New clients require this backend contract before rollout. Empty source metadata does not appear as a book; no schema change or automatic import is needed.

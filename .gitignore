@@ -12,3 +12,5 @@ venv/
 /staticfiles/
 .env
 /SQLite/
+/import_data/
+/scripts/content

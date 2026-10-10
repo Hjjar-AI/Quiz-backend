@@ -92,6 +92,12 @@ class StartSessionView(APIView):
         # only in the generic-bank branch, so selecting SRS or a blueprint
         # silently discarded difficulty, tag, and verification choices.
         filters = {}
+        source_document = data.get('source_document')
+        if source_document is not None:
+            if not isinstance(source_document, str) or not source_document.strip() or len(source_document) > 500:
+                return api_error('الكتاب المصدر غير صالح / Invalid source book', 400)
+            filters['source_document'] = source_document
+
         category = data.get('category')
         category_ids = data.get('category_ids')
         if category_ids:
@@ -160,11 +166,10 @@ class StartSessionView(APIView):
             # Order-preserving dedupe — shared with the rating-batch
             # view via `dedupe_ordered`.
             unique_ids = dedupe_ordered(question_ids)
-            existing_ids = set(
-                Question.objects.visible_to(request.user)
-                .filter(id__in=unique_ids)
-                .values_list('id', flat=True)
-            )
+            eligible_questions = Question.objects.visible_to(request.user).filter(id__in=unique_ids)
+            if source_document is not None:
+                eligible_questions = eligible_questions.filter(source_document=source_document)
+            existing_ids = set(eligible_questions.values_list('id', flat=True))
             if len(existing_ids) != len(unique_ids):
                 return api_error('بعض معرفات الأسئلة غير موجودة', 400)
             question_ids = unique_ids
