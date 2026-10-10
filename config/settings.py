@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_filters',
-    'sslserver',
     'apps.core',
     'apps.users',
     'apps.questions',
@@ -75,6 +74,11 @@ INSTALLED_APPS = [
     'apps.analytics',
     'apps.database',
 ]
+
+# Optional Django HTTPS development command. Ordinary runserver and nginx/
+# gunicorn deployments do not need django-sslserver; database TLS is independent.
+if os.environ.get('DJANGO_ENABLE_SSLSERVER', 'False').strip().lower() == 'true':
+    INSTALLED_APPS.append('sslserver')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

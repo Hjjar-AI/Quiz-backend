@@ -16,6 +16,8 @@ Requires existing database/schema and installed Python dependencies; combined mo
 
 ## Choose the database
 
+For PostgreSQL, follow the [complete setup guide](POSTGRESQL_SETUP.md) before launching. It covers the existing `mpsql` user / lowercase `quiz` database, optional fresh creation, Python/cache dependencies, schema/seeding, HTTP without `sslserver` and web/Android access.
+
 Set the engine in `backend/.env`, alongside its credentials:
 
 ```dotenv
@@ -94,7 +96,7 @@ python -m venv .venv
 python start.py sqlite --venv .venv --diagnose
 ```
 
-Windows: `.venv\Scripts\python.exe -m pip install -r requirements-sqlite.txt`; `--venv .venv` works on either system. MariaDB needs `requirements.txt` plus configured DB/cache. PostgreSQL: avoid full requirements' optional MySQL build dependency by using `requirements-sqlite.txt` plus compatible `psycopg[binary]`/`psycopg2-binary`, `django-sslserver`, cache client (`pymemcache`/Memcached or `django-redis`/Redis). Versions unchanged. PostgreSQL accepts either driver, never requires MySQLdb. Native Termux dependencies: `DEPLOYMENT.md`.
+Windows: `.venv\Scripts\python.exe -m pip install -r requirements-sqlite.txt`; `--venv .venv` works on either system. MariaDB needs `requirements.txt` plus configured DB/cache. PostgreSQL HTTP development uses `requirements-postgresql.txt` (shared core pins, `psycopg[binary]`, `pymemcache`) plus a running Memcached service; Redis users add `django-redis` and configure Redis instead. Neither PostgreSQL HTTP nor nginx/gunicorn HTTPS requires `django-sslserver`. The optional Django HTTPS command requires installing that package and explicitly setting `DJANGO_ENABLE_SSLSERVER=True`; the HTTP settings overlay disables it. Versions unchanged. PostgreSQL also accepts `psycopg2`, never requires MySQLdb. Native Termux dependencies: `DEPLOYMENT.md`.
 
 PostgreSQL database/users must exist beforehand. Native backup/restore and the MariaDB provisioning workflow do not yet support PostgreSQL. These settings and launcher changes remain unverified against a live PostgreSQL server.
 

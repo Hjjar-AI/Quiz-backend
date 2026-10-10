@@ -89,7 +89,6 @@ def main():
         runtime._REQUIRED_MODULES += ('MySQLdb',)
     elif engine == 'django.db.backends.postgresql':
         runtime._REQUIRED_MODULE_GROUPS = (('psycopg', 'psycopg2'),)
-    runtime._REQUIRED_MODULES += ('sslserver',)
 
     address = runtime._normalize_address(args.address or 'localhost:5005')
     os.environ['QUIZ_BIND_HOST'] = runtime._address_host(address)

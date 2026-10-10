@@ -4,6 +4,7 @@ import os
 
 os.environ['DEBUG'] = 'True'
 os.environ['USE_HTTPS'] = 'False'
+os.environ['DJANGO_ENABLE_SSLSERVER'] = 'False'
 if os.environ.get('QUIZ_FRONTEND_ORIGINS'):
     os.environ['CORS_ORIGINS'] = os.environ['QUIZ_FRONTEND_ORIGINS']
 

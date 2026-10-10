@@ -1,0 +1,8 @@
+# PostgreSQL HTTP development dependencies, without MySQL or django-sslserver.
+# Reuse the repository's existing core pins; no existing versions are changed.
+-r requirements-sqlite.txt
+psycopg[binary]
+pymemcache
+# Redis deployments also need django-redis instead of relying on Memcached.
+# PDF export/native libraries and production gunicorn are optional additions;
+# see docs/guides/DEPLOYMENT.md.

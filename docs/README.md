@@ -5,7 +5,7 @@ Start with [current status](workDone.md), [remaining work](workPlan.md), and [ag
 | Topic | Canonical location |
 | --- | --- |
 | Whole project navigation and maintenance rules | [Project documentation map](../../Android/docs/README.md) |
-| This repository's functional guides | [Startup](guides/START_HERE.md) · [Deployment](guides/DEPLOYMENT.md) |
+| This repository's functional guides | [Startup](guides/START_HERE.md) · [PostgreSQL setup](guides/POSTGRESQL_SETUP.md) · [Deployment](guides/DEPLOYMENT.md) |
 | Learning, selection and planner chronology | [Learning contracts](contracts/learningConsistency.md) |
 | Revisions, receipts, master writes and recovery | [Write/recovery contracts](contracts/writeRecovery.md) |
 | Schema/setup and coordinated deployment | [Schema readiness](contracts/schemaReadiness.md) |
