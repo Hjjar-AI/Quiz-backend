@@ -114,4 +114,36 @@ class ResolveForUserTests(CacheClearingTestCase):
         caps = resolve_for_user(u)
         self.assertNotIn('ghost.cap', caps)
         # Unrelated keys are unaffected.
+        self.assertIn('questions.edit_own', caps)
+
+    def test_member_can_create_with_explicit_role_grants(self):
+        RoleCapabilities.objects.update_or_create(
+            role='member', defaults={'capabilities': sorted(CAPABILITIES)},
+        )
+        user = make_user()
+        caps = resolve_for_user(user)
         self.assertIn('questions.create', caps)
+        self.assertIn('questions.duplicate', caps)
+        self.assertIn('questions.edit_own', caps)
+
+    def test_member_can_create_with_individual_grant(self):
+        user = make_user(capabilities={'questions.create': True})
+        caps = resolve_for_user(user)
+        self.assertIn('questions.create', caps)
+        self.assertNotIn('questions.duplicate', caps)
+
+    def test_member_override_revokes_explicit_role_grant(self):
+        RoleCapabilities.objects.update_or_create(
+            role='member', defaults={'capabilities': ['questions.create']},
+        )
+        user = make_user(capabilities={'questions.create': False})
+        self.assertNotIn('questions.create', resolve_for_user(user))
+
+    def test_moderator_can_create_and_duplicate_by_default(self):
+        caps = resolve_for_user(make_user(role='moderator'))
+        self.assertIn('questions.create', caps)
+        self.assertIn('questions.duplicate', caps)
+
+    def test_moderator_creation_can_still_be_revoked(self):
+        user = make_user(role='moderator', capabilities={'questions.create': False})
+        self.assertNotIn('questions.create', resolve_for_user(user))

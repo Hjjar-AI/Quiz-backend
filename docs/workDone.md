@@ -2,6 +2,12 @@
 
 Updated 2026-10-10. [Remaining gates](workPlan.md) · [Historical evidence](archive/README.md).
 
+## 2026-10-10 question creation role defaults
+
+Normal members no longer receive `questions.create` or `questions.duplicate` in the code defaults. Following the user's clarification, removed the hard role restriction: admins can grant/revoke either capability per user without promotion, and stored role grants remain authoritative. Moderator/admin defaults retain both. Vue/Android already gate creation and duplication using effective profile capabilities, so no client changes are required. Existing own-question editing/deletion remains available. Existing application role rows are not rewritten by this source change; disable creation/duplication in the member role through the permissions panel if that stored role still grants them, then grant individual exceptions.
+
+Verification: 49 focused SQLite capability, permission-gate, permission-admin API and question-role API tests passed, including default member POST rejection, individual grants/revocations without promotion, stored role grants and serialized client permissions. Whitespace checks passed. The earlier application PostgreSQL read-only inspection was unavailable (`OperationalError`); no application writes, migrations/setup, builds or Android suites. Deploy the backend and refresh profiles/re-login to verify live web/device visibility and enforcement. The earlier complete-suite report predates this policy change.
+
 
 - Learning evidence/fingerprints, occurrence chronology/SRS replay, activity/mastery/variety and planner scope history: [learning contracts](contracts/learningConsistency.md).
 - Locked ownership, monotonic import revisions, edit/delete preconditions, receipts/bookmarks, master start/resume/access/answer/navigation and archive results: [write contracts](contracts/writeRecovery.md).

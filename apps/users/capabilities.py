@@ -12,6 +12,8 @@ the RoleCapabilities database row for each role. On first bootstrap,
 `seed_capabilities` copies these constants into the DB. After that, the
 panel can edit the DB freely; the constants remain as a recovery seed
 and as the source-of-truth for which capabilities exist.
+Question creation and duplication are disabled in member defaults;
+admins can enable them through role grants or per-user overrides.
 
 Adding a new capability
 -----------------------
@@ -242,17 +244,15 @@ assert _grouped == CAPABILITIES, (
 # `--reset`.
 #
 # Three roles in this deployment:
-#   • member     — the default role. Can author their own questions.
+#   • member     — the default role. Can manage existing own questions.
 #   • moderator  — member plus content moderation and community mgmt.
 #   • admin      — every capability. Short-circuited in resolve_for_user.
 # ═══════════════════════════════════════════════════════════════════════
 
 _MEMBER = frozenset({
     # Questions — own only
-    'questions.create',
     'questions.edit_own',
     'questions.delete_own',
-    'questions.duplicate',
     'questions.upload_image',
     'questions.edit_case_stem_own',
     # Tests
@@ -261,6 +261,9 @@ _MEMBER = frozenset({
 })
 
 _MODERATOR = _MEMBER | frozenset({
+    # New-question authoring is enabled by default for moderators/admins.
+    'questions.create',
+    'questions.duplicate',
     # Question moderation — edits/deletes anything, not just own
     'questions.edit_any',
     'questions.delete_any',

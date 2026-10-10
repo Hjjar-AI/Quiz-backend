@@ -139,6 +139,18 @@ class UserCapabilitiesAPITests(CacheClearingTestCase):
         )
         self.assertIn('questions.verify', resp.json()['data']['resolved'])
 
+    def test_admin_can_grant_and_revoke_member_creation(self):
+        url = f'/api/v1/auth/admin/permissions/users/{self.target.id}/'
+        for granted in (True, False):
+            resp = self.client.put(
+                url, {'capabilities': {'questions.create': granted}}, format='json',
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual('questions.create' in resp.json()['data']['resolved'], granted)
+            self.target.refresh_from_db()
+            self.assertEqual(self.target.role, 'member')
+            self.assertEqual(self.target.capabilities['questions.create'], granted)
+
     def test_put_null_value_clears_that_override(self):
         self.target.capabilities = {'questions.verify': True}
         self.target.save()

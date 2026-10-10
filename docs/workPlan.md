@@ -6,6 +6,8 @@ The seven rescan and eight deeper-review findings are source-complete. Do not re
 
 ## Pending verification
 
+- Verify member creation/duplication defaults and individual admin exceptions on the deployed backend and refreshed Vue/Android profiles. Existing stored member role grants remain authoritative; disable these in the permissions panel if still enabled. Focused 49-test SQLite verification passed; live PostgreSQL/browser/device behavior remains unverified.
+
 - Verify [temporary import-limit bypass](contracts/importLimits.md) on the deployed session/cache stack and both clients: correct/wrong passwords, separate sessions, expiry at ten minutes, retained hourly quota and explicit resumption after HTTP 429. Focused SQLite/frontend checks do not establish live HTTP/device behavior.
 
 - Expand behavioral coverage beyond the passing [982-test suite and coverage report](verification/backendCoverage.md), prioritizing its measured uncovered lines/branches. PostgreSQL line/branch coverage is 71.75%/56.87%; passing suites do not verify every function or deployed behavior. The user's requested complete existing-suite run and coverage report are complete.

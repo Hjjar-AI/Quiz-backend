@@ -49,12 +49,15 @@ class HasCapabilityTests(CacheClearingTestCase):
         with self.assertRaises(ImproperlyConfigured):
             self.perm.has_permission(self._req(user), _ViewNoCap())
 
-    def test_member_holding_capability_passes(self):
-        # The 'member' role holds 'questions.create' by default.
+    def test_member_creation_is_refused(self):
         user = make_user()
-        self.assertTrue(
+        self.assertFalse(
             self.perm.has_permission(self._req(user), _ViewWithCap())
         )
+
+    def test_moderator_creation_passes(self):
+        user = make_user(role='moderator')
+        self.assertTrue(self.perm.has_permission(self._req(user), _ViewWithCap()))
 
     def test_member_lacking_capability_is_refused(self):
         user = make_user()  # member does not hold questions.verify
