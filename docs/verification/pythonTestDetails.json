@@ -2847,5 +2847,48 @@
     "focused_tests_passed": 105,
     "maximum_workers": 16,
     "sqlite_locking_skips": 36
+  },
+  "session_label_regression": {
+    "date": "2026-10-10",
+    "scope": "tests.exams.test_exam_service",
+    "new_tests": 4,
+    "postgresql": {
+      "run": 20,
+      "passed": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.386
+    },
+    "sqlite": {
+      "run": 20,
+      "passed": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.927
+    },
+    "limits": "Focused run only; prior full-suite results predate this change. No application database writes or UI runtime verification."
+  },
+  "member_offline_seeder_regression": {
+    "date": "2026-10-10",
+    "scope": "tests.management.test_seed_pro_users",
+    "postgresql": {
+      "run": 9,
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.534
+    },
+    "sqlite": {
+      "run": 9,
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.5
+    },
+    "limits": "Focused isolated tests only. Application seeder and full suite were not run."
   }
 }

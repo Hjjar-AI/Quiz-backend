@@ -1,53 +1,15 @@
 # backend/apps/core/management/commands/seed_pro_users.py
 """
-Seed moderator accounts for the doctors credited on the About page.
+Seed normal member accounts for the credited team and named offline learners.
 
-Usage:
-    python manage.py seed_pro_users
-    python manage.py seed_pro_users --reset-passwords
-    python manage.py seed_pro_users --quiet
+Usage: manage.py seed_pro_users [--reset-passwords] [--quiet]
 
-WHAT IT CREATES
----------------
-One active moderator account per doctor listed in the About page's
-"Testing and verification team" section. Accounts are matched by
-username, so re-running the command is idempotent: an existing
-account is left alone unless --reset-passwords is passed.
-
-PASSWORD SOURCE
----------------
-Every account is seeded with the same one-time password, read from
-the SEED_PRO_USER_PASSWORD environment variable (or the same key in
-backend/.env, loaded by settings.py). The default when that variable
-is not set is `1234test`.
-
-This value is a HAND-OUT CREDENTIAL, not a long-lived password.
-Every account created or reset by this command is marked
-`must_change_password=True`, and MustChangePasswordMiddleware blocks
-everything except the change-password flow until that flag is
-cleared. The account holder replaces the value on first login.
-
-Prefer SEED_PRO_USER_PASSWORD in backend/.env over an inline
-default: the .env file is 0600 and is read from a known location,
-whereas a hardcoded default is visible to anyone who can read this
-source file.
-
-WHY must_change_password=True (fix — previous revision set it False)
---------------------------------------------------------------------
-The previous revision seeded these accounts with
-`must_change_password=False` and per-user passwords of the form
-`firstname + "12345"`. Both halves of that decision were wrong for a
-moderator account that has `questions.edit_any`,
-`questions.verify`, and `groups.admin` capabilities:
-
-  • A per-user password derived from a name that appears on the
-    public About page is guessable.
-  • The flag being False meant the credential never rotated unless
-    someone ran `--reset-passwords` or manually edited the account.
-
-The flag is now True, matching `reset_admin_password` and
-`seed_data.seed_admin` — every other one-time credential path in
-this codebase already sets it.
+Accounts match stable usernames. Every run restores member status and clears
+staff/superuser flags; only the five OFFLINE_BANK_USERS receive an explicit
+full-bank grant. Other per-user overrides and existing display names/passwords
+are preserved. Missing accounts are created with a one-time password from
+SEED_PRO_USER_PASSWORD (development fallback: 1234test), requiring a change
+on first login. --reset-passwords explicitly replaces existing passwords.
 """
 
 import os
@@ -55,6 +17,7 @@ import sys
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 
 User = get_user_model()
@@ -67,17 +30,26 @@ User = get_user_model()
 # Usernames are latinised first names. They satisfy the User model's
 # USERNAME_REGEX (letters, digits, underscores, 3-50 chars).
 #
-# Order matches the About page's Arabic alphabetical listing.
+# Includes the credited team plus the designated offline-bank learners.
 PRO_USERS = [
     ('aya_kseibi',        'د. آية كسيبي',              'Dr. Aya Kseibi'),
     ('ayham_shaykha',     'د. أيهم شيخة',              'Dr. Ayham Shaykha'),
     ('ibrahim_tarsha',    'د. إبراهيم طرشه',           'Dr. Ibrahim Tarsha'),
+    ('iman_alshayeb',     'د. إيمان الشايب',           'Dr. Iman Al-Shayeb'),
+    ('haneen_alaji',      'د. حنين العجي',             'Dr. Haneen Al-Aji'),
     ('shvan_shamsi',      'د. شفان شمسي',              'Dr. Shvan Shamsi'),
     ('zilal_alwaw',       'د. ظلال الواو',             'Dr. Zilal Al-Waw'),
     ('nidal_abdulwahhab', 'د. محمد نضال عبد الوهاب',   'Dr. Muhammad Nidal Abdul-Wahhab'),
     ('nour_alsayed',      'د. محمد نور السيد',         'Dr. Muhammad Nour Al-Sayed'),
+    ('nour_dahdouh',      'د. نور دحدوح',              'Dr. Nour Dahdouh'),
     ('hadiyatullah_malas','د. هدية الله ملص',          'Dr. Hadiyatullah Malas'),
 ]
+
+
+OFFLINE_BANK_CAPABILITY = 'tests.download_full_bank'
+OFFLINE_BANK_USERS = frozenset({
+    'aya_kseibi', 'iman_alshayeb', 'nour_dahdouh', 'haneen_alaji', 'zilal_alwaw',
+})
 
 
 # Default one-time password when SEED_PRO_USER_PASSWORD is not set.
@@ -87,7 +59,7 @@ _DEFAULT_SEED_PASSWORD = '1234test'
 
 
 DEFAULTS = {
-    'role': 'moderator',
+    'role': 'member',
     'is_active': True,
     'is_staff': False,
     'is_superuser': False,
@@ -103,8 +75,8 @@ DEFAULTS = {
 
 class Command(BaseCommand):
     help = (
-        'Seed moderator accounts for the pro/verifying doctors listed '
-        'on the About page. Idempotent by username.'
+        'Seed normal member accounts; grant full offline-bank downloads to '
+        'the five designated learners. Idempotent by username.'
     )
 
     def add_arguments(self, parser):
@@ -114,9 +86,9 @@ class Command(BaseCommand):
             help=(
                 'Reset the password on existing accounts to the seeded '
                 'value (from SEED_PRO_USER_PASSWORD, or the built-in '
-                'default). Without this flag, an existing account is '
-                'left untouched — only its role is corrected if it '
-                'drifted.'
+                'default). Without this flag, an existing account '
+                'keeps its password; member status and designated offline '
+                'permissions are still enforced.'
             ),
         )
         parser.add_argument(
@@ -125,6 +97,7 @@ class Command(BaseCommand):
             help='Suppress the summary line on success (for CI/cron).',
         )
 
+    @transaction.atomic
     def handle(self, *args, **options):
         reset_passwords = options['reset_passwords']
         quiet = options['quiet']
@@ -143,11 +116,13 @@ class Command(BaseCommand):
         credentials = []
 
         for username, full_name_ar, full_name_en in PRO_USERS:
-            user, was_created = User.objects.get_or_create(
+            user, was_created = User.objects.select_for_update().get_or_create(
                 username=username,
                 defaults={
                     'full_name': full_name_ar,
                     **DEFAULTS,
+                    'capabilities': ({OFFLINE_BANK_CAPABILITY: True}
+                                     if username in OFFLINE_BANK_USERS else {}),
                 },
             )
 
@@ -163,16 +138,26 @@ class Command(BaseCommand):
                 credentials.append((username, full_name_en, seed_password))
                 continue
 
-            # Existing account. Correct role and full_name if they
-            # drifted; do not touch the password unless asked.
+            # Existing account: restore member status while retaining unrelated
+            # overrides, chosen display names and passwords unless reset.
             dirty_fields = []
             if user.role != DEFAULTS['role']:
                 user.role = DEFAULTS['role']
                 dirty_fields.append('role')
+            for field in ('is_staff', 'is_superuser'):
+                if getattr(user, field):
+                    setattr(user, field, False)
+                    dirty_fields.append(field)
+            if username in OFFLINE_BANK_USERS:
+                overrides = dict(user.capabilities or {})
+                if overrides.get(OFFLINE_BANK_CAPABILITY) is not True:
+                    overrides[OFFLINE_BANK_CAPABILITY] = True
+                    user.capabilities = overrides
+                    dirty_fields.append('capabilities')
             if not user.is_active:
                 user.is_active = True
                 dirty_fields.append('is_active')
-            # Prefer the English full name if the current one is empty;
+            # Fill the seeded Arabic full name if the current one is empty;
             # otherwise leave the admin's chosen display name alone.
             if not user.full_name:
                 user.full_name = full_name_ar
@@ -188,6 +173,8 @@ class Command(BaseCommand):
 
             if dirty_fields:
                 user.save(update_fields=dirty_fields)
+                if hasattr(user, '_resolved_caps_cache'):
+                    delattr(user, '_resolved_caps_cache')
                 updated += 1
             else:
                 unchanged += 1
@@ -208,7 +195,7 @@ class Command(BaseCommand):
         if credentials:
             self.stdout.write(
                 f'Printed {len(credentials)} credential line(s) to stderr. '
-                f'Every account carries must_change_password=True and will '
+                f'Created/reset accounts carry must_change_password=True and will '
                 f'be required to change the password on first login.'
             )
         else:

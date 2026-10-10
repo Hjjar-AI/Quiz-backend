@@ -29,6 +29,17 @@ def _max_choices():
     return getattr(settings, 'MAX_CHOICES', 8)
 
 
+def _bounded_session_label(label):
+    """Bound display metadata only; question selection uses separate filters."""
+    if label is None:
+        return None
+    limit = min(
+        ExamSession._meta.get_field('tag').max_length,
+        TestHistory._meta.get_field('tag').max_length,
+    )
+    return label if len(label) <= limit else label[:limit - 1] + '…'
+
+
 class AnswerSubmission(NamedTuple):
     """
     Return value for `ExamService.submit_answer`.
@@ -175,6 +186,7 @@ class ExamService:
         user, mode, question_ids, tag=None, blueprint=None,
         duration_minutes=None,
     ):
+        tag = _bounded_session_label(tag)
         session_id = str(uuid.uuid4())
 
         with transaction.atomic():
@@ -919,6 +931,7 @@ class ExamService:
         ONLY writer of session history — `save_session_result` was
         removed during the StudySession/TestHistory consolidation.
         """
+        tag = _bounded_session_label(tag)
         history = TestHistory.objects.create(
             user=user,
             mode=mode,

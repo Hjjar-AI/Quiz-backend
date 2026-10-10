@@ -25,3 +25,9 @@ Answered learning, including paused/discarded work and late offline uploads, dri
 Planner update/delete requires retained `expected_id` and `expected_version`; accepted updates return authoritative configuration/revision. Id protects against delete/recreate collisions. Both clients explicitly compare latest values and Keep draft/Use server after conflict.
 
 `StudyPlannerScope` records target categories/tag names/date window and effective/ended timestamps; `StudyPlannerScopeDay` stores credit under its original scope. Late events select their historical scope by occurrence time and frozen category/tag snapshots. Explicit filter/date changes reset today's displayed progress; taxonomy rename/merge continues it without copying counts. Today sums scopes since the latest reset; historical days sum all original scope counts, including pre-reset activity after midnight. Global learning evidence remains independent. Explicit planner deletion cascades its planner history, not global learning events.
+
+## Ordinary session display labels and recall controls
+
+`session_label` is descriptive; `tags_filter` and other selection inputs retain their full values. The service bounds session/history display labels to their shared model limit (currently 100 characters), using a trailing ellipsis for longer labels. Labels within the limit remain unchanged; nontext API labels return 400 before replacing a session. This requires no schema change.
+
+Android/Vue recall first save the typed pre-answer with `action=same`, then fetch choices for the same question. Question navigation/ordinary Finish wait for revealed choices and a selected answer. Keyboard choice selection after reveal and pause remain available; this client policy does not add a backend restriction to API navigation.

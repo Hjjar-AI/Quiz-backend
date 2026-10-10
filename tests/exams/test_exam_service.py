@@ -3,12 +3,13 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from apps.exams.models import ExamSession, TestHistory
 from apps.exams.services import ExamService
 from apps.learning.models import UserQuestionAttempt
 from tests.base import CacheClearingTestCase
-from tests.factories import make_user, make_question
+from tests.factories import make_user, make_question, make_tag
 
 
 class StartSessionTests(CacheClearingTestCase):
@@ -38,6 +39,73 @@ class StartSessionTests(CacheClearingTestCase):
         self.assertTrue(
             ExamSession.objects.filter(pk=exam_s.pk).exists()
         )
+
+
+    def test_long_display_labels_round_trip_all_session_modes(self):
+        user = make_user()
+        questions = [make_question(owner=user) for _ in range(2)]
+        ids = [q.id for q in questions]
+        for mode in ('study', 'exam', 'recall'):
+            for label in ('Cardiology, ' * 20, 'طب القلب، ' * 20):
+                with self.subTest(mode=mode, label=label):
+                    session = ExamService.start_session(user, mode, ids, tag=label)
+                    session.refresh_from_db()
+                    self.assertEqual(session.tag, label[:99] + '…')
+                    self.assertEqual(session.question_ids, ids)
+                    ExamService.finish_session(session, user)
+                    history = TestHistory.objects.get(source_session_id=session.session_id)
+                    self.assertEqual(history.tag, session.tag)
+                    self.assertEqual(history.total_questions, len(ids))
+
+    def test_label_at_storage_boundary_is_preserved(self):
+        user = make_user()
+        question = make_question(owner=user)
+        for label in (None, '', 'طب القلب', 'x' * 100):
+            with self.subTest(label=label):
+                session = ExamService.start_session(user, 'study', [question.id], tag=label)
+                session.refresh_from_db()
+                self.assertEqual(session.tag, label)
+
+
+class SessionLabelAPITests(CacheClearingTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = make_user()
+        self.client = APIClient()
+        self.client.force_login(self.user)
+
+    def test_long_multitag_label_keeps_complete_question_filter(self):
+        names = [f'Medical specialty number {index}' for index in range(8)]
+        questions = []
+        for name in names:
+            question = make_question(owner=self.user)
+            question.tags.add(make_tag(name))
+            questions.append(question)
+        excluded = make_question(owner=self.user)
+        label = ', '.join(names)
+        for mode in ('study', 'exam', 'recall'):
+            with self.subTest(mode=mode):
+                response = self.client.post(
+                    f'/api/v1/{mode}/start/{mode}/',
+                    {'session_label': label, 'tags_filter': names, 'limit': 20},
+                    format='json',
+                )
+                self.assertEqual(response.status_code, 200, response.data)
+                data = response.data['data']
+                self.assertEqual(data['tag'], label[:99] + '…')
+                self.assertCountEqual(data['question_ids'], [q.id for q in questions])
+                self.assertNotIn(excluded.id, data['question_ids'])
+
+    def test_nontext_label_returns_400_and_preserves_existing_session(self):
+        question = make_question(owner=self.user)
+        session = ExamService.start_session(self.user, 'study', [question.id])
+        response = self.client.post(
+            '/api/v1/study/start/study/',
+            {'question_ids': [question.id], 'session_label': ['invalid']},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(ExamSession.objects.filter(pk=session.pk).exists())
 
 
 class SubmitAnswerTests(CacheClearingTestCase):

@@ -95,7 +95,19 @@ python manage.py collectstatic --noinput --settings=config.settings_local
 python manage.py doctor --settings=config.settings_local
 ```
 
-`seed_pro_users` creates demo moderator/doctor accounts; passwords come from `SEED_PRO_USER_PASSWORD` or its development fallback `1234test`, and require first-login change. `--reset-passwords` explicitly resets existing demo accounts. `reset_admin_password --qr` optionally displays an ASCII QR credential; keep its terminal output private.
+`seed_pro_users` creates 11 normal member accounts, including missing designated offline learners. Reruns convert seeded accounts to members, clear staff/superuser flags and grant `tests.download_full_bank` to these five accounts:
+
+| Name | Username |
+| --- | --- |
+| آية كسيبي | `aya_kseibi` |
+| إيمان الشايب | `iman_alshayeb` |
+| نور دحدوح | `nour_dahdouh` |
+| حنين العجي | `haneen_alaji` |
+| ظلال الواو | `zilal_alwaw` |
+
+Accounts match by username. Existing passwords/display names and unrelated per-user permission overrides are preserved; role-wide defaults remain unchanged. A prior denial of full-bank access for one of these five is replaced with the requested grant. Other seeded accounts inherit member permissions unless they already have explicit overrides. Rerun the command above to apply this to an existing database; no migration is needed.
+
+New-account passwords come from `SEED_PRO_USER_PASSWORD` or its development fallback `1234test`, and require first-login change. Credentials for created/reset accounts print to stderr. `--reset-passwords` explicitly resets existing seeded accounts. `reset_admin_password --qr` optionally displays an ASCII QR credential; keep terminal credential output private.
 
 `doctor` reports configuration, database/migration state, cache, PDF/font, directories and frontend bundle availability. It is a diagnostic command, not initialization; cache probes may access the cache. A report does not replace functional/device verification. Missing frontend bundle is expected when using separate Vite development.
 

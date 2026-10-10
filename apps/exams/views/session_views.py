@@ -222,6 +222,8 @@ class StartSessionView(APIView):
         # still drives the filter — that is the whole point of the
         # split.
         session_label = data.get('session_label') or data.get('tag') or None
+        if session_label is not None and not isinstance(session_label, str):
+            return api_error('اسم الجلسة يجب أن يكون نصًا', 400)
 
         duration_minutes = _exam_duration_minutes()
         session = ExamService.start_session(

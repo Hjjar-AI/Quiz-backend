@@ -2,7 +2,7 @@
 
 2026-10-10 · baseline revision `8274707` plus the test changes below · Python 3.14.4 / Django 6.1.2 / PostgreSQL 18.6.
 
-The complete discovered suite now **passes on both databases** after failure triage and repairs. [Structured results and historical failure/function inventory](pythonTestDetails.json) contain no credentials or raw logs. The earlier 930-test run had 42 failures and 109 errors on each database; those failures are resolved in the final suite.
+The last full discovered suite **passed on both databases** after failure triage and repairs, before the later session-label changes below. [Structured results and historical failure/function inventory](pythonTestDetails.json) contain no credentials or raw logs. The earlier 930-test run had 42 failures and 109 errors on each database; those failures are resolved in the final suite.
 
 | Database | Run | Passed | Failures | Errors | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -12,6 +12,14 @@ The complete discovered suite now **passes on both databases** after failure tri
 SQLite took 35.038 seconds; PostgreSQL took 104.435 seconds. The earlier 102-test repair run also passed. Django system checks reported no issues. See the concurrency report for the new matrix and repeat runs; source/document checks are recorded in the work log.
 
 Before expanding the matrix, rechecked the original skipped test separately on 2026-10-10: SQLite skipped it as expected; PostgreSQL ran it and passed in 0.494 seconds. It verifies that two threads finishing the same master attempt record SRS once. The skip remains because SQLite does not implement the row locking this test exercises.
+
+## Later focused session-label regression run
+
+The 20-test `tests.exams.test_exam_service` module passes on isolated PostgreSQL (2.386s) and in-memory SQLite (0.927s), with zero failures/errors/skips. Four added tests cover long Arabic/English labels through start/history in all three modes, unchanged labels at/below the boundary, full multi-tag selection over HTTP, and nontext-label rejection preserving the existing session. Existing recall reveal/answer tests also pass. Application databases remain untouched. The full suite was not rerun after this change; the 971-test table above is historical evidence.
+
+## Later member/offline seeder regression run
+
+After changing `seed_pro_users` to member accounts and adding three missing offline learners, all nine `tests.management.test_seed_pro_users` tests pass on SQLite (0.500s) and isolated PostgreSQL (1.534s), with zero failures/errors/skips. They verify the five per-user full-bank grants, normal member permissions, role/staff flag repair, preserved unrelated overrides/passwords/names, missing-user creation and credential/reset behavior. Application seeding and a full-suite rerun were not performed.
 
 ## What was verified and changed
 

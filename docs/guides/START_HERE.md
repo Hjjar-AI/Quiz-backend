@@ -52,7 +52,7 @@ This normally ensures package files, generates initial migrations for model apps
 | Separate instance and port | `python start.py sqlite 5006 --data-root SQLite/sandbox` |
 | Select only the database file | `python start.py sqlite --db-path /path/to/db.sqlite3` |
 | Avoid address prompt | Add `--no-prompt`, or supply a port / `host:port` |
-| Optional moderator/pro accounts | Add `--seed-pro-users` during normal setup |
+| Optional team/member accounts | Add `--seed-pro-users` during normal setup |
 | Disable backend autoreload | Add `--noreload` |
 | Explicit concurrent development requests | Add `--allow-threading`; only for trusted light use |
 
