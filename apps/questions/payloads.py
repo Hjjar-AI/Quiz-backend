@@ -13,8 +13,9 @@ four side by side.
 
 The two helpers below — ``case_block_from_live`` and
 ``case_block_from_snapshot`` — are now the ONE place that decides
-the shape. Both return the same four-key dict (``id``, ``key``,
-``title``, ``stem``); missing fields are ``None``. Every builder in
+the shape. Both return the same case dict (``id``, ``key``,
+``title``, ``stem``, ``translations``); missing text fields are ``None``
+and missing translations are an empty object. Every builder in
 this module and every caller that produces a case block delegates
 to them.
 
@@ -61,6 +62,7 @@ def case_block_from_live(case):
         'key': case.key,
         'title': case.title,
         'stem': case.stem,
+        'translations': case.translations or {},
     }
 
 
@@ -76,6 +78,7 @@ def case_block_from_snapshot(snap):
         'key': snap.get('key'),
         'title': snap.get('title'),
         'stem': snap.get('stem'),
+        'translations': snap.get('translations') or {},
     }
 
 
@@ -121,7 +124,7 @@ def build_grading_snapshot(question_ids):
               'category_id', 'category_name', 'category_color',
               'question', 'choices', 'explanation', 'translations',
               'image_name',
-              'case': {'id', 'key', 'title', 'stem'} | None,
+              'case': {'id', 'key', 'title', 'stem', 'translations'} | None,
         }, ... }
 
     The ``case`` block is produced by ``case_block_from_live``, so its

@@ -12,6 +12,7 @@ from .finish import _force_finish
 from apps.questions.models import Question
 from apps.questions.payloads import (
     exam_question_payload,
+    case_block_from_snapshot,
     snapshot_image_url,
     without_translation_explanations,
 )
@@ -78,10 +79,7 @@ def _current_question_locked(attempt):
             'choices': snapshot['choices'],
             'translations': snapshot.get('translations') or {},
             'image_url': snapshot_image_url(snapshot),
-            'case': (
-                {key: snapshot['case'][key] for key in ('id', 'key', 'stem')}
-                if snapshot.get('case') else None
-            ),
+            'case': case_block_from_snapshot(snapshot.get('case')),
         })
     payload['translations'] = without_translation_explanations(
         payload.get('translations'),

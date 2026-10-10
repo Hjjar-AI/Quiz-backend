@@ -44,7 +44,7 @@ _SHEET_COLUMNS = {
     'QuestionTags': ('question_uuid', 'tag_uuid'),
     'Cases': (
         'uuid', 'key', 'title', 'stem', 'authored_by_uuid',
-        'authored_by_name',
+        'authored_by_name', 'translations_json',
     ),
     'KnowledgeObjects': (
         'uuid', 'title', 'learning_objective', 'canonical_answer',
@@ -63,6 +63,7 @@ _SHEET_COLUMNS = {
 # Readers accept their absence so an early v1/v2-state workbook can be migrated
 # by state_migrations.py after reconstruction.
 _OPTIONAL_COLUMNS = {
+    'Cases': {'translations_json'},
     'Questions': {
         'source_document', 'source_page', 'translations_json',
         'knowledge_object_uuid', 'last_revised_at',
@@ -269,6 +270,7 @@ def write_state_workbook(payload, filepath):
             item.get('uuid'), item.get('key'), item.get('title') or '',
             item.get('stem') or '', item.get('authored_by_uuid') or '',
             item.get('authored_by_name') or '',
+            json.dumps(item.get('translations') or {}, ensure_ascii=False),
         ))
 
     knowledge_objects = workbook.create_sheet('KnowledgeObjects')
@@ -373,6 +375,7 @@ def read_state_workbook(filepath, *, max_uncompressed_size=None):
 
         for row in _worksheet_rows(workbook, 'Cases'):
             payload['cases'].append({
+                **({'translations': _json_object(row['translations_json'], 'translations_json')} if 'translations_json' in row else {}),
                 'uuid': _text(row['uuid']),
                 'key': _text(row['key']),
                 'title': _text(row['title']),

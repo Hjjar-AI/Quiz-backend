@@ -170,7 +170,7 @@ class ClinicalCase(RevisionedSaveMixin, InvariantValidationMixin, TimeStampedMod
     Question for where those live.
     """
     version = models.PositiveIntegerField(default=1)
-    revision_fields = ('title', 'stem')
+    revision_fields = ('title', 'stem', 'translations')
 
     uuid = models.UUIDField(
         default=uuid.uuid4,
@@ -199,6 +199,7 @@ class ClinicalCase(RevisionedSaveMixin, InvariantValidationMixin, TimeStampedMod
         null=True,
         help_text='Shared clinical vignette rendered above every question in the case.',
     )
+    translations = models.JSONField(default=dict, blank=True)
     authored_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -222,6 +223,11 @@ class ClinicalCase(RevisionedSaveMixin, InvariantValidationMixin, TimeStampedMod
         return self.title or self.key
 
     def validate_invariants(self):
+        from .case_validation import normalize_case_translations
+        try:
+            normalize_case_translations(self.translations)
+        except ValueError as exc:
+            require(False, 'translations', str(exc))
         require(
             self.stem is None or (
                 isinstance(self.stem, str) and len(self.stem) <= CASE_STEM_MAX_LENGTH
@@ -230,8 +236,11 @@ class ClinicalCase(RevisionedSaveMixin, InvariantValidationMixin, TimeStampedMod
         )
 
     def invariants_saved(self, previous, saved):
-        from apps.learning.evidence import invalidate_question_learning
-        if previous is not None and previous.stem != saved.stem:
+        from apps.learning.evidence import invalidate_question_learning, case_learning_translations
+        if previous is not None and (
+            previous.stem != saved.stem
+            or case_learning_translations(previous) != case_learning_translations(saved)
+        ):
             invalidate_question_learning(
                 self.questions.values_list('pk', flat=True), using=self._state.db,
             )

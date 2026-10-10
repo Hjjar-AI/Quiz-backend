@@ -12,6 +12,7 @@ from django.conf import settings
 from ..validators import _is_valid_uuid, MAX_CHOICES
 from apps.questions.image_policy import MAX_IMAGE_SIZE
 from apps.questions.translation_validation import normalize_translations
+from apps.questions.case_validation import normalize_case_translations
 from .constants import STATE_FORMAT, STATE_FORMAT_VERSION
 from ....models import (
     CATEGORY_NAME_MAX_LENGTH,
@@ -146,6 +147,11 @@ def _validate_state_envelope(payload):
             seen.add(folded)
 
     for idx, case in enumerate(payload['cases']):
+        if 'translations' in case:
+            try:
+                case['translations'] = normalize_case_translations(case['translations'])
+            except ValueError as exc:
+                return {'error': f'الحالات: translations غير صالح في العنصر رقم {idx + 1}: {exc}', 'code': 400}
         stem = case.get('stem') or ''
         if not isinstance(stem, str) or len(stem) > CASE_STEM_MAX_LENGTH:
             return {'error': f'الحالات: stem غير صالح في العنصر رقم {idx + 1}', 'code': 400}

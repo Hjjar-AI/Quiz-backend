@@ -11,6 +11,7 @@ Draft-question serializers.
 from rest_framework import serializers
 
 from apps.questions.models import Question
+from apps.questions.payloads import case_block_from_live
 from apps.questions.validation import clean_and_validate_choices
 from apps.questions.write_fields import (
     question_text_field, choices_field, case_key_field,
@@ -47,14 +48,7 @@ class MasterExamDraftSerializer(serializers.ModelSerializer):
             return None
 
     def get_case(self, obj):
-        if not obj.case_id:
-            return None
-        return {
-            'id': obj.case.id,
-            'key': obj.case.key,
-            'title': obj.case.title,
-            'stem': obj.case.stem,
-        }
+        return case_block_from_live(obj.case) if obj.case_id else None
 
 
 class MasterExamDraftCreateSerializer(serializers.Serializer):

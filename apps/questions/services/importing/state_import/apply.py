@@ -369,6 +369,7 @@ def _apply_state(
                     key=key,
                     title=(entry.get('title') or '').strip() or None,
                     stem=stem,
+                    translations=entry.get('translations', {}),
                     authored_by=case_author,
                 )
                 counts['cases_created'] += 1
@@ -381,6 +382,16 @@ def _apply_state(
                         key, case.uuid, uuid_str,
                     )
                 dirty = []
+                # Cases use fill-missing merge semantics; preserve local translations.
+                merged = {locale: dict(content) for locale, content in (case.translations or {}).items()}
+                for locale, content in entry.get('translations', {}).items():
+                    fields = merged.setdefault(locale, {})
+                    for field, text in content.items():
+                        if not fields.get(field):
+                            fields[field] = text
+                if merged != case.translations:
+                    case.translations = merged
+                    dirty.append('translations')
                 if not case.stem and stem:
                     case.stem = stem
                     dirty.append('stem')

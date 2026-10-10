@@ -33,6 +33,15 @@ def knowledge_learning_content(obj):
     return content
 
 
+def case_learning_translations(case):
+    """Only translated assessed text affects learning; optional titles do not."""
+    return {
+        locale: content['stem']
+        for locale, content in (case.translations or {}).items()
+        if isinstance(content, dict) and content.get('stem')
+    }
+
+
 def question_learning_fingerprint(question):
     content = {
         'question': question.question, 'choices': question.choices,
@@ -47,6 +56,8 @@ def question_learning_fingerprint(question):
             if question.knowledge_object_id else None
         ),
         'case_stem': question.case.stem if question.case_id else None,
+        **({'case_translations': case_learning_translations(question.case)}
+           if question.case_id and case_learning_translations(question.case) else {}),
         'image': question.image.name if question.image else None,
     }
     return hashlib.sha256(

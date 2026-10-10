@@ -61,6 +61,7 @@ class ClinicalCaseAdmin(admin.ModelAdmin):
     inlines = [CaseQuestionInline]
     fieldsets = (
         (None, {'fields': ('key', 'title', 'stem')}),
+        ('Translations (optional)', {'fields': ('translations',), 'classes': ('collapse',)}),
         ('Ownership', {'fields': ('authored_by',)}),
         ('Timestamps', {'fields': ('uuid', 'created_at', 'updated_at')}),
     )

@@ -287,6 +287,7 @@ def export_state(
             'key': case.key,
             'title': case.title or '',
             'stem': case.stem or '',
+            'translations': case.translations or {},
             'authored_by_uuid': (
                 str(case.authored_by.uuid) if case.authored_by_id else None
             ),

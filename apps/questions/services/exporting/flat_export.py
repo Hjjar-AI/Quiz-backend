@@ -155,6 +155,7 @@ def _row_for_flat_format(q, max_choices):
         'case_uuid': str(q.case.uuid) if q.case_id else None,
         'case_title': sanitize_formula_cell(q.case.title) if q.case_id else '',
         'case_stem': sanitize_formula_cell(case_stem),
+        'case_translations_json': json.dumps(q.case.translations or {}, ensure_ascii=False) if q.case_id else '{}',
         'case_order': q.case_order,
     }
     choices = q.choices if isinstance(q.choices, list) else []
@@ -226,6 +227,7 @@ def _row_for_json(q):
                 'key': q.case.key,
                 'title': q.case.title,
                 'stem': q.case.stem,
+                'translations': q.case.translations or {},
             }
             if q.case_id
             else None

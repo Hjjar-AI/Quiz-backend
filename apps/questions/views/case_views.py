@@ -169,7 +169,7 @@ class CaseDetailView(APIView):
     GET    — any authenticated user with visibility on the case.
     PUT    — gated by the same two-tier rule as the stem endpoint
              (edit_case_stem_any, or edit_case_stem_own + authorship).
-             Only `title` and `stem` are writable here; the key is
+             Only `title`, `stem` and `translations` are writable here; the key is
              immutable once created because it is referenced by URL.
     DELETE — requires 'questions.edit_case_stem_any' (moderator or
              admin). Questions are NOT deleted; the FK uses SET_NULL,
@@ -241,7 +241,7 @@ class CaseDetailView(APIView):
         if not can_edit_case(request.user, case):
             return api_error('غير مصرح لك بتعديل هذه الحالة', 403)
         check_revision(case.version, expected_revision(request))
-        body = ClinicalCaseSerializer(case, data={field: request.data[field] for field in ('stem', 'title') if field in request.data}, partial=True)
+        body = ClinicalCaseSerializer(case, data={field: request.data[field] for field in ('stem', 'title', 'translations') if field in request.data}, partial=True)
         body.is_valid(raise_exception=True)
         for field, value in body.validated_data.items():
             setattr(case, field, value.strip() or None if isinstance(value, str) else value)

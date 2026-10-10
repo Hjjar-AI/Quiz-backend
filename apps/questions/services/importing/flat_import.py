@@ -41,6 +41,7 @@ from ...validation import (
     validate_correct_answer,
 )
 from ...translation_validation import normalize_translations
+from ...case_validation import normalize_case_translations
 
 from .validators import (
     MAX_CHOICES,
@@ -185,6 +186,15 @@ def _resolve_case_from_row(row, author=None):
         except (ValueError, TypeError, AttributeError):
             raise ValueError('uuid الحالة غير صالح')
 
+    raw_translations = row.get('case_translations', row.get('case_translations_json', nested.get('translations', {})))
+    if isinstance(raw_translations, str):
+        try:
+            raw_translations = json.loads(raw_translations.strip() or '{}')
+        except ValueError:
+            raise ValueError('case_translations_json غير صالح') from None
+    if raw_translations is None or (not isinstance(raw_translations, (dict, list)) and not _cell_to_str(raw_translations).strip()):
+        raw_translations = {}
+    translations = normalize_case_translations(raw_translations)
     case = ClinicalCase.objects.filter(uuid=case_uuid).first() if case_uuid else None
     created = False
     if case is None:
@@ -195,6 +205,7 @@ def _resolve_case_from_row(row, author=None):
                 or _cell_to_str(nested.get('title')).strip()
             )[:200] or None,
             'authored_by': author,
+            'translations': translations,
         }
         if case_uuid:
             defaults['uuid'] = case_uuid
@@ -203,9 +214,25 @@ def _resolve_case_from_row(row, author=None):
             defaults=defaults,
         )
 
-    if not created and case_stem and not case.stem:
-        case.stem = case_stem
-        case.save(update_fields=['stem', 'updated_at'])
+    if not created:
+        from apps.core.model_validation import lock_assessed_dependents
+        lock_assessed_dependents(case, case._state.db)
+        case = ClinicalCase.objects.select_for_update().get(pk=case.pk)
+        dirty = []
+        if case_stem and not case.stem:
+            case.stem = case_stem
+            dirty.append('stem')
+        merged = {locale: dict(content) for locale, content in (case.translations or {}).items()}
+        for locale, content in translations.items():
+            fields = merged.setdefault(locale, {})
+            for field, text in content.items():
+                if not fields.get(field):
+                    fields[field] = text
+        if merged != case.translations:
+            case.translations = merged
+            dirty.append('translations')
+        if dirty:
+            case.save(update_fields=dirty + ['updated_at'])
 
     return case
 

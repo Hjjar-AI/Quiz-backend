@@ -1,5 +1,6 @@
 # backend/apps/questions/serializers/case.py
 from rest_framework import serializers
+from ..case_validation import normalize_case_translations
 
 from ..models import (
     ClinicalCase,
@@ -17,7 +18,7 @@ class CaseSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = ClinicalCase
         fields = [
-            'id', 'uuid', 'version', 'key', 'title', 'stem',
+            'id', 'uuid', 'version', 'key', 'title', 'stem', 'translations',
             'authored_by', 'authored_by_username',
         ]
         read_only_fields = fields
@@ -76,7 +77,7 @@ class ClinicalCaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClinicalCase
         fields = [
-            'id', 'uuid', 'version', 'key', 'title', 'stem', 'question_count',
+            'id', 'uuid', 'version', 'key', 'title', 'stem', 'translations', 'question_count',
             'authored_by', 'authored_by_username',
             'created_at', 'updated_at',
         ]
@@ -85,6 +86,12 @@ class ClinicalCaseSerializer(serializers.ModelSerializer):
             'authored_by', 'authored_by_username',
             'created_at', 'updated_at', 'question_count',
         ]
+
+    def validate_translations(self, value):
+        try:
+            return normalize_case_translations(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
 
     def get_question_count(self, obj):
         annotated = getattr(obj, 'question_count_visible', None)

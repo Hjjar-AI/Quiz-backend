@@ -18,3 +18,5 @@ Builds, suites, migrations/setup, destructive operator actions and versions foll
 ## 2026-10-10 parity-review follow-up
 
 All seven native gaps, smaller workflow differences and shared web defects from the [latest parity review](../../Android/docs/archive/reviews/2026-10-10-androidParityReview.md) are source-complete. Verify the dedicated account set-state route, partial/unknown batch outcomes, clock-read ownership and the shared manual matrix after matching rollout. Old servers reject the new route without changing account state. Earlier completed fixes remain complete.
+
+Optional clinical-case translations are source-complete; verify matching `ClinicalCase.translations` schema and Android rollout, snapshots, editor recovery and legacy import/export behavior. See the [contract](contracts/caseTranslations.md). No schema setup has been performed for this extension.
