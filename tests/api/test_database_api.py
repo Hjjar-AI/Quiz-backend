@@ -353,6 +353,16 @@ class ExportDatabaseViewTests(CacheClearingTestCase):
         resp = self.client.get('/api/v1/database/export/state/?format=xml')
         self.assertEqual(resp.status_code, 400)
 
+    def test_state_export_format_does_not_bypass_permissions(self):
+        self.client.force_login(make_user('export_member'))
+        resp = self.client.get('/api/v1/database/export/state/?format=xlsx')
+        self.assertEqual(resp.status_code, 403)
+
+    def test_state_export_keeps_accept_header_validation(self):
+        resp = self.client.get('/api/v1/database/export/state/?format=xlsx',
+                               HTTP_ACCEPT='application/xml')
+        self.assertEqual(resp.status_code, 406)
+
     def test_state_export_query_params_passed_through(self):
         resp = self.client.get(
             '/api/v1/database/export/state/?include_images=false&verified_only=false'

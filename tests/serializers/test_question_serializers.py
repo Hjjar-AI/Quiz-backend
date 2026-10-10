@@ -33,7 +33,7 @@ class QuestionCreateSerializerTests(SimpleTestCase):
             translations={
                 'EN_us': {
                     'question': 'Translated question?',
-                    'choices': ['Yes', 'No'],
+                    'choices': ['Yes', 'No', 'Maybe'],
                     'explanation': 'Explanation',
                 },
             },
@@ -96,14 +96,14 @@ class QuestionUpdateSerializerTests(SimpleTestCase):
 
     def test_partial_update_without_choices(self):
         s = QuestionUpdateSerializer(
-            self._instance(), data={'difficulty': 'hard'}, partial=True,
+            self._instance(), data={'expected_version': 1, 'difficulty': 'hard'}, partial=True,
         )
         self.assertTrue(s.is_valid(), s.errors)
 
     def test_new_choices_requires_valid_range(self):
         s = QuestionUpdateSerializer(
             self._instance(),
-            data={'choices': ['A', 'B', 'C'], 'correct_answer': 5},
+            data={'expected_version': 1, 'choices': ['A', 'B', 'C'], 'correct_answer': 5},
             partial=True,
         )
         self.assertFalse(s.is_valid())
@@ -113,7 +113,7 @@ class QuestionUpdateSerializerTests(SimpleTestCase):
         # has 3 entries. The existing 1 is still valid; no error.
         s = QuestionUpdateSerializer(
             self._instance(),
-            data={'choices': ['A', 'B', 'C']},
+            data={'expected_version': 1, 'choices': ['A', 'B', 'C']},
             partial=True,
         )
         self.assertTrue(s.is_valid(), s.errors)
@@ -121,7 +121,7 @@ class QuestionUpdateSerializerTests(SimpleTestCase):
     def test_authored_by_not_writable(self):
         s = QuestionUpdateSerializer(
             self._instance(),
-            data={'authored_by': 999, 'question': 'ok?'},
+            data={'expected_version': 1, 'authored_by': 999, 'question': 'ok?'},
             partial=True,
         )
         self.assertTrue(s.is_valid(), s.errors)

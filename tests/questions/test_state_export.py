@@ -78,7 +78,7 @@ class StateExportTests(CacheClearingTestCase):
 
     def test_provenance_and_translations_are_exported(self):
         author = make_user('translated_author')
-        question = make_question(owner=author, question='Original?')
+        question = make_question(owner=author, question='Original?', choices=['Yes', 'No'])
         question.source_document = 'source.pdf'
         question.source_page = 17
         question.translations = {

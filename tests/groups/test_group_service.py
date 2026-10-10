@@ -7,7 +7,7 @@ from apps.groups.models import Group, GroupMembership
 from apps.groups.services import GroupService, LeaderboardService
 from tests.base import CacheClearingTestCase
 from tests.factories import (
-    make_user, make_test_history,
+    make_user, make_learning_batch,
 )
 
 
@@ -136,13 +136,13 @@ class LeaderboardServiceTests(CacheClearingTestCase):
         self.assertEqual(LeaderboardService.group_leaderboard(g), [])
 
     def test_ranks_by_questions_answered(self):
-        make_test_history(
+        make_learning_batch(
             self.alice, total_questions=10, correct_count=5,
         )
-        make_test_history(
+        make_learning_batch(
             self.bob, total_questions=50, correct_count=40,
         )
-        make_test_history(
+        make_learning_batch(
             self.carol, total_questions=20, correct_count=15,
         )
         rows = LeaderboardService.group_leaderboard(self.g)
@@ -153,8 +153,8 @@ class LeaderboardServiceTests(CacheClearingTestCase):
         self.assertEqual(rows[2]['rank'], 3)
 
     def test_members_with_show_in_leaderboard_false_are_hidden(self):
-        make_test_history(self.alice, total_questions=100, correct_count=90)
-        make_test_history(self.bob, total_questions=5, correct_count=1)
+        make_learning_batch(self.alice, total_questions=100, correct_count=90)
+        make_learning_batch(self.bob, total_questions=5, correct_count=1)
         GroupService.set_visibility(self.g, self.alice.id, False)
         rows = LeaderboardService.group_leaderboard(self.g)
         usernames = [r['username'] for r in rows]
@@ -162,10 +162,10 @@ class LeaderboardServiceTests(CacheClearingTestCase):
         self.assertIn('bob', usernames)
 
     def test_window_excludes_old_sessions(self):
-        make_test_history(
+        make_learning_batch(
             self.alice, total_questions=10, correct_count=5,
         )
-        make_test_history(
+        make_learning_batch(
             self.bob, total_questions=100, correct_count=50,
             completed_at=timezone.now() - timedelta(days=30),
         )
@@ -175,10 +175,10 @@ class LeaderboardServiceTests(CacheClearingTestCase):
         self.assertEqual(bob_row['sessions'], 0)
 
     def test_accuracy_is_correct_over_answered(self):
-        make_test_history(
+        make_learning_batch(
             self.alice, total_questions=10, correct_count=7,
         )
-        make_test_history(
+        make_learning_batch(
             self.alice, total_questions=10, correct_count=3,
         )
         rows = LeaderboardService.group_leaderboard(self.g)
@@ -188,6 +188,7 @@ class LeaderboardServiceTests(CacheClearingTestCase):
         self.assertEqual(alice_row['accuracy'], 50.0)
 
     def test_streak_fields_carried_through(self):
+        self.alice.last_study_date = timezone.localdate()
         self.alice.current_streak = 5
         self.alice.longest_streak = 12
         self.alice.save()

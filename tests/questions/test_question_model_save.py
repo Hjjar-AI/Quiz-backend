@@ -40,15 +40,9 @@ class QuestionSaveValidationTests(CacheClearingTestCase):
         with self.assertRaises(ValueError):
             self._make(correct_answer=0)
 
-    def test_empty_choices_skips_the_range_check(self):
-        """
-        `choices` is a JSONField list. When it is empty, the model's
-        guard is a no-op — the check cannot decide a range. The
-        CheckConstraint on the model does not cover this either,
-        because the range depends on the list length.
-        """
-        q = self._make(choices=[], correct_answer=1)
-        self.assertEqual(q.choices, [])
+    def test_empty_choices_are_rejected(self):
+        with self.assertRaises(ValueError):
+            self._make(choices=[], correct_answer=1)
 
     def test_bulk_create_bypasses_the_save_guard(self):
         """

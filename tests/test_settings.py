@@ -4,15 +4,14 @@ Test-only settings overlay.
 
 Imported by tests/runtests.py when no --settings is given on the
 command line. Everything inherits from config.settings; only the
-three sections below differ.
+database, cache, hashing and file storage differ.
 
 WHY SQLITE FOR TESTS
 --------------------
-The production backend is MariaDB. The tests do not need to
-exercise MariaDB specifically — the code paths under test are
-backend-agnostic (QuerySet filters, service logic, serializer
-validation). Two behaviors that ARE backend-specific are already
-handled by the app itself:
+SQLite provides a self-contained baseline for services, serializers
+and HTTP clients. It does not validate PostgreSQL/MariaDB row locking
+or all SQL differences; use tests.postgresql_settings for a separate
+PostgreSQL run. Relevant backend differences include:
 
   • QuestionFlag.unique_open_flag_per_user_question is a partial
     unique index. MariaDB silently drops it (SILENCED_SYSTEM_CHECKS
@@ -33,10 +32,12 @@ touching MySQL.
 USAGE
 -----
     python tests/runtests.py                          # uses this file
-    DJANGO_SETTINGS_MODULE=config.settings \
-        python tests/runtests.py                     # uses MariaDB
+    QUIZ_TEST_POSTGRES_DB=test_quiz_backend python manage.py test tests \
+        --settings=tests.postgresql_settings --keepdb --noinput
 """
 import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
 # Production settings validate these values while they are imported,
@@ -105,3 +106,16 @@ PASSWORD_HASHERS = [
 #     still fires if the env carries an insecure key — which is the
 #     correct behavior even under test.
 DEBUG = False
+
+# Test uploads/exports/cleanup must never use application-owned directories.
+# Keep the owner alive for the process lifetime; TemporaryDirectory cleans up
+# at interpreter shutdown, including when the suite reports failures.
+_test_storage = TemporaryDirectory(prefix='quiz-python-tests-')
+_test_root = Path(_test_storage.name)
+MEDIA_ROOT = _test_root / 'media'
+UPLOAD_FOLDER = _test_root / 'uploads'
+EXPORT_FOLDER = _test_root / 'exports'
+BACKUP_FOLDER = _test_root / 'backups'
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+for _directory in (MEDIA_ROOT, UPLOAD_FOLDER, EXPORT_FOLDER, BACKUP_FOLDER):
+    _directory.mkdir()

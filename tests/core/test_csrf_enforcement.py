@@ -14,8 +14,8 @@ cases:
   • session present, CSRF cookie, no header → 403
   • session present, CSRF cookie + header → 201
 
-The login endpoint itself is exempt — DRF only enforces CSRF for
-authenticated requests. That is documented by the fourth test.
+Login explicitly enforces CSRF even before a session exists; a token can
+be obtained from the public CSRF endpoint before submitting credentials.
 """
 from rest_framework.test import APIClient
 
@@ -100,19 +100,18 @@ class CSRFEnforcementTests(CacheClearingTestCase):
         self.assertEqual(resp.status_code, 201, resp.content)
         self.assertEqual(Question.objects.count(), 1)
 
-    def test_login_endpoint_is_csrf_exempt(self):
-        """
-        Login runs before the user has a session, so DRF's session
-        auth has nothing to check against. Without this exemption,
-        a user could never log in.
-        """
+    def test_login_without_csrf_is_rejected(self):
         anon_client = APIClient(enforce_csrf_checks=True)
-        resp = anon_client.post(
-            '/api/v1/auth/login/',
-            {'username': 'alice', 'password': 'wrong-pw'},
-            format='json',
-        )
-        # 401, not 403 — the request reached the view.
+        resp = anon_client.post('/api/v1/auth/login/',
+                               {'username': 'alice', 'password': 'wrong-pw'}, format='json')
+        self.assertEqual(resp.status_code, 403)
+
+    def test_login_with_csrf_reaches_credential_validation(self):
+        anon_client = APIClient(enforce_csrf_checks=True)
+        token = anon_client.get('/api/v1/auth/csrf/').json()['data']['token']
+        resp = anon_client.post('/api/v1/auth/login/',
+                               {'username': 'alice', 'password': 'wrong-pw'},
+                               format='json', HTTP_X_CSRFTOKEN=token)
         self.assertEqual(resp.status_code, 401)
 
 

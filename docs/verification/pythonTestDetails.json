@@ -1,0 +1,2851 @@
+{
+  "date": "2026-10-10",
+  "baseline_revision": "8274707",
+  "environment": {
+    "python": "3.14.4",
+    "django": "6.1.2",
+    "postgresql": "18.6"
+  },
+  "reachability": {
+    "method": "stdlib sys.setprofile, main thread only, enabled after django.setup; SQLite suite",
+    "scope": "apps/, config/, scripts/; excludes tests, migrations and root entry points",
+    "defined": 912,
+    "observed": 608,
+    "areas": {
+      "apps/analytics": {
+        "defined": 25,
+        "observed": 24
+      },
+      "apps/core": {
+        "defined": 126,
+        "observed": 86
+      },
+      "apps/database": {
+        "defined": 44,
+        "observed": 20
+      },
+      "apps/exams": {
+        "defined": 73,
+        "observed": 35
+      },
+      "apps/feedback": {
+        "defined": 20,
+        "observed": 12
+      },
+      "apps/groups": {
+        "defined": 27,
+        "observed": 23
+      },
+      "apps/learning": {
+        "defined": 39,
+        "observed": 35
+      },
+      "apps/master_exams": {
+        "defined": 135,
+        "observed": 100
+      },
+      "apps/planning": {
+        "defined": 26,
+        "observed": 17
+      },
+      "apps/questions": {
+        "defined": 261,
+        "observed": 189
+      },
+      "apps/users": {
+        "defined": 88,
+        "observed": 67
+      },
+      "config": {
+        "defined": 4,
+        "observed": 0
+      },
+      "scripts": {
+        "defined": 44,
+        "observed": 0
+      }
+    },
+    "unobserved": [
+      {
+        "file": "apps/users/models.py",
+        "line": 211,
+        "function": "is_moderator"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 215,
+        "function": "is_member"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 258,
+        "function": "has_any_capability"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 264,
+        "function": "has_all_capabilities"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 323,
+        "function": "deactivate"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 356,
+        "function": "get_id"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 397,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 412,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/users/models.py",
+        "line": 422,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/users/admin.py",
+        "line": 139,
+        "function": "capability_count"
+      },
+      {
+        "file": "apps/users/apps.py",
+        "line": 11,
+        "function": "ready"
+      },
+      {
+        "file": "apps/users/serializers.py",
+        "line": 220,
+        "function": "validate_new_password"
+      },
+      {
+        "file": "apps/users/serializers.py",
+        "line": 229,
+        "function": "validate_capabilities"
+      },
+      {
+        "file": "apps/users/signals.py",
+        "line": 19,
+        "function": "_invalidate_on_delete"
+      },
+      {
+        "file": "apps/analytics/views.py",
+        "line": 121,
+        "function": "get"
+      },
+      {
+        "file": "apps/core/models.py",
+        "line": 56,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/core/models.py",
+        "line": 115,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/core/models.py",
+        "line": 148,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/core/admin.py",
+        "line": 9,
+        "function": "get_queryset"
+      },
+      {
+        "file": "apps/core/admin.py",
+        "line": 66,
+        "function": "text_preview"
+      },
+      {
+        "file": "apps/core/write_receipts.py",
+        "line": 14,
+        "function": "create_with_receipt"
+      },
+      {
+        "file": "apps/core/write_receipts.py",
+        "line": 42,
+        "function": "get"
+      },
+      {
+        "file": "apps/core/model_validation.py",
+        "line": 52,
+        "function": "clean"
+      },
+      {
+        "file": "apps/planning/models.py",
+        "line": 69,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/planning/models.py",
+        "line": 98,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/planning/admin.py",
+        "line": 28,
+        "function": "changeform_view"
+      },
+      {
+        "file": "apps/planning/admin.py",
+        "line": 38,
+        "function": "category_count"
+      },
+      {
+        "file": "apps/planning/admin.py",
+        "line": 42,
+        "function": "tag_count"
+      },
+      {
+        "file": "apps/planning/services.py",
+        "line": 32,
+        "function": "record_scope_change"
+      },
+      {
+        "file": "apps/planning/services.py",
+        "line": 66,
+        "function": "update_planner"
+      },
+      {
+        "file": "apps/planning/services.py",
+        "line": 176,
+        "function": "delete_planner"
+      },
+      {
+        "file": "apps/planning/views.py",
+        "line": 115,
+        "function": "post"
+      },
+      {
+        "file": "apps/groups/models.py",
+        "line": 37,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/groups/admin.py",
+        "line": 22,
+        "function": "member_count"
+      },
+      {
+        "file": "apps/groups/views.py",
+        "line": 108,
+        "function": "get"
+      },
+      {
+        "file": "apps/groups/views.py",
+        "line": 139,
+        "function": "get"
+      },
+      {
+        "file": "apps/database/serializers.py",
+        "line": 46,
+        "function": "validate_question_ids"
+      },
+      {
+        "file": "apps/database/views.py",
+        "line": 212,
+        "function": "get"
+      },
+      {
+        "file": "apps/database/views.py",
+        "line": 215,
+        "function": "post"
+      },
+      {
+        "file": "apps/database/views.py",
+        "line": 238,
+        "function": "post"
+      },
+      {
+        "file": "apps/database/views.py",
+        "line": 345,
+        "function": "post"
+      },
+      {
+        "file": "apps/database/views.py",
+        "line": 439,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/models.py",
+        "line": 92,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/exams/models.py",
+        "line": 171,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/exams/models.py",
+        "line": 199,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/exams/models.py",
+        "line": 254,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/exams/admin.py",
+        "line": 59,
+        "function": "weight_count"
+      },
+      {
+        "file": "apps/questions/models.py",
+        "line": 70,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/questions/models.py",
+        "line": 98,
+        "function": "clean"
+      },
+      {
+        "file": "apps/questions/models.py",
+        "line": 221,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/questions/models.py",
+        "line": 307,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/questions/models.py",
+        "line": 567,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/questions/models.py",
+        "line": 695,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/questions/payloads.py",
+        "line": 49,
+        "function": "case_block_from_live"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 17,
+        "function": "get_deleted_objects"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 50,
+        "function": "has_add_permission"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 68,
+        "function": "question_count"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 84,
+        "function": "question_count"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 116,
+        "function": "question_preview"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 145,
+        "function": "_recompute_affected_authors"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 156,
+        "function": "bulk_verify"
+      },
+      {
+        "file": "apps/questions/admin.py",
+        "line": 167,
+        "function": "bulk_unverify"
+      },
+      {
+        "file": "apps/questions/apps.py",
+        "line": 7,
+        "function": "ready"
+      },
+      {
+        "file": "apps/questions/utils.py",
+        "line": 20,
+        "function": "_require_sqlite"
+      },
+      {
+        "file": "apps/questions/utils.py",
+        "line": 29,
+        "function": "ensure_fts_table"
+      },
+      {
+        "file": "apps/questions/utils.py",
+        "line": 40,
+        "function": "rebuild_fts_index"
+      },
+      {
+        "file": "apps/questions/utils.py",
+        "line": 48,
+        "function": "search_questions_fts"
+      },
+      {
+        "file": "apps/questions/export_options.py",
+        "line": 8,
+        "function": "manual_export_limit"
+      },
+      {
+        "file": "apps/questions/colors.py",
+        "line": 10,
+        "function": "is_valid_hex_color"
+      },
+      {
+        "file": "apps/questions/signals.py",
+        "line": 52,
+        "function": "lock_planner_targets"
+      },
+      {
+        "file": "apps/questions/signals.py",
+        "line": 96,
+        "function": "bump_planner_taxonomy_version"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 148,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 178,
+        "function": "is_published"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 200,
+        "function": "question_ids"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 258,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 324,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 329,
+        "function": "is_expired"
+      },
+      {
+        "file": "apps/master_exams/models.py",
+        "line": 354,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/master_exams/admin.py",
+        "line": 33,
+        "function": "has_add_permission"
+      },
+      {
+        "file": "apps/master_exams/admin.py",
+        "line": 79,
+        "function": "question_count_display"
+      },
+      {
+        "file": "apps/learning/models.py",
+        "line": 146,
+        "function": "__str__"
+      },
+      {
+        "file": "apps/learning/mastery.py",
+        "line": 49,
+        "function": "concept_mastery_summary"
+      },
+      {
+        "file": "apps/learning/views.py",
+        "line": 128,
+        "function": "get"
+      },
+      {
+        "file": "apps/learning/views.py",
+        "line": 169,
+        "function": "get"
+      },
+      {
+        "file": "apps/feedback/admin.py",
+        "line": 20,
+        "function": "resolve_flags"
+      },
+      {
+        "file": "apps/feedback/services.py",
+        "line": 15,
+        "function": "set_bookmark"
+      },
+      {
+        "file": "apps/feedback/views.py",
+        "line": 43,
+        "function": "get"
+      },
+      {
+        "file": "apps/feedback/views.py",
+        "line": 47,
+        "function": "put"
+      },
+      {
+        "file": "apps/feedback/views.py",
+        "line": 88,
+        "function": "get"
+      },
+      {
+        "file": "apps/feedback/views.py",
+        "line": 132,
+        "function": "get"
+      },
+      {
+        "file": "apps/feedback/views.py",
+        "line": 154,
+        "function": "get"
+      },
+      {
+        "file": "apps/feedback/views.py",
+        "line": 207,
+        "function": "get"
+      },
+      {
+        "file": "apps/master_exams/views/crud_views.py",
+        "line": 131,
+        "function": "get"
+      },
+      {
+        "file": "apps/master_exams/views/crud_views.py",
+        "line": 187,
+        "function": "delete"
+      },
+      {
+        "file": "apps/master_exams/views/crud_views.py",
+        "line": 215,
+        "function": "post"
+      },
+      {
+        "file": "apps/master_exams/views/crud_views.py",
+        "line": 226,
+        "function": "get"
+      },
+      {
+        "file": "apps/master_exams/views/attempt_views.py",
+        "line": 149,
+        "function": "get"
+      },
+      {
+        "file": "apps/master_exams/views/attempt_views.py",
+        "line": 241,
+        "function": "post"
+      },
+      {
+        "file": "apps/master_exams/views/attempt_views.py",
+        "line": 272,
+        "function": "post"
+      },
+      {
+        "file": "apps/master_exams/views/attempt_views.py",
+        "line": 300,
+        "function": "post"
+      },
+      {
+        "file": "apps/master_exams/views/lifecycle_views.py",
+        "line": 51,
+        "function": "post"
+      },
+      {
+        "file": "apps/master_exams/views/lifecycle_views.py",
+        "line": 85,
+        "function": "post"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_sweeper.py",
+        "line": 90,
+        "function": "sweep_attempt"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/question_flow.py",
+        "line": 21,
+        "function": "_next_unanswered"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/question_flow.py",
+        "line": 102,
+        "function": "goto_question"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/finish.py",
+        "line": 19,
+        "function": "finish"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/finish.py",
+        "line": 26,
+        "function": "_finish_locked"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/finish.py",
+        "line": 103,
+        "function": "_force_finish"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/status.py",
+        "line": 10,
+        "function": "status"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/answer.py",
+        "line": 41,
+        "function": "submit_answer"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/answer.py",
+        "line": 57,
+        "function": "_submit_answer_locked"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/start.py",
+        "line": 174,
+        "function": "_start_preview"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/helpers.py",
+        "line": 12,
+        "function": "_last_answer_tolerance_seconds"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_attempt_service/helpers.py",
+        "line": 16,
+        "function": "_resolve_weight"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_service/audience.py",
+        "line": 161,
+        "function": "user_has_attempt"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_service/audience.py",
+        "line": 167,
+        "function": "user_completed_attempt"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_service/audience.py",
+        "line": 173,
+        "function": "acknowledge"
+      },
+      {
+        "file": "apps/master_exams/services/master_exam_service/audience.py",
+        "line": 179,
+        "function": "needs_acknowledgement"
+      },
+      {
+        "file": "apps/questions/serializers/question_write.py",
+        "line": 26,
+        "function": "to_internal_value"
+      },
+      {
+        "file": "apps/questions/serializers/case.py",
+        "line": 110,
+        "function": "create"
+      },
+      {
+        "file": "apps/questions/serializers/question_read.py",
+        "line": 144,
+        "function": "_count_case_siblings"
+      },
+      {
+        "file": "apps/questions/serializers/tag.py",
+        "line": 13,
+        "function": "validate_parent"
+      },
+      {
+        "file": "apps/questions/serializers/image.py",
+        "line": 14,
+        "function": "validate_image"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 39,
+        "function": "_validate_string_list"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 44,
+        "function": "validate_key_facts"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 47,
+        "function": "validate_misconceptions"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 50,
+        "function": "validate_translations"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 56,
+        "function": "_set_tags"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 66,
+        "function": "create"
+      },
+      {
+        "file": "apps/questions/serializers/knowledge_object.py",
+        "line": 74,
+        "function": "update"
+      },
+      {
+        "file": "apps/questions/views/question_views.py",
+        "line": 229,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/question_views.py",
+        "line": 347,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/question_views.py",
+        "line": 431,
+        "function": "post"
+      },
+      {
+        "file": "apps/questions/views/question_views.py",
+        "line": 533,
+        "function": "post"
+      },
+      {
+        "file": "apps/questions/views/question_views.py",
+        "line": 568,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/question_views.py",
+        "line": 672,
+        "function": "post"
+      },
+      {
+        "file": "apps/questions/views/tag_admin_views.py",
+        "line": 18,
+        "function": "_validate_tag_name"
+      },
+      {
+        "file": "apps/questions/views/case_views.py",
+        "line": 59,
+        "function": "_visible_questions_in_case"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 24,
+        "function": "_validate_color"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 34,
+        "function": "_validate_icon"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 44,
+        "function": "_coerce_name"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 61,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 77,
+        "function": "post"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 132,
+        "function": "put"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 187,
+        "function": "delete"
+      },
+      {
+        "file": "apps/questions/views/category_views.py",
+        "line": 104,
+        "function": "create"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 15,
+        "function": "_knowledge_queryset"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 27,
+        "function": "_may_manage"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 41,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 69,
+        "function": "post"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 86,
+        "function": "get_object"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 89,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 93,
+        "function": "put"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 108,
+        "function": "delete"
+      },
+      {
+        "file": "apps/questions/views/knowledge_object_views.py",
+        "line": 123,
+        "function": "get"
+      },
+      {
+        "file": "apps/questions/views/write_receipts.py",
+        "line": 14,
+        "function": "_identity"
+      },
+      {
+        "file": "apps/questions/views/write_receipts.py",
+        "line": 18,
+        "function": "_result"
+      },
+      {
+        "file": "apps/questions/views/write_receipts.py",
+        "line": 25,
+        "function": "read_receipt"
+      },
+      {
+        "file": "apps/questions/services/question_service.py",
+        "line": 77,
+        "function": "get_question"
+      },
+      {
+        "file": "apps/questions/services/question_service.py",
+        "line": 301,
+        "function": "delete_question"
+      },
+      {
+        "file": "apps/questions/services/question_service.py",
+        "line": 365,
+        "function": "toggle_verify"
+      },
+      {
+        "file": "apps/questions/services/question_service.py",
+        "line": 436,
+        "function": "bulk_unverify"
+      },
+      {
+        "file": "apps/questions/services/question_service.py",
+        "line": 645,
+        "function": "update_case_stem"
+      },
+      {
+        "file": "apps/questions/services/exporting/pdf_export.py",
+        "line": 301,
+        "function": "_safe_color"
+      },
+      {
+        "file": "apps/questions/services/exporting/pdf_export.py",
+        "line": 311,
+        "function": "_sanitize_filename_part"
+      },
+      {
+        "file": "apps/questions/services/exporting/pdf_export.py",
+        "line": 335,
+        "function": "_split_csv"
+      },
+      {
+        "file": "apps/exams/serializers/exam_serializers.py",
+        "line": 89,
+        "function": "validate_confidence"
+      },
+      {
+        "file": "apps/exams/views/_helpers.py",
+        "line": 10,
+        "function": "_exam_duration_minutes"
+      },
+      {
+        "file": "apps/exams/views/history_views.py",
+        "line": 41,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/history_views.py",
+        "line": 79,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/offline_views.py",
+        "line": 65,
+        "function": "_closed"
+      },
+      {
+        "file": "apps/exams/views/offline_views.py",
+        "line": 38,
+        "function": "validate_question_ids"
+      },
+      {
+        "file": "apps/exams/views/offline_views.py",
+        "line": 59,
+        "function": "validate_answers"
+      },
+      {
+        "file": "apps/exams/views/offline_views.py",
+        "line": 84,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/offline_views.py",
+        "line": 113,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/offline_views.py",
+        "line": 181,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/blueprint_views.py",
+        "line": 20,
+        "function": "_reload_with_weights"
+      },
+      {
+        "file": "apps/exams/views/blueprint_views.py",
+        "line": 46,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/blueprint_views.py",
+        "line": 60,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/blueprint_views.py",
+        "line": 82,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/blueprint_views.py",
+        "line": 89,
+        "function": "put"
+      },
+      {
+        "file": "apps/exams/views/blueprint_views.py",
+        "line": 104,
+        "function": "delete"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 56,
+        "function": "_session_progress_payload"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 77,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 243,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 293,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 358,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 373,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 395,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 415,
+        "function": "post"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 454,
+        "function": "delete"
+      },
+      {
+        "file": "apps/exams/views/session_views.py",
+        "line": 481,
+        "function": "get"
+      },
+      {
+        "file": "apps/exams/services/activity.py",
+        "line": 7,
+        "function": "_bucket"
+      },
+      {
+        "file": "apps/exams/services/activity.py",
+        "line": 12,
+        "function": "_add"
+      },
+      {
+        "file": "apps/exams/services/activity.py",
+        "line": 23,
+        "function": "_public"
+      },
+      {
+        "file": "apps/exams/services/exam_service.py",
+        "line": 28,
+        "function": "_max_choices"
+      },
+      {
+        "file": "apps/exams/services/exam_service.py",
+        "line": 684,
+        "function": "study_feedback"
+      },
+      {
+        "file": "apps/exams/services/exam_service.py",
+        "line": 799,
+        "function": "flush_session_learning"
+      },
+      {
+        "file": "apps/exams/services/exam_service.py",
+        "line": 939,
+        "function": "completed_result"
+      },
+      {
+        "file": "apps/database/services/backend.py",
+        "line": 18,
+        "function": "_is_sqlite"
+      },
+      {
+        "file": "apps/database/services/backend.py",
+        "line": 22,
+        "function": "_is_mariadb"
+      },
+      {
+        "file": "apps/database/services/backend.py",
+        "line": 27,
+        "function": "_mysql_config"
+      },
+      {
+        "file": "apps/database/services/backend.py",
+        "line": 38,
+        "function": "_write_defaults_file"
+      },
+      {
+        "file": "apps/database/services/backup_service.py",
+        "line": 49,
+        "function": "_unsupported_backend"
+      },
+      {
+        "file": "apps/database/services/backup_service.py",
+        "line": 59,
+        "function": "get_info"
+      },
+      {
+        "file": "apps/database/services/backup_service.py",
+        "line": 100,
+        "function": "create_backup"
+      },
+      {
+        "file": "apps/database/services/backup_service.py",
+        "line": 155,
+        "function": "list_backups"
+      },
+      {
+        "file": "apps/database/services/backup_service.py",
+        "line": 188,
+        "function": "restore_backup"
+      },
+      {
+        "file": "apps/database/services/backup_service.py",
+        "line": 255,
+        "function": "clear_database"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 33,
+        "function": "_sqlite_db_path"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 37,
+        "function": "_sqlite_timeout"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 41,
+        "function": "_backup_database"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 49,
+        "function": "get_info"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 77,
+        "function": "create_backup"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 101,
+        "function": "list_backups"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 125,
+        "function": "restore_backup"
+      },
+      {
+        "file": "apps/database/services/_sqlite_reference.py",
+        "line": 175,
+        "function": "reset_autoincrement"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 50,
+        "function": "__init__"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 57,
+        "function": "handle"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 125,
+        "function": "_section"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 128,
+        "function": "_ok"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 132,
+        "function": "_warn"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 137,
+        "function": "_fail"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 144,
+        "function": "_check_debug"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 153,
+        "function": "_check_secret_key"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 172,
+        "function": "_check_allowed_hosts"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 185,
+        "function": "_check_https"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 197,
+        "function": "_check_db_connectivity"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 213,
+        "function": "_check_migrations_applied"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 234,
+        "function": "_check_superuser_exists"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 254,
+        "function": "_check_cache_round_trip"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 287,
+        "function": "_check_weasyprint"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 308,
+        "function": "_check_arabic_font"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 321,
+        "function": "_check_writable_dir"
+      },
+      {
+        "file": "apps/core/management/commands/doctor.py",
+        "line": 344,
+        "function": "_check_frontend_build"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 107,
+        "function": "add_arguments"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 199,
+        "function": "handle"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 260,
+        "function": "_run_system_checks"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 287,
+        "function": "_setup_database_and_user"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 447,
+        "function": "_try_connection"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 473,
+        "function": "_print_db_setup_failure"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 535,
+        "function": "_verify_arabic_font"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 566,
+        "function": "_print_summary"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 599,
+        "function": "_confirm_clean"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 636,
+        "function": "_clean"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 653,
+        "function": "_clean_mariadb"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 722,
+        "function": "_wipe_migrations"
+      },
+      {
+        "file": "apps/core/management/commands/bootstrap.py",
+        "line": 746,
+        "function": "_bootstrap"
+      },
+      {
+        "file": "apps/core/management/commands/cleanup_database.py",
+        "line": 16,
+        "function": "handle"
+      },
+      {
+        "file": "apps/users/views/session_views.py",
+        "line": 24,
+        "function": "_handle"
+      },
+      {
+        "file": "apps/users/views/session_views.py",
+        "line": 28,
+        "function": "_store"
+      },
+      {
+        "file": "apps/users/views/session_views.py",
+        "line": 35,
+        "function": "_live"
+      },
+      {
+        "file": "apps/users/views/session_views.py",
+        "line": 49,
+        "function": "get"
+      },
+      {
+        "file": "apps/users/views/session_views.py",
+        "line": 77,
+        "function": "post"
+      },
+      {
+        "file": "apps/users/views/permission_views.py",
+        "line": 236,
+        "function": "get"
+      },
+      {
+        "file": "apps/users/views/admin_user_views.py",
+        "line": 596,
+        "function": "post"
+      },
+      {
+        "file": "config/database.py",
+        "line": 6,
+        "function": "database_engine"
+      },
+      {
+        "file": "config/database.py",
+        "line": 23,
+        "function": "database_config"
+      },
+      {
+        "file": "config/urls.py",
+        "line": 16,
+        "function": "spa_serve"
+      },
+      {
+        "file": "config/urls.py",
+        "line": 47,
+        "function": "api_not_found"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 18,
+        "function": "_choice"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 31,
+        "function": "_port"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 39,
+        "function": "_command"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 43,
+        "function": "_plan"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 104,
+        "function": "_stop"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 134,
+        "function": "_run"
+      },
+      {
+        "file": "scripts/interactive_launch.py",
+        "line": 165,
+        "function": "main"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 136,
+        "function": "command_text"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 145,
+        "function": "examples"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 209,
+        "function": "shell_environment"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 217,
+        "function": "lesson_plan"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 618,
+        "function": "main"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 346,
+        "function": "__init__"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 471,
+        "function": "key"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 474,
+        "function": "toggle_advanced"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 482,
+        "function": "resize_content"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 486,
+        "function": "reset"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 499,
+        "function": "rebuild"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 514,
+        "function": "select_step"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 519,
+        "function": "go"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 525,
+        "function": "set_text"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 533,
+        "function": "render"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 580,
+        "function": "copy"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 587,
+        "function": "copy_command"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 590,
+        "function": "copy_plan"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 597,
+        "function": "show_help"
+      },
+      {
+        "file": "scripts/startup_tutorial.py",
+        "line": 608,
+        "function": "update"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 179,
+        "function": "_split_argv"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 214,
+        "function": "_print_help"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 224,
+        "function": "_runtime_candidates"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 254,
+        "function": "_runtime_missing"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 276,
+        "function": "_ensure_runtime"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 313,
+        "function": "_diagnose"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 341,
+        "function": "_enabled"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 348,
+        "function": "_normalize_address"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 393,
+        "function": "_resolve_server_address"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 445,
+        "function": "_address_host"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 455,
+        "function": "_configure_sqlite_network"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 473,
+        "function": "_configure_threading"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 484,
+        "function": "_ensure_package_files"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 510,
+        "function": "_app_needs_makemigrations"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 520,
+        "function": "main"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 229,
+        "function": "add_venv"
+      },
+      {
+        "file": "scripts/start_sqlite.py",
+        "line": 366,
+        "function": "checked_port"
+      }
+    ],
+    "captured": "Before the failure repairs; historical call inventory, not final-run coverage. File line numbers refer to that snapshot."
+  },
+  "before_repairs": {
+    "sqlite": {
+      "tests": 930,
+      "failures": 42,
+      "errors": 109,
+      "skipped": 1,
+      "unsuccessful_tests": [
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_active_users_counts_only_those_with_sessions.test_active_users_counts_only_those_with_sessions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_avg_accuracy_is_session_count_weighted.test_avg_accuracy_is_session_count_weighted"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_group_disappears_when_only_sessions_are_outside_window.test_group_disappears_when_only_sessions_are_outside_window"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_group_included_when_any_session_inside_window.test_group_included_when_any_session_inside_window"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_inactive_groups_excluded.test_inactive_groups_excluded"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_sorted_by_accuracy_then_sessions.test_sorted_by_accuracy_then_sessions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_user_in_two_groups_appears_in_both.test_user_in_two_groups_appears_in_both"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryCoverageTests.test_counts_split_public_and_verified.test_counts_split_public_and_verified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryMasteryTests.test_mastered_flag_at_eighty_percent.test_mastered_flag_at_eighty_percent"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryMasteryTests.test_ranks_highest_accuracy_first.test_ranks_highest_accuracy_first"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryMasteryTests.test_seventy_nine_percent_is_not_mastered.test_seventy_nine_percent_is_not_mastered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.ConfidenceStatsTests.test_fragile_ratio_computed_over_correct_answers.test_fragile_ratio_computed_over_correct_answers"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.StreakHistoryTests.test_session_landing_on_today_updates_count.test_session_landing_on_today_updates_count"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.TagCoverageTests.test_counts_public_and_verified_per_tag.test_counts_public_and_verified_per_tag"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserPerformanceTrendTests.test_same_day_sessions_aggregated.test_same_day_sessions_aggregated"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserPerformanceTrendTests.test_trend_returns_one_row_per_day.test_trend_returns_one_row_per_day"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserWeakCategoriesTests.test_ranks_lowest_accuracy_first.test_ranks_lowest_accuracy_first"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserWeakCategoriesTests.test_top_caps_the_result.test_top_caps_the_result"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserDetailLatestExamTests.test_detail_includes_latest_exam_columns.test_detail_includes_latest_exam_columns"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserListLatestExamTests.test_accuracy_is_rounded_to_one_decimal.test_accuracy_is_rounded_to_one_decimal"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserListLatestExamTests.test_latest_session_wins.test_latest_session_wins"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserListLatestExamTests.test_user_with_one_session_shows_values.test_user_with_one_session_shows_values"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.CategoryMasteryAPITests.test_ignores_user_id_query_param.test_ignores_user_id_query_param"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.CategoryMasteryAPITests.test_mastery_payload_shape.test_mastery_payload_shape"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.SummaryViewAPITests.test_moderator_gets_populated_admin_sections.test_moderator_gets_populated_admin_sections"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.VerificationStatsAPITests.test_returns_expected_shape.test_returns_expected_shape"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_feedback_admin_api.AdminFlagQueueAPITests.test_only_open_flags_listed.test_only_open_flags_listed"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_groups_api.GroupLeaderboardAPITests.test_leaderboard_data_reflects_test_history.test_leaderboard_data_reflects_test_history"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_learning_api.AttemptSummaryAPITests.test_summary_counts.test_summary_counts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_learning_api.FragileAnswersAPITests.test_lists_correct_but_not_confident.test_lists_correct_but_not_confident"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_learning_api.WrongAnswersAPITests.test_lists_wrong_open_questions.test_lists_wrong_open_questions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_master_exam_api.MasterExamHTTPLifecycleTests.test_foreign_question_answer_returns_400_with_code.test_foreign_question_answer_returns_400_with_code"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.ActivityHeatmapAPITests.test_counts_reflected_in_days.test_counts_reflected_in_days"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.GetPlannerAPITests.test_daily_progress_returns_iso_keyed_dict.test_daily_progress_returns_iso_keyed_dict"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.RecordProgressAPITests.test_record_progress_creates_day_row.test_record_progress_creates_day_row"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.RecordProgressAPITests.test_record_progress_upserts_not_inserts.test_record_progress_upserts_not_inserts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.UpdatePlannerAPITests.test_full_replacement_of_categories.test_full_replacement_of_categories"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_question_extras_api.QuestionBatchAPITests.test_hydrates_ids.test_hydrates_ids"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_question_extras_api.QuestionBatchAPITests.test_invisible_draft_is_dropped.test_invisible_draft_is_dropped"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_tag_admin_api.TagListAPITests.test_verified_count_excludes_unverified.test_verified_count_excludes_unverified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_blueprint_assembly.BlueprintWeightConstraintTests.test_negative_weight_is_refused_by_constraint.test_negative_weight_is_refused_by_constraint"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_blueprint_assembly.BlueprintWeightConstraintTests.test_zero_weight_is_refused_by_constraint.test_zero_weight_is_refused_by_constraint"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.CurrentQuestionReadTests.test_valid_current_question_is_not_resaved.test_valid_current_question_is_not_resaved"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamLastAnswerBoundary.test_at_boundary_accepted.test_at_boundary_accepted"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamLastAnswerBoundary.test_well_past_boundary_forces_finish.test_well_past_boundary_forces_finish"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamWindowBoundaries.test_after_close_with_makeup_creates_makeup_attempt.test_after_close_with_makeup_creates_makeup_attempt"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamWindowBoundaries.test_after_close_without_makeup_refused.test_after_close_without_makeup_refused"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamWindowBoundaries.test_before_opens_refused.test_before_opens_refused"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_csv_export_writes_file.test_csv_export_writes_file"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_json_export_includes_choices_list.test_json_export_includes_choices_list"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_json_export_preserves_formula_prefixes_as_data.test_json_export_preserves_formula_prefixes_as_data"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_json_keeps_legacy_tags_and_adds_lossless_tag_names.test_json_keeps_legacy_tags_and_adds_lossless_tag_names"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_no_questions_returns_404_error.test_no_questions_returns_404_error"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_unknown_format_returns_400.test_unknown_format_returns_400"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_verified_only_excludes_unverified.test_verified_only_excludes_unverified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_accuracy_is_correct_over_answered.test_accuracy_is_correct_over_answered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_members_with_show_in_leaderboard_false_are_hidden.test_members_with_show_in_leaderboard_false_are_hidden"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_ranks_by_questions_answered.test_ranks_by_questions_answered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_window_excludes_old_sessions.test_window_excludes_old_sessions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_knowledge_map.KnowledgeMapTests.test_correct_confident_retained_attempt_is_mastered.test_correct_confident_retained_attempt_is_mastered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_never_returns_duplicates.test_never_returns_duplicates"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_srs_due_bucket_fills_its_budget.test_srs_due_bucket_fills_its_budget"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_srs_shortfall_rolls_into_fragile.test_srs_shortfall_rolls_into_fragile"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.DueAndQueryTests.test_attempt_summary_shape.test_attempt_summary_shape"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.DueAndQueryTests.test_fragile_question_ids_are_correct_but_not_confident.test_fragile_question_ids_are_correct_but_not_confident"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.DueAndQueryTests.test_wrong_question_ids_ordered_by_wrong_count.test_wrong_question_ids_ordered_by_wrong_count"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_creates_rows_for_new_attempts.test_creates_rows_for_new_attempts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_race_falls_back_to_update_or_create.test_race_falls_back_to_update_or_create"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_second_call_updates_existing.test_second_call_updates_existing"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_unanswered_rows_are_skipped.test_unanswered_rows_are_skipped"
+        },
+        {
+          "kind": "error",
+          "test": "tests.management.test_cleanup_commands.RefreshAuthorRanksTests.test_recomputes_trust_scores.test_recomputes_trust_scores"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.CsvSummaryTests.test_data_row_for_finished_attempt.test_data_row_for_finished_attempt"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.FlagsRaisedTests.test_resolved_flag_excluded.test_resolved_flag_excluded"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.LiveSummaryTests.test_audience_and_attempt_counts.test_audience_and_attempt_counts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.PerUserRowsTests.test_fields_present.test_fields_present"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.PerUserRowsTests.test_sorted_by_accuracy_descending.test_sorted_by_accuracy_descending"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_sweeper_limit.SweepExpiredLimitTests.test_default_limit_processes_everything_below_bound.test_default_limit_processes_everything_below_bound"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_sweeper_limit.SweepExpiredLimitTests.test_limit_bounds_single_run.test_limit_bounds_single_run"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_sweeper_limit.SweepExpiredLimitTests.test_subsequent_run_finishes_remaining.test_subsequent_run_finishes_remaining"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.DeletePlannerTests.test_cascade_removes_day_rows.test_cascade_removes_day_rows"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.DeletePlannerTests.test_delete_when_none_exists_is_a_noop.test_delete_when_none_exists_is_a_noop"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.RecordDailyProgressTests.test_counts_todays_sessions_only.test_counts_todays_sessions_only"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.RecordDailyProgressTests.test_second_call_upserts_not_inserts.test_second_call_upserts_not_inserts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_duplicate_tag_names_are_deduplicated.test_duplicate_tag_names_are_deduplicated"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_empty_categories_clears.test_empty_categories_clears"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_replaces_categories_entirely.test_replaces_categories_entirely"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_tag_names_are_created_on_the_fly.test_tag_names_are_created_on_the_fly"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_unknown_category_ids_are_dropped.test_unknown_category_ids_are_dropped"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_author_with_own_capability_can_update.test_author_with_own_capability_can_update"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_author_without_own_capability_raises_permission_error.test_author_without_own_capability_raises_permission_error"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_blank_stem_normalizes_to_none.test_blank_stem_normalizes_to_none"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_empty_key_returns_zero.test_empty_key_returns_zero"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_explicit_none_stem_normalizes_to_none.test_explicit_none_stem_normalizes_to_none"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_missing_case_returns_zero.test_missing_case_returns_zero"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_moderator_with_edit_any_can_update.test_moderator_with_edit_any_can_update"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_non_author_member_raises_permission_error.test_non_author_member_raises_permission_error"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_model_save.QuestionSaveValidationTests.test_empty_choices_skips_the_range_check.test_empty_choices_skips_the_range_check"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.BulkVerifyTests.test_bulk_unverify_resets_counters.test_bulk_unverify_resets_counters"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_category_ids_filter.test_category_ids_filter"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_category_ids_takes_precedence_over_category.test_category_ids_takes_precedence_over_category"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_difficulty_filter.test_difficulty_filter"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_search_requires_two_chars.test_search_requires_two_chars"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_single_category_filter_normalizes_to_list.test_single_category_filter_normalizes_to_list"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_tags_filter_or_within_set.test_tags_filter_or_within_set"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_verified_filter_yes.test_verified_filter_yes"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_state_export.StateExportTests.test_provenance_and_translations_are_exported.test_provenance_and_translations_are_exported"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_state_export.StateExportTests.test_verified_only_excludes_unverified.test_verified_only_excludes_unverified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_state_roundtrip.StateRoundTripTests.test_roundtrip_preserves_verification_fields.test_roundtrip_preserves_verification_fields"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_pdf_theme.PdfThemeTests.test_question_image_is_embedded_as_a_data_uri.test_question_image_is_embedded_as_a_data_uri"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.analytics.test_services.StreakHistoryTests.test_streak_fields_read_from_user_model.test_streak_fields_read_from_user_model"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseDetailAPITests.test_moderator_can_delete_case_and_questions_survive.test_moderator_can_delete_case_and_questions_survive"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseDetailAPITests.test_put_stem_by_author.test_put_stem_by_author"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseDetailAPITests.test_put_title_by_author.test_put_title_by_author"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseStemUpdateAPITests.test_author_can_update_stem.test_author_can_update_stem"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseStemUpdateAPITests.test_member_not_author_gets_403.test_member_not_author_gets_403"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_database_api.ExportDatabaseViewTests.test_state_export_rejects_unknown_format.test_state_export_rejects_unknown_format"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_database_api.ExportDatabaseViewTests.test_state_export_returns_full_xlsx.test_state_export_returns_full_xlsx"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_groups_api.AdminGroupAPITests.test_update_group.test_update_group"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_master_exam_api.MasterExamHTTPLifecycleTests.test_full_attempt_via_http.test_full_attempt_via_http"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.DeletePlannerAPITests.test_delete_removes_planner.test_delete_removes_planner"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.MyStreakAPITests.test_returns_streak_fields.test_returns_streak_fields"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.UpdatePlannerAPITests.test_categories_accepted_as_csv_string.test_categories_accepted_as_csv_string"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.UpdatePlannerAPITests.test_update_with_categories_and_tags.test_update_with_categories_and_tags"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_questions_api.QuestionDetailAPITests.test_delete_own_succeeds.test_delete_own_succeeds"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_questions_api.QuestionDetailAPITests.test_moderator_can_edit_any.test_moderator_can_edit_any"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_questions_api.QuestionDetailAPITests.test_owner_can_edit_own_question.test_owner_can_edit_own_question"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagDeleteAPITests.test_delete_nonexistent_returns_404.test_delete_nonexistent_returns_404"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagDeleteAPITests.test_delete_removes_tag_and_through_rows.test_delete_removes_tag_and_through_rows"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagMergeAPITests.test_merge_creates_target_if_missing.test_merge_creates_target_if_missing"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagMergeAPITests.test_merge_moves_through_rows_and_deletes_sources.test_merge_moves_through_rows_and_deletes_sources"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagMergeAPITests.test_source_equal_to_target_is_skipped.test_source_equal_to_target_is_skipped"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagRenameAPITests.test_rename_nonexistent_returns_404.test_rename_nonexistent_returns_404"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagRenameAPITests.test_rename_updates_tag.test_rename_updates_tag"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_cleanup_database.CleanupDatabaseTests.test_prunes_inactive_exam_sessions.test_prunes_inactive_exam_sessions"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_csrf_enforcement.CSRFEnforcementTests.test_login_endpoint_is_csrf_exempt.test_login_endpoint_is_csrf_exempt"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_health_and_config_api.AdminSettingsViewTests.test_post_ignores_unknown_keys.test_post_ignores_unknown_keys"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_health_and_config_api.AdminSettingsViewTests.test_post_updates_numeric_settings.test_post_updates_numeric_settings"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_streak_fields_carried_through.test_streak_fields_carried_through"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_anonymous_returns_empty_payload.test_anonymous_returns_empty_payload"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_wrong_open_absorbs_rollover_when_fragile_empty.test_wrong_open_absorbs_rollover_when_fragile_empty"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_confused_steps_back_one.test_wrong_confused_steps_back_one"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_guessed_resets.test_wrong_guessed_resets"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_misread_keeps_repetitions.test_wrong_misread_keeps_repetitions"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_unknown_resets_to_one_day.test_wrong_unknown_resets_to_one_day"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.management.test_seeders.SeedDataTests.test_first_run_creates_categories.test_first_run_creates_categories"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.questions.test_flat_import.FlatImportCSVTests.test_duplicate_choices_rejected.test_duplicate_choices_rejected"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.questions.test_state_import.ReplaceModeTests.test_replace_from_older_v2_preserves_stats_missing_from_envelope.test_replace_from_older_v2_preserves_stats_missing_from_envelope"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionCreateSerializerTests.test_provenance_and_multilingual_fields_are_normalized.test_provenance_and_multilingual_fields_are_normalized"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionUpdateSerializerTests.test_authored_by_not_writable.test_authored_by_not_writable"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionUpdateSerializerTests.test_new_choices_alone_uses_instance_correct_answer.test_new_choices_alone_uses_instance_correct_answer"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionUpdateSerializerTests.test_partial_update_without_choices.test_partial_update_without_choices"
+        }
+      ],
+      "passed": 778
+    },
+    "postgresql": {
+      "tests": 930,
+      "failures": 42,
+      "errors": 109,
+      "skipped": 0,
+      "unsuccessful_tests": [
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_active_users_counts_only_those_with_sessions.test_active_users_counts_only_those_with_sessions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_avg_accuracy_is_session_count_weighted.test_avg_accuracy_is_session_count_weighted"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_group_disappears_when_only_sessions_are_outside_window.test_group_disappears_when_only_sessions_are_outside_window"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_group_included_when_any_session_inside_window.test_group_included_when_any_session_inside_window"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_inactive_groups_excluded.test_inactive_groups_excluded"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_sorted_by_accuracy_then_sessions.test_sorted_by_accuracy_then_sessions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_cohort_comparison.CohortComparisonTests.test_user_in_two_groups_appears_in_both.test_user_in_two_groups_appears_in_both"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryCoverageTests.test_counts_split_public_and_verified.test_counts_split_public_and_verified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryMasteryTests.test_mastered_flag_at_eighty_percent.test_mastered_flag_at_eighty_percent"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryMasteryTests.test_ranks_highest_accuracy_first.test_ranks_highest_accuracy_first"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.CategoryMasteryTests.test_seventy_nine_percent_is_not_mastered.test_seventy_nine_percent_is_not_mastered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.ConfidenceStatsTests.test_fragile_ratio_computed_over_correct_answers.test_fragile_ratio_computed_over_correct_answers"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.StreakHistoryTests.test_session_landing_on_today_updates_count.test_session_landing_on_today_updates_count"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.TagCoverageTests.test_counts_public_and_verified_per_tag.test_counts_public_and_verified_per_tag"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserPerformanceTrendTests.test_same_day_sessions_aggregated.test_same_day_sessions_aggregated"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserPerformanceTrendTests.test_trend_returns_one_row_per_day.test_trend_returns_one_row_per_day"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserWeakCategoriesTests.test_ranks_lowest_accuracy_first.test_ranks_lowest_accuracy_first"
+        },
+        {
+          "kind": "error",
+          "test": "tests.analytics.test_services.UserWeakCategoriesTests.test_top_caps_the_result.test_top_caps_the_result"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserDetailLatestExamTests.test_detail_includes_latest_exam_columns.test_detail_includes_latest_exam_columns"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserListLatestExamTests.test_accuracy_is_rounded_to_one_decimal.test_accuracy_is_rounded_to_one_decimal"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserListLatestExamTests.test_latest_session_wins.test_latest_session_wins"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_admin_user_list_aggregation.AdminUserListLatestExamTests.test_user_with_one_session_shows_values.test_user_with_one_session_shows_values"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.CategoryMasteryAPITests.test_ignores_user_id_query_param.test_ignores_user_id_query_param"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.CategoryMasteryAPITests.test_mastery_payload_shape.test_mastery_payload_shape"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.SummaryViewAPITests.test_moderator_gets_populated_admin_sections.test_moderator_gets_populated_admin_sections"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_analytics_api.VerificationStatsAPITests.test_returns_expected_shape.test_returns_expected_shape"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_feedback_admin_api.AdminFlagQueueAPITests.test_only_open_flags_listed.test_only_open_flags_listed"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_groups_api.GroupLeaderboardAPITests.test_leaderboard_data_reflects_test_history.test_leaderboard_data_reflects_test_history"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_learning_api.AttemptSummaryAPITests.test_summary_counts.test_summary_counts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_learning_api.FragileAnswersAPITests.test_lists_correct_but_not_confident.test_lists_correct_but_not_confident"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_learning_api.WrongAnswersAPITests.test_lists_wrong_open_questions.test_lists_wrong_open_questions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_master_exam_api.MasterExamHTTPLifecycleTests.test_foreign_question_answer_returns_400_with_code.test_foreign_question_answer_returns_400_with_code"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.ActivityHeatmapAPITests.test_counts_reflected_in_days.test_counts_reflected_in_days"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.GetPlannerAPITests.test_daily_progress_returns_iso_keyed_dict.test_daily_progress_returns_iso_keyed_dict"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.RecordProgressAPITests.test_record_progress_creates_day_row.test_record_progress_creates_day_row"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.RecordProgressAPITests.test_record_progress_upserts_not_inserts.test_record_progress_upserts_not_inserts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_planning_api.UpdatePlannerAPITests.test_full_replacement_of_categories.test_full_replacement_of_categories"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_question_extras_api.QuestionBatchAPITests.test_hydrates_ids.test_hydrates_ids"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_question_extras_api.QuestionBatchAPITests.test_invisible_draft_is_dropped.test_invisible_draft_is_dropped"
+        },
+        {
+          "kind": "error",
+          "test": "tests.api.test_tag_admin_api.TagListAPITests.test_verified_count_excludes_unverified.test_verified_count_excludes_unverified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_blueprint_assembly.BlueprintWeightConstraintTests.test_negative_weight_is_refused_by_constraint.test_negative_weight_is_refused_by_constraint"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_blueprint_assembly.BlueprintWeightConstraintTests.test_zero_weight_is_refused_by_constraint.test_zero_weight_is_refused_by_constraint"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.CurrentQuestionReadTests.test_valid_current_question_is_not_resaved.test_valid_current_question_is_not_resaved"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamLastAnswerBoundary.test_at_boundary_accepted.test_at_boundary_accepted"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamLastAnswerBoundary.test_well_past_boundary_forces_finish.test_well_past_boundary_forces_finish"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamWindowBoundaries.test_after_close_with_makeup_creates_makeup_attempt.test_after_close_with_makeup_creates_makeup_attempt"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamWindowBoundaries.test_after_close_without_makeup_refused.test_after_close_without_makeup_refused"
+        },
+        {
+          "kind": "error",
+          "test": "tests.edge_cases.test_master_exam_boundaries.MasterExamWindowBoundaries.test_before_opens_refused.test_before_opens_refused"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_csv_export_writes_file.test_csv_export_writes_file"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_json_export_includes_choices_list.test_json_export_includes_choices_list"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_json_export_preserves_formula_prefixes_as_data.test_json_export_preserves_formula_prefixes_as_data"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_json_keeps_legacy_tags_and_adds_lossless_tag_names.test_json_keeps_legacy_tags_and_adds_lossless_tag_names"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_no_questions_returns_404_error.test_no_questions_returns_404_error"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_unknown_format_returns_400.test_unknown_format_returns_400"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_flat_export.FlatExportTests.test_verified_only_excludes_unverified.test_verified_only_excludes_unverified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_accuracy_is_correct_over_answered.test_accuracy_is_correct_over_answered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_members_with_show_in_leaderboard_false_are_hidden.test_members_with_show_in_leaderboard_false_are_hidden"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_ranks_by_questions_answered.test_ranks_by_questions_answered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_window_excludes_old_sessions.test_window_excludes_old_sessions"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_knowledge_map.KnowledgeMapTests.test_correct_confident_retained_attempt_is_mastered.test_correct_confident_retained_attempt_is_mastered"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_never_returns_duplicates.test_never_returns_duplicates"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_srs_due_bucket_fills_its_budget.test_srs_due_bucket_fills_its_budget"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_srs_shortfall_rolls_into_fragile.test_srs_shortfall_rolls_into_fragile"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.DueAndQueryTests.test_attempt_summary_shape.test_attempt_summary_shape"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.DueAndQueryTests.test_fragile_question_ids_are_correct_but_not_confident.test_fragile_question_ids_are_correct_but_not_confident"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.DueAndQueryTests.test_wrong_question_ids_ordered_by_wrong_count.test_wrong_question_ids_ordered_by_wrong_count"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_creates_rows_for_new_attempts.test_creates_rows_for_new_attempts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_race_falls_back_to_update_or_create.test_race_falls_back_to_update_or_create"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_second_call_updates_existing.test_second_call_updates_existing"
+        },
+        {
+          "kind": "error",
+          "test": "tests.learning.test_srs_service.RecordAttemptsBulkTests.test_unanswered_rows_are_skipped.test_unanswered_rows_are_skipped"
+        },
+        {
+          "kind": "error",
+          "test": "tests.management.test_cleanup_commands.RefreshAuthorRanksTests.test_recomputes_trust_scores.test_recomputes_trust_scores"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.CsvSummaryTests.test_data_row_for_finished_attempt.test_data_row_for_finished_attempt"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.FlagsRaisedTests.test_resolved_flag_excluded.test_resolved_flag_excluded"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.LiveSummaryTests.test_audience_and_attempt_counts.test_audience_and_attempt_counts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.PerUserRowsTests.test_fields_present.test_fields_present"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_results_service.PerUserRowsTests.test_sorted_by_accuracy_descending.test_sorted_by_accuracy_descending"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_sweeper_limit.SweepExpiredLimitTests.test_default_limit_processes_everything_below_bound.test_default_limit_processes_everything_below_bound"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_sweeper_limit.SweepExpiredLimitTests.test_limit_bounds_single_run.test_limit_bounds_single_run"
+        },
+        {
+          "kind": "error",
+          "test": "tests.master_exams.test_sweeper_limit.SweepExpiredLimitTests.test_subsequent_run_finishes_remaining.test_subsequent_run_finishes_remaining"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.DeletePlannerTests.test_cascade_removes_day_rows.test_cascade_removes_day_rows"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.DeletePlannerTests.test_delete_when_none_exists_is_a_noop.test_delete_when_none_exists_is_a_noop"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.RecordDailyProgressTests.test_counts_todays_sessions_only.test_counts_todays_sessions_only"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.RecordDailyProgressTests.test_second_call_upserts_not_inserts.test_second_call_upserts_not_inserts"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_duplicate_tag_names_are_deduplicated.test_duplicate_tag_names_are_deduplicated"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_empty_categories_clears.test_empty_categories_clears"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_replaces_categories_entirely.test_replaces_categories_entirely"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_tag_names_are_created_on_the_fly.test_tag_names_are_created_on_the_fly"
+        },
+        {
+          "kind": "error",
+          "test": "tests.planning.test_planner_service.UpdatePlannerTests.test_unknown_category_ids_are_dropped.test_unknown_category_ids_are_dropped"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_author_with_own_capability_can_update.test_author_with_own_capability_can_update"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_author_without_own_capability_raises_permission_error.test_author_without_own_capability_raises_permission_error"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_blank_stem_normalizes_to_none.test_blank_stem_normalizes_to_none"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_empty_key_returns_zero.test_empty_key_returns_zero"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_explicit_none_stem_normalizes_to_none.test_explicit_none_stem_normalizes_to_none"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_missing_case_returns_zero.test_missing_case_returns_zero"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_moderator_with_edit_any_can_update.test_moderator_with_edit_any_can_update"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_case_service.UpdateCaseStemServiceTests.test_non_author_member_raises_permission_error.test_non_author_member_raises_permission_error"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_model_save.QuestionSaveValidationTests.test_empty_choices_skips_the_range_check.test_empty_choices_skips_the_range_check"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.BulkVerifyTests.test_bulk_unverify_resets_counters.test_bulk_unverify_resets_counters"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_category_ids_filter.test_category_ids_filter"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_category_ids_takes_precedence_over_category.test_category_ids_takes_precedence_over_category"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_difficulty_filter.test_difficulty_filter"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_search_requires_two_chars.test_search_requires_two_chars"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_single_category_filter_normalizes_to_list.test_single_category_filter_normalizes_to_list"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_tags_filter_or_within_set.test_tags_filter_or_within_set"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_question_service.GetQuestionsFiltersTests.test_verified_filter_yes.test_verified_filter_yes"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_state_export.StateExportTests.test_provenance_and_translations_are_exported.test_provenance_and_translations_are_exported"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_state_export.StateExportTests.test_verified_only_excludes_unverified.test_verified_only_excludes_unverified"
+        },
+        {
+          "kind": "error",
+          "test": "tests.questions.test_state_roundtrip.StateRoundTripTests.test_roundtrip_preserves_verification_fields.test_roundtrip_preserves_verification_fields"
+        },
+        {
+          "kind": "error",
+          "test": "tests.export.test_pdf_theme.PdfThemeTests.test_question_image_is_embedded_as_a_data_uri.test_question_image_is_embedded_as_a_data_uri"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.analytics.test_services.StreakHistoryTests.test_streak_fields_read_from_user_model.test_streak_fields_read_from_user_model"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseDetailAPITests.test_moderator_can_delete_case_and_questions_survive.test_moderator_can_delete_case_and_questions_survive"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseDetailAPITests.test_put_stem_by_author.test_put_stem_by_author"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseDetailAPITests.test_put_title_by_author.test_put_title_by_author"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseStemUpdateAPITests.test_author_can_update_stem.test_author_can_update_stem"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_cases_api.CaseStemUpdateAPITests.test_member_not_author_gets_403.test_member_not_author_gets_403"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_database_api.ExportDatabaseViewTests.test_state_export_rejects_unknown_format.test_state_export_rejects_unknown_format"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_database_api.ExportDatabaseViewTests.test_state_export_returns_full_xlsx.test_state_export_returns_full_xlsx"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_groups_api.AdminGroupAPITests.test_update_group.test_update_group"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_master_exam_api.MasterExamHTTPLifecycleTests.test_full_attempt_via_http.test_full_attempt_via_http"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.DeletePlannerAPITests.test_delete_removes_planner.test_delete_removes_planner"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.MyStreakAPITests.test_returns_streak_fields.test_returns_streak_fields"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.UpdatePlannerAPITests.test_categories_accepted_as_csv_string.test_categories_accepted_as_csv_string"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_planning_api.UpdatePlannerAPITests.test_update_with_categories_and_tags.test_update_with_categories_and_tags"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_questions_api.QuestionDetailAPITests.test_delete_own_succeeds.test_delete_own_succeeds"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_questions_api.QuestionDetailAPITests.test_moderator_can_edit_any.test_moderator_can_edit_any"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_questions_api.QuestionDetailAPITests.test_owner_can_edit_own_question.test_owner_can_edit_own_question"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagDeleteAPITests.test_delete_nonexistent_returns_404.test_delete_nonexistent_returns_404"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagDeleteAPITests.test_delete_removes_tag_and_through_rows.test_delete_removes_tag_and_through_rows"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagMergeAPITests.test_merge_creates_target_if_missing.test_merge_creates_target_if_missing"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagMergeAPITests.test_merge_moves_through_rows_and_deletes_sources.test_merge_moves_through_rows_and_deletes_sources"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagMergeAPITests.test_source_equal_to_target_is_skipped.test_source_equal_to_target_is_skipped"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagRenameAPITests.test_rename_nonexistent_returns_404.test_rename_nonexistent_returns_404"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.api.test_tag_admin_api.AdminTagRenameAPITests.test_rename_updates_tag.test_rename_updates_tag"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_cleanup_database.CleanupDatabaseTests.test_prunes_inactive_exam_sessions.test_prunes_inactive_exam_sessions"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_csrf_enforcement.CSRFEnforcementTests.test_login_endpoint_is_csrf_exempt.test_login_endpoint_is_csrf_exempt"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_health_and_config_api.AdminSettingsViewTests.test_post_ignores_unknown_keys.test_post_ignores_unknown_keys"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.core.test_health_and_config_api.AdminSettingsViewTests.test_post_updates_numeric_settings.test_post_updates_numeric_settings"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.groups.test_group_service.LeaderboardServiceTests.test_streak_fields_carried_through.test_streak_fields_carried_through"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_anonymous_returns_empty_payload.test_anonymous_returns_empty_payload"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_learning_service.StudyNowQueueTests.test_wrong_open_absorbs_rollover_when_fragile_empty.test_wrong_open_absorbs_rollover_when_fragile_empty"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_confused_steps_back_one.test_wrong_confused_steps_back_one"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_guessed_resets.test_wrong_guessed_resets"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_misread_keeps_repetitions.test_wrong_misread_keeps_repetitions"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.learning.test_srs_service.ApplyReviewTests.test_wrong_unknown_resets_to_one_day.test_wrong_unknown_resets_to_one_day"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.management.test_seeders.SeedDataTests.test_first_run_creates_categories.test_first_run_creates_categories"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.questions.test_flat_import.FlatImportCSVTests.test_duplicate_choices_rejected.test_duplicate_choices_rejected"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.questions.test_state_import.ReplaceModeTests.test_replace_from_older_v2_preserves_stats_missing_from_envelope.test_replace_from_older_v2_preserves_stats_missing_from_envelope"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionCreateSerializerTests.test_provenance_and_multilingual_fields_are_normalized.test_provenance_and_multilingual_fields_are_normalized"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionUpdateSerializerTests.test_authored_by_not_writable.test_authored_by_not_writable"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionUpdateSerializerTests.test_new_choices_alone_uses_instance_correct_answer.test_new_choices_alone_uses_instance_correct_answer"
+        },
+        {
+          "kind": "fail",
+          "test": "tests.serializers.test_question_serializers.QuestionUpdateSerializerTests.test_partial_update_without_choices.test_partial_update_without_choices"
+        }
+      ],
+      "passed": 779
+    }
+  },
+  "sqlite": {
+    "tests": 971,
+    "passed": 935,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 36,
+    "seconds": 35.038,
+    "unsuccessful_tests": []
+  },
+  "postgresql": {
+    "tests": 971,
+    "passed": 971,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 104.435,
+    "unsuccessful_tests": []
+  },
+  "repairs": {
+    "production": "State-export file format no longer collides with DRF renderer negotiation; Accept header and capability checks retained.",
+    "tests": "Coherent invariants, mandatory revision/session baselines, durable learning activity, current mastery/relearning/CSRF/import policies; six added regression scenarios."
+  },
+  "concurrency": {
+    "report": "concurrencyLimits.md",
+    "measurements": "concurrencyDetails.json",
+    "new_scenarios": 35,
+    "focused_runs": 3,
+    "focused_tests_passed": 105,
+    "maximum_workers": 16,
+    "sqlite_locking_skips": 36
+  }
+}

@@ -71,6 +71,7 @@ def _attempt(exam, user, answers=None, **kw):
         'exam_name_snapshot': exam.name,
     }
     defaults.update(kw)
+    defaults.setdefault('answered_count', defaults['total_questions'])
     return MasterExamAttempt.objects.create(**defaults)
 
 
@@ -357,7 +358,7 @@ class FlagsRaisedTests(CacheClearingTestCase):
     def test_resolved_flag_excluded(self):
         QuestionFlag.objects.create(
             question=self.q, user=self.student,
-            reason='old', resolved=True,
+            reason='old', resolved=True, resolved_by=self.author.username, resolved_at=timezone.now(),
             master_exam_attempt=self.attempt,
         )
         self.assertEqual(

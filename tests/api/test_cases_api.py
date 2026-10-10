@@ -117,7 +117,7 @@ class CaseDetailAPITests(CacheClearingTestCase):
         self.client.force_login(self.alice)
         resp = self.client.put(
             '/api/v1/questions/cases/shared/',
-            {'title': 'Renamed'},
+            {'expected_version': self.case.version, 'title': 'Renamed'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -128,7 +128,7 @@ class CaseDetailAPITests(CacheClearingTestCase):
         self.client.force_login(self.alice)
         resp = self.client.put(
             '/api/v1/questions/cases/shared/',
-            {'stem': 'updated stem'},
+            {'expected_version': self.case.version, 'stem': 'updated stem'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -145,21 +145,21 @@ class CaseDetailAPITests(CacheClearingTestCase):
         self.client.force_login(self.bob)
         resp = self.client.put(
             '/api/v1/questions/cases/shared/',
-            {'title': 'hijack'},
+            {'expected_version': self.case.version, 'title': 'hijack'},
             format='json',
         )
         self.assertEqual(resp.status_code, 403)
 
     def test_delete_requires_edit_case_stem_any(self):
         self.client.force_login(self.alice)
-        resp = self.client.delete('/api/v1/questions/cases/shared/')
+        resp = self.client.delete(f'/api/v1/questions/cases/shared/?expected_version={self.case.version}')
         self.assertEqual(resp.status_code, 403)
 
     def test_moderator_can_delete_case_and_questions_survive(self):
         mod = make_user('mod_user', role='moderator')
         self.client.force_login(mod)
         q_count = self.case.questions.count()
-        resp = self.client.delete('/api/v1/questions/cases/shared/')
+        resp = self.client.delete(f'/api/v1/questions/cases/shared/?expected_version={self.case.version}')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['data']['detached_questions'], q_count)
         self.assertFalse(ClinicalCase.objects.filter(key='shared').exists())
@@ -189,7 +189,7 @@ class CaseStemUpdateAPITests(CacheClearingTestCase):
         self.client.force_login(self.bob)
         resp = self.client.post(
             '/api/v1/questions/case/shared-stem/stem/',
-            {'case_stem': 'hijack'},
+            {'expected_version': self.case.version, 'case_stem': 'hijack'},
             format='json',
         )
         self.assertEqual(resp.status_code, 403)
@@ -198,7 +198,7 @@ class CaseStemUpdateAPITests(CacheClearingTestCase):
         self.client.force_login(self.alice)
         resp = self.client.post(
             '/api/v1/questions/case/shared-stem/stem/',
-            {'case_stem': 'author edit'},
+            {'expected_version': self.case.version, 'case_stem': 'author edit'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -209,17 +209,18 @@ class CaseStemUpdateAPITests(CacheClearingTestCase):
         self.client.force_login(self.alice)
         resp = self.client.post(
             '/api/v1/questions/case/nope/stem/',
-            {'case_stem': 'x'},
+            {'expected_version': self.case.version, 'case_stem': 'x'},
             format='json',
         )
         self.assertEqual(resp.status_code, 404)
 
     def test_blank_stem_normalized_to_null(self):
         self.client.force_login(self.alice)
-        self.client.post(
+        resp = self.client.post(
             '/api/v1/questions/case/shared-stem/stem/',
-            {'case_stem': '   '},
+            {'expected_version': self.case.version, 'case_stem': '   '},
             format='json',
         )
+        self.assertEqual(resp.status_code, 200)
         self.case.refresh_from_db()
         self.assertIsNone(self.case.stem)

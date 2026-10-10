@@ -201,7 +201,7 @@ class ReplaceModeTests(CacheClearingTestCase):
         self.assertEqual(self.covered_q.pk, old_pk)
         self.assertEqual(self.covered_q.question, 'New text?')
 
-    def test_replace_from_older_v2_preserves_stats_missing_from_envelope(self):
+    def test_replace_changed_content_resets_stats_and_increments_local_version(self):
         self.covered_q.times_answered = 11
         self.covered_q.times_correct = 7
         self.covered_q.version = 4
@@ -213,9 +213,23 @@ class ReplaceModeTests(CacheClearingTestCase):
         ImportService.import_state(_upload(payload), 'acting', mode='replace')
 
         self.covered_q.refresh_from_db()
+        self.assertEqual(self.covered_q.times_answered, 0)
+        self.assertEqual(self.covered_q.times_correct, 0)
+        self.assertEqual(self.covered_q.version, 5)
+
+    def test_replace_unchanged_content_preserves_stats_missing_from_envelope(self):
+        self.covered_q.times_answered = 11
+        self.covered_q.times_correct = 7
+        self.covered_q.save(update_fields=['times_answered', 'times_correct'])
+        payload = _envelope([_q_entry(
+            self.covered_uuid, text=self.covered_q.question,
+            choices=self.covered_q.choices,
+        )])
+        result = ImportService.import_state(_upload(payload), 'acting', mode='replace')
+        self.assertNotIn('error', result)
+        self.covered_q.refresh_from_db()
         self.assertEqual(self.covered_q.times_answered, 11)
         self.assertEqual(self.covered_q.times_correct, 7)
-        self.assertEqual(self.covered_q.version, 4)
 
     def test_replace_preserves_through_fk_rows(self):
         """

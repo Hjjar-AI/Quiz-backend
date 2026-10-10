@@ -1,6 +1,7 @@
 # backend/apps/database/views.py
 
 from rest_framework.views import APIView
+from rest_framework.negotiation import DefaultContentNegotiation
 from rest_framework.exceptions import MethodNotAllowed
 from django.http import FileResponse
 from django.conf import settings
@@ -440,9 +441,17 @@ class ExportVerifiedDatabaseView(_PdfExportThrottleMixin, APIView):
         return _post_question_export(request, fmt, verified_only=True)
 
 
+class StateExportNegotiation(DefaultContentNegotiation):
+    def filter_renderers(self, renderers, format):
+        # "format" selects the exported file, not a DRF response renderer.
+        # Keep Accept-header negotiation and validate the file format in the view.
+        return renderers
+
+
 class ExportStateView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'admin.database'
+    content_negotiation_class = StateExportNegotiation
 
     def get(self, request):
         include_images = request.query_params.get('include_images', 'true') != 'false'

@@ -18,19 +18,20 @@ class UpdateCaseStemServiceTests(CacheClearingTestCase):
 
     def test_empty_key_returns_zero(self):
         updated = QuestionService.update_case_stem(
-            '', 'new stem', self.moderator,
+            '', 'new stem', self.moderator, expected_version=self.case.version,
         )
         self.assertEqual(updated, 0)
 
-    def test_missing_case_returns_zero(self):
-        updated = QuestionService.update_case_stem(
-            'no-such-case', 'new stem', self.moderator,
-        )
-        self.assertEqual(updated, 0)
+    def test_missing_case_returns_not_found(self):
+        from django.http import Http404
+        with self.assertRaises(Http404):
+            QuestionService.update_case_stem(
+                'no-such-case', 'new stem', self.moderator, expected_version=1,
+            )
 
     def test_moderator_with_edit_any_can_update(self):
         updated = QuestionService.update_case_stem(
-            'shared-case', 'new stem text', self.moderator,
+            'shared-case', 'new stem text', self.moderator, expected_version=self.case.version,
         )
         self.assertEqual(updated, 2)
         self.case.refresh_from_db()
@@ -40,14 +41,14 @@ class UpdateCaseStemServiceTests(CacheClearingTestCase):
         # Author has questions in this case AND holds
         # 'questions.edit_case_stem_own' (which every member has).
         updated = QuestionService.update_case_stem(
-            'shared-case', 'author stem', self.author,
+            'shared-case', 'author stem', self.author, expected_version=self.case.version,
         )
         self.assertEqual(updated, 2)
 
     def test_non_author_member_raises_permission_error(self):
         with self.assertRaises(PermissionError):
             QuestionService.update_case_stem(
-                'shared-case', 'hijacked', self.other,
+                'shared-case', 'hijacked', self.other, expected_version=self.case.version,
             )
 
     def test_author_without_own_capability_raises_permission_error(self):
@@ -56,21 +57,21 @@ class UpdateCaseStemServiceTests(CacheClearingTestCase):
         self.author.save()
         with self.assertRaises(PermissionError):
             QuestionService.update_case_stem(
-                'shared-case', 'hijacked', self.author,
+                'shared-case', 'hijacked', self.author, expected_version=self.case.version,
             )
 
     def test_blank_stem_normalizes_to_none(self):
         self.case.stem = 'existing'
         self.case.save()
         QuestionService.update_case_stem(
-            'shared-case', '   ', self.moderator,
+            'shared-case', '   ', self.moderator, expected_version=self.case.version,
         )
         self.case.refresh_from_db()
         self.assertIsNone(self.case.stem)
 
     def test_explicit_none_stem_normalizes_to_none(self):
         QuestionService.update_case_stem(
-            'shared-case', None, self.moderator,
+            'shared-case', None, self.moderator, expected_version=self.case.version,
         )
         self.case.refresh_from_db()
         self.assertIsNone(self.case.stem)

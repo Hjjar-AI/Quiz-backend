@@ -10,6 +10,8 @@ Start with [current status](workDone.md), [remaining work](workPlan.md), and [ag
 | Revisions, receipts, master writes and recovery | [Write/recovery contracts](contracts/writeRecovery.md) |
 | Schema/setup and coordinated deployment | [Schema readiness](contracts/schemaReadiness.md) |
 | Shared HTTP/device/concurrency scenarios | [Manual matrix](../../Android/docs/verification/manualVerification.md) |
+| Python suite results, reruns and coverage limits | [Python verification](verification/pythonTests.md) |
+| PostgreSQL concurrency scenarios, measurements and capacity limits | [Concurrency verification](verification/concurrencyLimits.md) |
 | Previous reviews/change details | [Dated archive](archive/README.md) |
 
 Guides/contracts are maintained by function; archived reviews are dated evidence, not the current queue. Links are document-relative; commands/source paths use repository root unless stated otherwise. Record actual runtime results with revision/environment; source completion is separate.

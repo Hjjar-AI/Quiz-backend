@@ -125,7 +125,7 @@ class QuestionDetailAPITests(CacheClearingTestCase):
         self.client.force_login(self.bob)
         resp = self.client.put(
             f'/api/v1/questions/{self.alice_q.id}/',
-            {'question': 'hijack'},
+            {'question': 'hijack', 'expected_version': self.alice_q.version},
             format='json',
         )
         self.assertEqual(resp.status_code, 403)
@@ -134,7 +134,7 @@ class QuestionDetailAPITests(CacheClearingTestCase):
         self.client.force_login(self.alice)
         resp = self.client.put(
             f'/api/v1/questions/{self.alice_q.id}/',
-            {'question': 'updated?'},
+            {'question': 'updated?', 'expected_version': self.alice_q.version},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -144,7 +144,7 @@ class QuestionDetailAPITests(CacheClearingTestCase):
         self.client.force_login(mod)
         resp = self.client.put(
             f'/api/v1/questions/{self.alice_q.id}/',
-            {'question': 'moderated?'},
+            {'question': 'moderated?', 'expected_version': self.alice_q.version},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -162,12 +162,12 @@ class QuestionDetailAPITests(CacheClearingTestCase):
 
     def test_delete_own_succeeds(self):
         self.client.force_login(self.alice)
-        resp = self.client.delete(f'/api/v1/questions/{self.alice_q.id}/')
+        resp = self.client.delete(f'/api/v1/questions/{self.alice_q.id}/?expected_version={self.alice_q.version}')
         self.assertEqual(resp.status_code, 200)
 
     def test_delete_foreign_refused(self):
         self.client.force_login(self.bob)
-        resp = self.client.delete(f'/api/v1/questions/{self.alice_q.id}/')
+        resp = self.client.delete(f'/api/v1/questions/{self.alice_q.id}/?expected_version={self.alice_q.version}')
         self.assertEqual(resp.status_code, 403)
 
 

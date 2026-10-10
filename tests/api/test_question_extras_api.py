@@ -23,7 +23,7 @@ class QuestionBatchAPITests(CacheClearingTestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()['data']
-        self.assertEqual(data['count'], 2)
+        self.assertEqual(data['total'], 2)
         ids = {item['id'] for item in data['items']}
         self.assertEqual(ids, {q1.id, q2.id})
 
@@ -52,7 +52,7 @@ class QuestionBatchAPITests(CacheClearingTestCase):
             {'ids': [bob_draft.id]},
             format='json',
         )
-        self.assertEqual(resp.json()['data']['count'], 0)
+        self.assertEqual(resp.json()['data']['total'], 0)
 
 
 class QuestionDuplicateAPITests(CacheClearingTestCase):

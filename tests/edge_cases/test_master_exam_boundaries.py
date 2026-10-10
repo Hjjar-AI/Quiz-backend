@@ -20,6 +20,7 @@ def _exam(author, questions, opens_offset_minutes, closes_offset_minutes, **kw):
         'closes_at': now + timedelta(minutes=closes_offset_minutes),
         'duration_minutes': 60,
         'stored_status': 'published',
+        'audience_all_doctors': True,
     }
     defaults.update(kw)
     exam = MasterExam.objects.create(**defaults)
@@ -94,8 +95,10 @@ class MasterExamLastAnswerBoundary(CacheClearingTestCase):
         self.attempt.deadline_at = timezone.now() - timedelta(
             seconds=self._boundary() - 5,
         )
+        self.attempt.started_at = self.attempt.deadline_at - timedelta(minutes=60)
         self.attempt.save()
-        MasterExamAttemptService.submit_answer(self.attempt, self.q.id, 1)
+        MasterExamAttemptService.submit_answer(self.attempt, self.q.id, 1,
+                expected_slot=None, session_id=str(self.attempt.session_id))
         self.attempt.refresh_from_db()
         self.assertFalse(self.attempt.is_complete)
 
@@ -103,9 +106,11 @@ class MasterExamLastAnswerBoundary(CacheClearingTestCase):
         self.attempt.deadline_at = timezone.now() - timedelta(
             seconds=self._boundary() + 30,
         )
+        self.attempt.started_at = self.attempt.deadline_at - timedelta(minutes=60)
         self.attempt.save()
         with self.assertRaises(ValueError) as ctx:
-            MasterExamAttemptService.submit_answer(self.attempt, self.q.id, 1)
+            MasterExamAttemptService.submit_answer(self.attempt, self.q.id, 1,
+                expected_slot=None, session_id=str(self.attempt.session_id))
         self.assertEqual(str(ctx.exception), 'TIME_EXPIRED')
         self.attempt.refresh_from_db()
         self.assertTrue(self.attempt.is_complete)

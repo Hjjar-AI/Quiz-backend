@@ -22,7 +22,7 @@ Android uses profile/account-bound encrypted recovery for applicable editor and 
 
 Question/knowledge updates and DELETE require `expected_version` (DELETE query). Question mutations recheck current `owned_by`/override under lock. Category/case update/delete/stem require versions; group metadata requires version. Tag-tree and runtime-settings reads return shared revisions required for writes. Compare after locks; stale writes return 409. Clients keep the baseline shown with the draft; a fresh read alone does not authorize silently replacing it.
 
-Assessed parent saves lock linked questions before their case/knowledge row; API/model/import/learning writers coordinate dependencies. Existing state-import questions/knowledge advance the locked local revision, never adopt a lower/equal exported token. Imports take broad user/question locks; runtime deadlock/rollback/performance checks remain pending, including ORM paths bypassing save hooks.
+Assessed parent saves lock linked questions before their case/knowledge row; API/model/import/learning writers coordinate dependencies. Existing state-import questions/knowledge advance the locked local revision, never adopt a lower/equal exported token. Imports take broad user/question locks. The [PostgreSQL concurrency matrix](../verification/concurrencyLimits.md) verifies bounded duplicate imports, parent-edit/learning ordering, revisions, quotas and lock-timeout rollback/recovery. Large mixed imports, other interleavings and ORM paths bypassing save hooks remain pending.
 
 ## Master attempts
 

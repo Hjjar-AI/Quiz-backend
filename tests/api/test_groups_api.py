@@ -4,7 +4,7 @@ from rest_framework.test import APIClient
 from apps.groups.models import Group, GroupMembership
 from apps.groups.services import GroupService
 from tests.base import CacheClearingTestCase
-from tests.factories import make_user, make_test_history
+from tests.factories import make_user, make_learning_batch
 
 
 class MyGroupsAPITests(CacheClearingTestCase):
@@ -93,7 +93,7 @@ class GroupLeaderboardAPITests(CacheClearingTestCase):
         self.assertEqual(resp.json()['data']['days'], 7)
 
     def test_leaderboard_data_reflects_test_history(self):
-        make_test_history(
+        make_learning_batch(
             self.member, total_questions=30, correct_count=21,
         )
         self.client.force_login(self.member)
@@ -171,7 +171,7 @@ class AdminGroupAPITests(CacheClearingTestCase):
         g = GroupService.create_group('Old', '', 'mod_user')
         resp = self.client.put(
             f'/api/v1/study/admin/groups/{g.id}/',
-            {'name': 'New'},
+            {'name': 'New', 'expected_version': g.version},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -183,7 +183,7 @@ class AdminGroupAPITests(CacheClearingTestCase):
         g = GroupService.create_group('Mine', '', 'mod_user')
         resp = self.client.put(
             f'/api/v1/study/admin/groups/{g.id}/',
-            {'name': 'Taken'},
+            {'name': 'Taken', 'expected_version': g.version},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)

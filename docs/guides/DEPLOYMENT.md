@@ -1,6 +1,8 @@
 # Deployment and optional native dependencies
 
-Updated 2026-10-10. Use [Startup](START_HERE.md) for SQLite/server-database HTTP scenarios and [PostgreSQL setup](POSTGRESQL_SETUP.md) for the current `mpsql` / `quiz` instance. Run backend commands from `backend/` unless stated otherwise; keep secrets in ignored `.env`.
+Updated 2026-10-10. Use [Startup](START_HERE.md) for SQLite/server-database HTTP scenarios and [PostgreSQL setup](POSTGRESQL_SETUP.md) for the current `mpsql` / `quiz_fresh` instance. Run backend commands from `backend/` unless stated otherwise; keep secrets in ignored `.env`.
+
+For worker/database sizing, see the [verified concurrency limits](../verification/concurrencyLimits.md): the current cluster has 100 connection slots with three reserved for superusers; local 16-worker transaction tests do not establish deployed user capacity.
 
 ## 1. System packages
 
@@ -59,7 +61,7 @@ python manage.py bootstrap --no-db-setup --settings=config.settings_local
 | --- | --- |
 | Fresh portable SQLite | `python start.py sqlite` performs setup/seeding and starts HTTP. |
 | Existing SQLite, launch only | `python start.py sqlite --no-setup` |
-| Existing PostgreSQL database/user | Bootstrap above; current DB is lowercase `quiz`. |
+| Existing PostgreSQL database/user | Bootstrap above; current application DB is `quiz_fresh`. |
 | Existing MariaDB database/user | Bootstrap above. |
 | MariaDB database/user need provisioning | Omit `--no-db-setup`; supply `DB_ADMIN_USER` / `DB_ADMIN_PASSWORD` in `.env`. |
 | Production server schema/seed | Bootstrap with normal `config.settings` and configured production secrets/cache, instead of the HTTP overlay. |
@@ -152,4 +154,4 @@ For MariaDB on macOS, `brew install mariadb` and `brew services start mariadb`; 
 | PostgreSQL name/login/schema error | Follow [PostgreSQL troubleshooting](POSTGRESQL_SETUP.md#connection-and-name-errors). |
 | HTTP cookie/CSRF/proxy issue | Use [Startup recovery](START_HERE.md#diagnose-and-recover). |
 
-PostgreSQL connection and development startup have been observed; bootstrap/schema, workflows and concurrency still need verification. PostgreSQL provisioning/destructive clean and application-native backup/restore are unsupported. Instructions are source-aligned, not proof that commands were executed. Record revision/environment/results in the work log and follow the [shared manual matrix](../../../Android/docs/verification/manualVerification.md).
+The user reported successful PostgreSQL bootstrap on `quiz_fresh`. Isolated [Python suites](../verification/pythonTests.md) pass on SQLite and PostgreSQL, including the PostgreSQL two-thread exam-finish check. Deployed workflows, production cache, PDF rendering and broader concurrency need verification. PostgreSQL provisioning/destructive clean and application-native backup/restore are unsupported. Follow the [shared manual matrix](../../../Android/docs/verification/manualVerification.md).

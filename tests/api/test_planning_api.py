@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 from apps.planning.models import StudyPlanner, StudyPlannerDay
 from apps.questions.models import Tag
 from tests.base import CacheClearingTestCase
-from tests.factories import make_user, make_category, make_test_history
+from tests.factories import make_user, make_category, make_learning_batch
 
 
 class GetPlannerAPITests(CacheClearingTestCase):
@@ -32,7 +32,7 @@ class GetPlannerAPITests(CacheClearingTestCase):
         self.assertIn('today', data)
 
     def test_daily_progress_returns_iso_keyed_dict(self):
-        make_test_history(self.u, total_questions=5)
+        make_learning_batch(self.u, total_questions=5)
         # Trigger the day row via record.
         self.client.post('/api/v1/study-planner/progress/')
         resp = self.client.get('/api/v1/study-planner/')
@@ -49,12 +49,32 @@ class UpdatePlannerAPITests(CacheClearingTestCase):
         self.u = make_user('alice')
         self.client.force_login(self.u)
 
+    def baseline(self):
+        planner, _ = StudyPlanner.objects.get_or_create(user=self.u)
+        return {'expected_version': planner.version, 'expected_id': planner.pk}
+
+    def test_missing_baseline_is_rejected(self):
+        resp = self.client.post('/api/v1/study-planner/update/',
+                                {'target_questions_per_day': 20}, format='json')
+        self.assertEqual(resp.status_code, 400)
+
+    def test_stale_baseline_is_rejected_without_changing_target(self):
+        payload = self.baseline()
+        planner = StudyPlanner.objects.get(user=self.u)
+        planner.version += 1
+        planner.save(update_fields=['version'])
+        resp = self.client.post('/api/v1/study-planner/update/',
+                                {**payload, 'target_questions_per_day': 20}, format='json')
+        self.assertEqual(resp.status_code, 409)
+        planner.refresh_from_db()
+        self.assertEqual(planner.target_questions_per_day, 10)
+
     def test_update_with_categories_and_tags(self):
         cat = make_category('target-cat')
         resp = self.client.post(
             '/api/v1/study-planner/update/',
             {
-                'target_questions_per_day': 25,
+                **self.baseline(), 'target_questions_per_day': 25,
                 'target_categories': [cat.id],
                 'target_tags': ['focus-tag'],
             },
@@ -70,7 +90,7 @@ class UpdatePlannerAPITests(CacheClearingTestCase):
         for bad in (0, 1001, -5):
             resp = self.client.post(
                 '/api/v1/study-planner/update/',
-                {'target_questions_per_day': bad},
+                {**self.baseline(), 'target_questions_per_day': bad},
                 format='json',
             )
             self.assertEqual(resp.status_code, 400)
@@ -81,7 +101,7 @@ class UpdatePlannerAPITests(CacheClearingTestCase):
         resp = self.client.post(
             '/api/v1/study-planner/update/',
             {
-                'target_questions_per_day': 10,
+                **self.baseline(), 'target_questions_per_day': 10,
                 'target_categories': f'{cat_a.id},{cat_b.id}',
             },
             format='json',
@@ -94,7 +114,7 @@ class UpdatePlannerAPITests(CacheClearingTestCase):
         resp = self.client.post(
             '/api/v1/study-planner/update/',
             {
-                'target_questions_per_day': 10,
+                **self.baseline(), 'target_questions_per_day': 10,
                 'start_date': 'not-a-date',
             },
             format='json',
@@ -104,22 +124,24 @@ class UpdatePlannerAPITests(CacheClearingTestCase):
     def test_full_replacement_of_categories(self):
         cat_a = make_category('cat-a')
         cat_b = make_category('cat-b')
-        self.client.post(
+        resp = self.client.post(
             '/api/v1/study-planner/update/',
             {
-                'target_questions_per_day': 10,
+                **self.baseline(), 'target_questions_per_day': 10,
                 'target_categories': [cat_a.id, cat_b.id],
             },
             format='json',
         )
-        self.client.post(
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.post(
             '/api/v1/study-planner/update/',
             {
-                'target_questions_per_day': 10,
+                **self.baseline(), 'target_questions_per_day': 10,
                 'target_categories': [cat_a.id],
             },
             format='json',
         )
+        self.assertEqual(resp.status_code, 200)
         p = StudyPlanner.objects.get(user=self.u)
         self.assertEqual(
             set(p.target_categories.values_list('id', flat=True)),
@@ -141,7 +163,7 @@ class RecordProgressAPITests(CacheClearingTestCase):
         this test asserted only the HTTP status — a view that
         returned 200 without writing anything would have passed.
         """
-        make_test_history(self.u, total_questions=8)
+        make_learning_batch(self.u, total_questions=8)
         resp = self.client.post('/api/v1/study-planner/progress/')
         self.assertEqual(resp.status_code, 200)
 
@@ -158,9 +180,9 @@ class RecordProgressAPITests(CacheClearingTestCase):
         UPDATE on the indexed (planner, date) pair when the row
         already exists.
         """
-        make_test_history(self.u, total_questions=3)
+        make_learning_batch(self.u, total_questions=3)
         self.client.post('/api/v1/study-planner/progress/')
-        make_test_history(self.u, total_questions=4)
+        make_learning_batch(self.u, total_questions=4)
         self.client.post('/api/v1/study-planner/progress/')
 
         today = timezone.localdate()
@@ -186,7 +208,7 @@ class DeletePlannerAPITests(CacheClearingTestCase):
     def test_delete_removes_planner(self):
         self.client.get('/api/v1/study-planner/')
         self.assertTrue(StudyPlanner.objects.filter(user=self.u).exists())
-        resp = self.client.delete('/api/v1/study-planner/delete/')
+        resp = self.client.delete(f'/api/v1/study-planner/delete/?expected_version=1&expected_id={StudyPlanner.objects.get(user=self.u).pk}')
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(StudyPlanner.objects.filter(user=self.u).exists())
 
@@ -199,6 +221,7 @@ class MyStreakAPITests(CacheClearingTestCase):
         self.client.force_login(self.u)
 
     def test_returns_streak_fields(self):
+        self.u.last_study_date = timezone.localdate()
         self.u.current_streak = 3
         self.u.longest_streak = 10
         self.u.save()
@@ -232,7 +255,7 @@ class ActivityHeatmapAPITests(CacheClearingTestCase):
         self.assertEqual(len(resp.json()['data']['days']), 7)
 
     def test_counts_reflected_in_days(self):
-        make_test_history(self.u, total_questions=5)
+        make_learning_batch(self.u, total_questions=5)
         resp = self.client.get('/api/v1/study/activity-heatmap/?days=7')
         days = resp.json()['data']['days']
         today = timezone.localdate().isoformat()

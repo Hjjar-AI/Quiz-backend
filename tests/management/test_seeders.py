@@ -50,7 +50,7 @@ class SeedDataTests(CacheClearingTestCase):
 
     def test_first_run_creates_categories(self):
         call_command('seed_data', stdout=StringIO())
-        self.assertEqual(Category.objects.count(), 18)
+        self.assertEqual(Category.objects.count(), 28)
 
     def test_first_run_creates_settings(self):
         call_command('seed_data', stdout=StringIO())

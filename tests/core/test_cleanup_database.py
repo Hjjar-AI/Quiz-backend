@@ -33,7 +33,7 @@ class CleanupDatabaseTests(CacheClearingTestCase):
         u = make_user('alice')
         stale = make_exam_session(u)
         stale.is_active = False
-        stale.created_at = timezone.now() - timedelta(days=2)
+        stale.started_at = timezone.now() - timedelta(days=2)
         stale.save()
 
         cleanup_database()

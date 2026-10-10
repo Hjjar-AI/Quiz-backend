@@ -2,6 +2,7 @@ from apps.learning.knowledge_map import build_knowledge_map
 from apps.learning.models import UserQuestionAttempt
 from apps.questions.models import KnowledgeObject
 from tests.base import CacheClearingTestCase
+from tests.factories import make_attempt
 from tests.factories import make_category, make_question, make_user
 
 
@@ -30,13 +31,13 @@ class KnowledgeMapTests(CacheClearingTestCase):
         self.assertEqual(result['items'][0]['question_ids'], [self.question.id])
 
     def test_correct_confident_retained_attempt_is_mastered(self):
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user,
             question=self.question,
             last_correct=True,
             last_confidence=True,
             last_confidence_score=3,
-            attempts=2,
+            attempts=3,
             ever_correct=True,
             repetitions=3,
         )

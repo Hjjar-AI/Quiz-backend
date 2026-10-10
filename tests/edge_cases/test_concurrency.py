@@ -37,8 +37,9 @@ class ConcurrentMasterExamFinishTests(TransactionTestCase):
     Run this test on MariaDB / Postgres to actually exercise the
     lock:
 
-        DJANGO_SETTINGS_MODULE=config.settings python tests/runtests.py \\
-            edge_cases.test_concurrency
+        QUIZ_TEST_POSTGRES_DB=test_quiz_backend python manage.py test \\
+            tests.edge_cases.test_concurrency \\
+            --settings=tests.postgresql_settings --keepdb --noinput
     """
     def setUp(self):
         super().setUp()
@@ -46,7 +47,7 @@ class ConcurrentMasterExamFinishTests(TransactionTestCase):
             self.skipTest(
                 'SQLite serializes at the database level and does not '
                 'honor select_for_update; the race this test simulates '
-                'cannot be reproduced. Run with MariaDB.'
+                'cannot be reproduced. Run with PostgreSQL or MariaDB.'
             )
         self.author = make_user('author')
         self.student = make_user('student')
@@ -62,6 +63,7 @@ class ConcurrentMasterExamFinishTests(TransactionTestCase):
             duration_minutes=60,
             stored_status='published',
         )
+        exam.audience_users.add(self.student)
         MasterExamQuestion.objects.create(
             master_exam=exam, question=self.q, order=1,
         )
@@ -73,7 +75,10 @@ class ConcurrentMasterExamFinishTests(TransactionTestCase):
         super().tearDown()
 
     def test_two_threads_finish_do_not_double_count_srs(self):
-        MasterExamAttemptService.submit_answer(self.attempt, self.q.id, 1)
+        MasterExamAttemptService.submit_answer(
+            self.attempt, self.q.id, 1,
+            expected_slot=None, session_id=str(self.attempt.session_id),
+        )
 
         errors = []
 

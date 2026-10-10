@@ -1,6 +1,7 @@
 # tests/api/test_tag_admin_api.py
 from rest_framework.test import APIClient
 
+from apps.core.revisions import settings_revision
 from apps.questions.models import Tag, QuestionTag
 from tests.base import CacheClearingTestCase
 from tests.factories import make_user, make_question, make_tag
@@ -85,7 +86,7 @@ class AdminTagRenameAPITests(CacheClearingTestCase):
         make_tag('old-name')
         resp = self.client.post(
             '/api/v1/questions/admin/tags/old-name/rename/',
-            {'new_name': 'new-name'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'new_name': 'new-name'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -97,7 +98,7 @@ class AdminTagRenameAPITests(CacheClearingTestCase):
         make_tag('target')
         resp = self.client.post(
             '/api/v1/questions/admin/tags/target/rename/',
-            {'new_name': 'existing'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'new_name': 'existing'},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -106,7 +107,7 @@ class AdminTagRenameAPITests(CacheClearingTestCase):
         make_tag('has-name')
         resp = self.client.post(
             '/api/v1/questions/admin/tags/has-name/rename/',
-            {'new_name': '   '},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'new_name': '   '},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -115,7 +116,7 @@ class AdminTagRenameAPITests(CacheClearingTestCase):
         make_tag('short')
         resp = self.client.post(
             '/api/v1/questions/admin/tags/short/rename/',
-            {'new_name': 'x' * 100},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'new_name': 'x' * 100},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -123,7 +124,7 @@ class AdminTagRenameAPITests(CacheClearingTestCase):
     def test_rename_nonexistent_returns_404(self):
         resp = self.client.post(
             '/api/v1/questions/admin/tags/nope/rename/',
-            {'new_name': 'new'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'new_name': 'new'},
             format='json',
         )
         self.assertEqual(resp.status_code, 404)
@@ -143,7 +144,7 @@ class AdminTagDeleteAPITests(CacheClearingTestCase):
         self.assertEqual(QuestionTag.objects.filter(tag=tag).count(), 1)
 
         resp = self.client.delete(
-            '/api/v1/questions/admin/tags/gone/delete/'
+            f"/api/v1/questions/admin/tags/gone/delete/?expected_version={settings_revision('_tag_hierarchy_lock')}"
         )
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Tag.objects.filter(name='gone').exists())
@@ -155,14 +156,14 @@ class AdminTagDeleteAPITests(CacheClearingTestCase):
         q.tags.add(tag)
         qid = q.id
 
-        self.client.delete('/api/v1/questions/admin/tags/gone-2/delete/')
+        self.client.delete(f"/api/v1/questions/admin/tags/gone-2/delete/?expected_version={settings_revision('_tag_hierarchy_lock')}")
 
         from apps.questions.models import Question
         self.assertTrue(Question.objects.filter(id=qid).exists())
 
     def test_delete_nonexistent_returns_404(self):
         resp = self.client.delete(
-            '/api/v1/questions/admin/tags/nope/delete/'
+            f"/api/v1/questions/admin/tags/nope/delete/?expected_version={settings_revision('_tag_hierarchy_lock')}"
         )
         self.assertEqual(resp.status_code, 404)
 
@@ -185,7 +186,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
 
         resp = self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': ['src-a', 'src-b'], 'target_tag': 'target'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': ['src-a', 'src-b'], 'target_tag': 'target'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -200,7 +201,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
 
         resp = self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': ['src'], 'target_tag': 'brand-new'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': ['src'], 'target_tag': 'brand-new'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -215,7 +216,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
 
         self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': ['src'], 'target_tag': 'target'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': ['src'], 'target_tag': 'target'},
             format='json',
         )
         # Question ends up with exactly one 'target' row.
@@ -224,7 +225,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
     def test_merge_empty_sources_rejected(self):
         resp = self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': [], 'target_tag': 'x'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': [], 'target_tag': 'x'},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -232,7 +233,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
     def test_merge_empty_target_rejected(self):
         resp = self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': ['a'], 'target_tag': ''},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': ['a'], 'target_tag': ''},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -244,7 +245,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
 
         resp = self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': ['same'], 'target_tag': 'same'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': ['same'], 'target_tag': 'same'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -256,7 +257,7 @@ class AdminTagMergeAPITests(CacheClearingTestCase):
         self.client.force_login(make_user('member_a'))
         resp = self.client.post(
             '/api/v1/questions/admin/tags/merge/',
-            {'source_tags': ['a'], 'target_tag': 'b'},
+            {'expected_version': settings_revision('_tag_hierarchy_lock'), 'source_tags': ['a'], 'target_tag': 'b'},
             format='json',
         )
         self.assertEqual(resp.status_code, 403)

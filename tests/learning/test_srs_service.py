@@ -1,8 +1,7 @@
 # tests/learning/test_srs_service.py
 from datetime import timedelta
-from unittest.mock import patch
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from apps.learning.models import UserQuestionAttempt
@@ -10,6 +9,7 @@ from apps.learning.srs_service import (
     SRSService, _apply_review, _next_interval, EASE_FLOOR,
 )
 from tests.base import CacheClearingTestCase
+from tests.factories import make_attempt
 from tests.factories import make_user, make_question
 
 
@@ -57,43 +57,55 @@ class ApplyReviewTests(CacheClearingTestCase):
         self.assertEqual(a.last_confidence_score, 1)
         self.assertFalse(a.last_confidence)
 
-    def test_wrong_unknown_resets_to_one_day(self):
+    def test_wrong_unknown_schedules_ten_minute_relearning(self):
         a = self._fresh()
+        a.attempts = 5
+        a.ever_correct = a.last_correct = True
         a.repetitions = 5
         a.interval_days = 30
         _apply_review(a, is_correct=False, is_confident=False,
                       error_reason='unknown')
         self.assertEqual(a.repetitions, 0)
-        self.assertEqual(a.interval_days, 1)
+        self.assertEqual(a.interval_days, 0)
+        self.assertTrue(a.relearning)
+        self.assertEqual(a.next_due - a.last_answered_at, timedelta(minutes=10))
         self.assertEqual(a.wrong_count, 1)
 
-    def test_wrong_misread_keeps_repetitions(self):
-        """
-        Knowledge is present; the reading habit is not. Repetitions
-        do not reset; a short re-show is scheduled.
-        """
+    def test_wrong_misread_resets_chain_and_schedules_twelve_hours(self):
         a = self._fresh()
+        a.attempts = 3
+        a.ever_correct = a.last_correct = True
         a.repetitions = 3
         _apply_review(a, is_correct=False, is_confident=False,
                       error_reason='misread')
-        self.assertEqual(a.repetitions, 3)
-        self.assertEqual(a.interval_days, 2)
+        self.assertEqual(a.repetitions, 0)
+        self.assertEqual(a.interval_days, 0)
+        self.assertTrue(a.relearning)
+        self.assertEqual(a.next_due - a.last_answered_at, timedelta(hours=12))
 
-    def test_wrong_confused_steps_back_one(self):
+    def test_wrong_confused_resets_chain_and_schedules_six_hours(self):
         a = self._fresh()
+        a.attempts = 3
+        a.ever_correct = a.last_correct = True
         a.repetitions = 3
         _apply_review(a, is_correct=False, is_confident=False,
                       error_reason='confused')
-        self.assertEqual(a.repetitions, 2)
-        self.assertEqual(a.interval_days, 3)
+        self.assertEqual(a.repetitions, 0)
+        self.assertEqual(a.interval_days, 0)
+        self.assertTrue(a.relearning)
+        self.assertEqual(a.next_due - a.last_answered_at, timedelta(hours=6))
 
     def test_wrong_guessed_resets(self):
         a = self._fresh()
+        a.attempts = 4
+        a.ever_correct = a.last_correct = True
         a.repetitions = 4
         _apply_review(a, is_correct=False, is_confident=False,
                       error_reason='guessed')
         self.assertEqual(a.repetitions, 0)
-        self.assertEqual(a.interval_days, 1)
+        self.assertEqual(a.interval_days, 0)
+        self.assertTrue(a.relearning)
+        self.assertEqual(a.next_due - a.last_answered_at, timedelta(hours=1))
 
     def test_ease_factor_has_a_floor(self):
         a = self._fresh()
@@ -111,86 +123,48 @@ class ApplyReviewTests(CacheClearingTestCase):
         self.assertIsNone(a.last_error_reason)
 
 
-class RecordAttemptsBulkTests(CacheClearingTestCase):
+class RecordLearningEventsTests(CacheClearingTestCase):
     def setUp(self):
         super().setUp()
         self.user = make_user()
         self.q1 = make_question(owner=self.user)
         self.q2 = make_question(owner=self.user)
 
-    def _results(self):
-        return [
-            {
-                'question_id': self.q1.id,
-                'user_answer': 1,
-                'is_correct': True,
-                'confidence': True,
-                'error_reason': None,
-            },
-            {
-                'question_id': self.q2.id,
-                'user_answer': 2,
-                'is_correct': False,
-                'confidence': False,
-                'error_reason': 'misread',
-            },
-        ]
+    def _record(self, source, answered=True):
+        from apps.learning.events import record_events
+        from apps.learning.evidence import question_learning_fingerprint
+        from apps.users.models import User
+        results = [{'question_id': q.pk, 'user_answer': 1 if answered else None,
+                    'is_correct': True, 'confidence_score': 3,
+                    'learning_fingerprint': question_learning_fingerprint(q)}
+                   for q in (self.q1, self.q2)]
+        with transaction.atomic():
+            User.objects.select_for_update().get(pk=self.user.pk)
+            return record_events(self.user, results, source)
 
-    def test_creates_rows_for_new_attempts(self):
-        count = SRSService.record_attempts_bulk(self.user, self._results())
-        self.assertEqual(count, 2)
+    def test_creates_rows_for_new_answers(self):
+        self.assertEqual(len(self._record('test:first')), 2)
         self.assertEqual(UserQuestionAttempt.objects.count(), 2)
 
     def test_unanswered_rows_are_skipped(self):
-        results = [{
-            'question_id': self.q1.id,
-            'user_answer': None,
-            'is_correct': False,
-            'confidence': True,
-            'error_reason': None,
-        }]
-        count = SRSService.record_attempts_bulk(self.user, results)
-        self.assertEqual(count, 0)
+        self.assertEqual(self._record('test:unanswered', answered=False), [])
+        self.assertEqual(UserQuestionAttempt.objects.count(), 0)
 
-    def test_second_call_updates_existing(self):
-        SRSService.record_attempts_bulk(self.user, self._results())
-        SRSService.record_attempts_bulk(self.user, self._results())
+    def test_new_source_updates_existing(self):
+        self._record('test:first')
+        self._record('test:second')
         a = UserQuestionAttempt.objects.get(user=self.user, question=self.q1)
         self.assertEqual(a.attempts, 2)
+        # Immediate practice does not advance spaced repetitions.
+        self.assertEqual(a.repetitions, 1)
 
-    def test_race_falls_back_to_update_or_create(self):
-        """
-        Simulate the race the savepoint handler exists for: the row
-        is inserted by a concurrent worker between our read and our
-        bulk_create. The IntegrityError must be caught, the outer
-        transaction must survive, and the fallback must run.
-        """
-        # Pre-create the row so the bulk_create inside the service
-        # will hit the unique constraint.
-        UserQuestionAttempt.objects.create(
-            user=self.user, question=self.q1,
-        )
-
-        real_bulk_create = UserQuestionAttempt.objects.bulk_create
-        call_count = {'n': 0}
-
-        def _side_effect(objs, **kw):
-            call_count['n'] += 1
-            if call_count['n'] == 1:
-                raise IntegrityError('simulated race')
-            return real_bulk_create(objs, **kw)
-
-        with patch.object(
-            UserQuestionAttempt.objects, 'bulk_create',
-            side_effect=_side_effect,
-        ):
-            with transaction.atomic():
-                SRSService.record_attempts_bulk(
-                    self.user, self._results(),
-                )
-
+    def test_duplicate_source_does_not_double_count(self):
+        self._record('test:first')
+        self.assertEqual(self._record('test:first'), [])
         a = UserQuestionAttempt.objects.get(user=self.user, question=self.q1)
-        self.assertEqual(a.attempts, 1)  # the service's own review
+        self.assertEqual(a.attempts, 1)
+        self.q1.refresh_from_db()
+        self.assertEqual(self.q1.times_answered, 1)
 
 
 class DueAndQueryTests(CacheClearingTestCase):
@@ -202,11 +176,11 @@ class DueAndQueryTests(CacheClearingTestCase):
 
     def test_due_includes_past_and_null_next_due(self):
         now = timezone.now()
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q1,
             next_due=now - timedelta(days=1),
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q2,
             next_due=None,
         )
@@ -214,18 +188,18 @@ class DueAndQueryTests(CacheClearingTestCase):
         self.assertEqual(due, {self.q1.id, self.q2.id})
 
     def test_due_excludes_future(self):
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q1,
             next_due=timezone.now() + timedelta(days=7),
         )
         self.assertEqual(SRSService.due_question_ids(self.user), [])
 
     def test_wrong_question_ids_ordered_by_wrong_count(self):
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q1,
             ever_correct=False, wrong_count=1,
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q2,
             ever_correct=False, wrong_count=5,
         )
@@ -233,11 +207,11 @@ class DueAndQueryTests(CacheClearingTestCase):
         self.assertEqual(wrong[0], self.q2.id)
 
     def test_fragile_question_ids_are_correct_but_not_confident(self):
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q1,
             last_correct=True, last_confidence=False,
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q2,
             last_correct=True, last_confidence=True,
         )
@@ -246,7 +220,7 @@ class DueAndQueryTests(CacheClearingTestCase):
         )
 
     def test_attempt_summary_shape(self):
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=self.q1,
             ever_correct=True, last_correct=True, last_confidence=False,
         )

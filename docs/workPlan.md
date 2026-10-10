@@ -6,13 +6,14 @@ The seven rescan and eight deeper-review findings are source-complete. Do not re
 
 ## Pending verification
 
-- Complete PostgreSQL bootstrap and verify schema/cache/workflows against `mpsql` / lowercase `quiz`. The user's `/home/mhmmd/Envs/quiz` server reached HTTP on 5005 with 39 unapplied migrations; no bootstrap completion has been reported. Follow the [PostgreSQL guide](guides/POSTGRESQL_SETUP.md).
+- Expand behavioral coverage beyond the passing [Python suite](verification/pythonTests.md), prioritizing functions absent from its earlier scoped call inventory. Passing suites do not verify every function or deployed behavior.
+- Verify deployed PostgreSQL/cache/workflows against `mpsql` / `quiz_fresh`. The user reported successful bootstrap; the older `quiz` database remains separate recovery work. Follow the [PostgreSQL guide](guides/POSTGRESQL_SETUP.md).
 
 - Prepare/verify matching [schema and coordinated clients](contracts/schemaReadiness.md); no readiness is inferred from source or database deletion.
 - Execute the [shared functional matrix](../../Android/docs/verification/manualVerification.md), especially lost responses, account/attempt switches, receipts, permissions, revisions, imports/parent locking and planner late/midnight evidence.
-- Check selected database row locking/rollback, startup/driver/session/cache integration, exports/PDFs and deliberately isolated backup/restore/clear. PostgreSQL administration remains unsupported.
+- Extend the passing [35-scenario PostgreSQL concurrency matrix](verification/concurrencyLimits.md) to deployed HTTP/multiple processes/production cache, sustained load and large mixed imports before claiming user capacity. Verify startup/session integration, exports/PDFs and deliberately isolated backup/restore/clear. PostgreSQL administration remains unsupported.
 
-Builds, suites, migrations/setup, destructive operator actions and versions follow [explicit-request policies](../Agents.md). Current source checks do not establish compilation, HTTP, schema or runtime concurrency.
+Builds, suites, migrations/setup, destructive operator actions and versions follow [explicit-request policies](../Agents.md). The user's Python-test authorization covered these isolated suites and test database initialization; their results do not establish complete deployed readiness.
 
 ## 2026-10-10 parity-review follow-up
 

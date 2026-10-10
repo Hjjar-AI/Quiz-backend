@@ -126,7 +126,7 @@ class PdfThemeTests(SimpleTestCase):
     def test_question_image_is_embedded_as_a_data_uri(self):
         question = SimpleNamespace(
             difficulty='medium', category_id=None, category=None,
-            image=object(),
+            image=SimpleNamespace(size=3),
         )
 
         with TemporaryDirectory() as export_dir, override_settings(

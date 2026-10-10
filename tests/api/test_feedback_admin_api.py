@@ -1,4 +1,5 @@
 # tests/api/test_feedback_admin_api.py
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.feedback.models import QuestionFlag
@@ -31,7 +32,7 @@ class AdminFlagQueueAPITests(CacheClearingTestCase):
         )
         QuestionFlag.objects.create(
             question=self.q, user=self.author, reason='closed',
-            resolved=True,
+            resolved=True, resolved_by=self.author.username, resolved_at=timezone.now(),
         )
         resp = self.client.get('/api/v1/questions/admin/flags/')
         ids = {item['id'] for item in resp.json()['data']['items']}

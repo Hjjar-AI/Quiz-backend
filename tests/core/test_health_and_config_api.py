@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from rest_framework.test import APIClient
 
+from apps.core.revisions import settings_revision
 from apps.core.models import Setting, Tip
 from tests.base import CacheClearingTestCase
 from tests.factories import make_user, make_admin
@@ -141,6 +142,7 @@ class AdminSettingsViewTests(CacheClearingTestCase):
         resp = self.client.post(
             '/api/v1/admin/settings/',
             {
+                'expected_version': settings_revision('_runtime_settings_revision'),
                 'default_expiry_days': 45,
                 'exam_duration_minutes': 90,
             },
@@ -157,7 +159,7 @@ class AdminSettingsViewTests(CacheClearingTestCase):
     def test_post_rejects_negative_values(self):
         resp = self.client.post(
             '/api/v1/admin/settings/',
-            {'default_expiry_days': -1},
+            {'expected_version': settings_revision('_runtime_settings_revision'), 'default_expiry_days': -1},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -165,7 +167,7 @@ class AdminSettingsViewTests(CacheClearingTestCase):
     def test_post_rejects_non_numeric(self):
         resp = self.client.post(
             '/api/v1/admin/settings/',
-            {'default_expiry_days': 'abc'},
+            {'expected_version': settings_revision('_runtime_settings_revision'), 'default_expiry_days': 'abc'},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)
@@ -173,7 +175,7 @@ class AdminSettingsViewTests(CacheClearingTestCase):
     def test_post_ignores_unknown_keys(self):
         resp = self.client.post(
             '/api/v1/admin/settings/',
-            {'unknown_key': 'value'},
+            {'expected_version': settings_revision('_runtime_settings_revision'), 'unknown_key': 'value'},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)

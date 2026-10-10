@@ -49,6 +49,7 @@ class SweepExpiredLimitTests(CacheClearingTestCase):
         for i in range(5):
             student = make_user(f'student_{i}')
             attempt = MasterExamAttemptService.start(student, self.exam)
+            attempt.started_at = timezone.now() - timedelta(hours=2)
             attempt.deadline_at = timezone.now() - timedelta(hours=1)
             attempt.save()
             self.students.append(student)

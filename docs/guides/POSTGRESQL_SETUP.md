@@ -1,6 +1,6 @@
 # PostgreSQL: setup and common cases
 
-Updated 2026-10-10. Run from `backend/` with `quizon` or your own active venv. This computer uses PostgreSQL 18.6, `127.0.0.1:5432`, user `mpsql` and database **`quiz`**. Read-only login to `quiz` succeeded; the latest user startup reached HTTP 5005 with **39 unapplied migrations**. Schema initialization and functional verification remain pending.
+Updated 2026-10-10. Run from `backend/` with `quizon` or your own active venv. This computer uses PostgreSQL 18.6, `127.0.0.1:5432`, user `mpsql` and application database **`quiz_fresh`**. The user reported successful bootstrap with default data and 16 sample questions. The older `quiz` database was preserved after regenerated initial migration files disagreed with its existing schema/history; its recovery is separate work. Functional verification remains necessary.
 
 ## Existing database: current setup
 
@@ -8,7 +8,7 @@ The ignored `.env` already selects the database below; its password and unrelate
 
 ```dotenv
 DB_ENGINE=postgresql
-DB_NAME=quiz
+DB_NAME=quiz_fresh
 DB_USER=mpsql
 DB_PASSWORD='YOUR_POSTGRESQL_PASSWORD'
 DB_HOST=127.0.0.1
@@ -18,7 +18,7 @@ CACHE_TYPE=MemcachedCache
 MEMCACHED_LOCATION=127.0.0.1:11211
 ```
 
-Edit existing keys, avoiding duplicate entries. Process environment overrides `.env`. `Quiz` and `quiz` are distinct names when passed to the client; use the actual catalog name. Keep secrets out of Git and shared output.
+Edit existing keys, avoiding duplicate entries. Process environment overrides `.env`. Database names are case-sensitive when passed to the client; use the actual catalog name. Keep secrets out of Git and shared output.
 
 ```bash
 # Start installed services if needed (Ubuntu/Debian).
@@ -75,7 +75,7 @@ Only run creation commands when those names are absent; this computer already ha
 
 ```bash
 sudo -u postgres createuser --login --no-superuser --no-createdb --no-createrole --pwprompt mpsql
-sudo -u postgres createdb --owner=mpsql quiz
+sudo -u postgres createdb --owner=mpsql quiz_fresh
 ```
 
 Use the prompted password in `.env`, then follow bootstrap above. For another instance choose distinct names and update `.env` consistently. Do not delete an existing database to make creation succeed. These options are documented by PostgreSQL [createuser](https://www.postgresql.org/docs/current/app-createuser.html) and [createdb](https://www.postgresql.org/docs/current/app-createdb.html).
@@ -85,7 +85,7 @@ Use the prompted password in `.env`, then follow bootstrap above. For another in
 ```bash
 pg_isready -h 127.0.0.1 -p 5432
 pg_lsclusters
-psql -h 127.0.0.1 -p 5432 -U mpsql -d quiz -W -c 'SELECT current_database(), current_user;'
+psql -h 127.0.0.1 -p 5432 -U mpsql -d quiz_fresh -W -c 'SELECT current_database(), current_user;'
 # To discover the exact database names:
 psql -h 127.0.0.1 -p 5432 -U mpsql -d postgres -W -c 'SELECT datname FROM pg_database ORDER BY datname;'
 ```
@@ -95,10 +95,10 @@ psql -h 127.0.0.1 -p 5432 -U mpsql -d postgres -W -c 'SELECT datname FROM pg_dat
 | Connection refused | Start PostgreSQL; match the running cluster's actual port. The umbrella service can show `active (exited)`. |
 | Password authentication failed | Match the role/password in `.env` with the TCP `psql` login above. |
 | Peer authentication failed | Use `-h 127.0.0.1` for the TCP application-user check. |
-| `database "Quiz" does not exist` | Correct `DB_NAME=quiz`; restart backend. No new database is needed here. |
+| `database "Quiz" does not exist` | Use the actual catalog name. The original DB was lowercase `quiz`; the current initialized application DB is `quiz_fresh`. |
 | Schema permission denied | Database/schema ownership or grants must permit table creation for the application role; login alone does not prove that. |
 | Missing tables / unapplied migrations | Complete bootstrap; stop at the first failing operation. |
 | Missing `pymemcache` / cache refused | Install the selected client and start/configure its service. |
 | Missing `sslserver` | Use the HTTP overlay and keep `DJANGO_ENABLE_SSLSERVER=False`. |
 
-System checks, dependency diagnostics and a successful DB login do not establish schema/cache/concurrency readiness. The application's PostgreSQL provisioning, destructive clean and native backup/restore administration remain unsupported. No data transfer from SQLite/MariaDB is performed by these commands. [Schema/rollout](../contracts/schemaReadiness.md) · [Production/native dependencies](DEPLOYMENT.md) · [Manual verification](../../../Android/docs/verification/manualVerification.md).
+System checks, dependency diagnostics and a successful DB login do not establish complete workflow/cache readiness. Automated results are in [Python test verification](../verification/pythonTests.md); its PostgreSQL database is isolated from application data. The application's PostgreSQL provisioning, destructive clean and native backup/restore administration remain unsupported. No data transfer from SQLite/MariaDB is performed by these commands. [Schema/rollout](../contracts/schemaReadiness.md) · [Production/native dependencies](DEPLOYMENT.md) · [Manual verification](../../../Android/docs/verification/manualVerification.md).

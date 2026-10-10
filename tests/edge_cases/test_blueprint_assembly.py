@@ -83,16 +83,16 @@ class BlueprintWeightConstraintTests(CacheClearingTestCase):
     def test_zero_weight_is_refused_by_constraint(self):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
-                BlueprintWeight.objects.create(
+                BlueprintWeight.objects.bulk_create([BlueprintWeight(
                     blueprint=self.bp, category=self.cat, weight=0.0,
-                )
+                )])
 
     def test_negative_weight_is_refused_by_constraint(self):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
-                BlueprintWeight.objects.create(
+                BlueprintWeight.objects.bulk_create([BlueprintWeight(
                     blueprint=self.bp, category=self.cat, weight=-1.0,
-                )
+                )])
 
     def test_small_positive_weight_is_accepted(self):
         # The constraint is `weight > 0`, so any positive value

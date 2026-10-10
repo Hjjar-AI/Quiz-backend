@@ -4,6 +4,7 @@ from rest_framework.test import APIClient
 from apps.feedback.models import QuestionFlag
 from apps.learning.models import UserQuestionAttempt
 from tests.base import CacheClearingTestCase
+from tests.factories import make_attempt
 from tests.factories import (
     make_user, make_admin, make_question, make_category, make_test_history,
 )
@@ -126,8 +127,8 @@ class CategoryMasteryAPITests(CacheClearingTestCase):
     def test_mastery_payload_shape(self):
         cat = make_category('mastered')
         q = make_question(owner=self.u, category=cat)
-        UserQuestionAttempt.objects.create(
-            user=self.u, question=q, attempts=10, wrong_count=1,
+        make_attempt(
+            user=self.u, question=q, attempts=10, wrong_count=1, last_correct=True, repetitions=3,
         )
         resp = self.client.get('/api/v1/analytics/category-mastery/')
         row = resp.json()['data']['categories'][0]
@@ -139,7 +140,7 @@ class CategoryMasteryAPITests(CacheClearingTestCase):
         other = make_user('bob')
         other_cat = make_category('bobs')
         other_q = make_question(owner=other, category=other_cat)
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=other, question=other_q, attempts=10, wrong_count=1,
         )
 

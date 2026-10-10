@@ -47,6 +47,7 @@ from django.utils import timezone
 from apps.analytics.services import AnalyticsService
 from apps.learning.models import UserQuestionAttempt
 from tests.base import CacheClearingTestCase
+from tests.factories import make_attempt, make_learning_batch
 from tests.factories import (
     make_user,
     make_question,
@@ -212,7 +213,7 @@ class UserWeakCategoriesTests(CacheClearingTestCase):
     def test_min_attempts_filters_low_volume(self):
         cat = make_category('cat-a')
         q = make_question(owner=self.user, category=cat)
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=q, attempts=2, wrong_count=2,
         )
         # min_attempts defaults to 3, so this category is filtered out.
@@ -225,11 +226,11 @@ class UserWeakCategoriesTests(CacheClearingTestCase):
         cat_b = make_category('cat-b')
         qa = make_question(owner=self.user, category=cat_a)
         qb = make_question(owner=self.user, category=cat_b)
-        UserQuestionAttempt.objects.create(
-            user=self.user, question=qa, attempts=10, wrong_count=8,
+        make_attempt(
+            user=self.user, question=qa, attempts=10, wrong_count=8, last_correct=True, repetitions=1,
         )
-        UserQuestionAttempt.objects.create(
-            user=self.user, question=qb, attempts=10, wrong_count=2,
+        make_attempt(
+            user=self.user, question=qb, attempts=10, wrong_count=2, last_correct=True, repetitions=3,
         )
 
         rows = AnalyticsService.get_user_weak_categories(self.user.id)
@@ -240,7 +241,7 @@ class UserWeakCategoriesTests(CacheClearingTestCase):
         for i in range(5):
             cat = make_category(f'cat-{i}')
             q = make_question(owner=self.user, category=cat)
-            UserQuestionAttempt.objects.create(
+            make_attempt(
                 user=self.user, question=q, attempts=10, wrong_count=5,
             )
         rows = AnalyticsService.get_user_weak_categories(
@@ -278,17 +279,17 @@ class ConfidenceStatsTests(CacheClearingTestCase):
 
         # Correct-and-confident, and ever_correct=True so it is NOT
         # wrong_open.
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=q1,
             last_correct=True, last_confidence=True, ever_correct=True,
         )
         # Correct-but-fragile. ever_correct=True for the same reason.
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=q2,
             last_correct=True, last_confidence=False, ever_correct=True,
         )
         # Wrong and never corrected.
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=q3,
             last_correct=False, last_confidence=True, ever_correct=False,
         )
@@ -336,22 +337,22 @@ class CategoryMasteryTests(CacheClearingTestCase):
         self.assertEqual(data['categories'], [])
         self.assertEqual(data['total_categories'], 0)
 
-    def test_mastered_flag_at_eighty_percent(self):
+    def test_spaced_correct_reviews_are_mastered(self):
         cat = make_category('strong')
         q = make_question(owner=self.user, category=cat)
-        UserQuestionAttempt.objects.create(
-            user=self.user, question=q, attempts=10, wrong_count=2,
+        make_attempt(
+            user=self.user, question=q, attempts=10, wrong_count=2, last_correct=True, repetitions=2,
         )
         rows = AnalyticsService.get_category_mastery(self.user.id)
         row = rows['categories'][0]
-        self.assertEqual(row['accuracy'], 80.0)
+        self.assertEqual(row['accuracy'], 88.3)
         self.assertTrue(row['mastered'])
 
-    def test_seventy_nine_percent_is_not_mastered(self):
+    def test_lapse_is_not_mastered_despite_historical_accuracy(self):
         cat = make_category('almost')
         q = make_question(owner=self.user, category=cat)
         # 79/100 ≈ 79.0%
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.user, question=q, attempts=100, wrong_count=21,
         )
         rows = AnalyticsService.get_category_mastery(self.user.id)
@@ -362,11 +363,11 @@ class CategoryMasteryTests(CacheClearingTestCase):
         weak = make_category('weak')
         qs = make_question(owner=self.user, category=strong)
         qw = make_question(owner=self.user, category=weak)
-        UserQuestionAttempt.objects.create(
-            user=self.user, question=qs, attempts=10, wrong_count=1,
+        make_attempt(
+            user=self.user, question=qs, attempts=10, wrong_count=1, last_correct=True, repetitions=3,
         )
-        UserQuestionAttempt.objects.create(
-            user=self.user, question=qw, attempts=10, wrong_count=8,
+        make_attempt(
+            user=self.user, question=qw, attempts=10, wrong_count=8, last_correct=True, repetitions=1,
         )
         rows = AnalyticsService.get_category_mastery(self.user.id)
         self.assertEqual(rows['categories'][0]['category_name'], 'strong')
@@ -390,7 +391,7 @@ class StreakHistoryTests(CacheClearingTestCase):
         self.assertEqual(len(data['days']), 365)
 
     def test_session_landing_on_today_updates_count(self):
-        make_test_history(self.user, total_questions=4)
+        make_learning_batch(self.user, total_questions=4)
         data = AnalyticsService.get_streak_history(self.user.id, days=7)
         today = timezone.localdate().isoformat()
         today_row = next(d for d in data['days'] if d['date'] == today)
@@ -405,6 +406,7 @@ class StreakHistoryTests(CacheClearingTestCase):
             self.assertEqual((b - a).days, 1)
 
     def test_streak_fields_read_from_user_model(self):
+        self.user.last_study_date = timezone.localdate()
         self.user.current_streak = 4
         self.user.longest_streak = 9
         self.user.save()

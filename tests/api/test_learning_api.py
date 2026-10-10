@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from apps.learning.models import UserQuestionAttempt
 from tests.base import CacheClearingTestCase
+from tests.factories import make_attempt
 from tests.factories import make_user, make_question
 
 
@@ -24,11 +25,11 @@ class WrongAnswersAPITests(CacheClearingTestCase):
     def test_lists_wrong_open_questions(self):
         q1 = make_question(owner=self.u)
         q2 = make_question(owner=self.u)
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q1, ever_correct=False,
         )
-        UserQuestionAttempt.objects.create(
-            user=self.u, question=q2, ever_correct=True,
+        make_attempt(
+            user=self.u, question=q2, ever_correct=True, last_correct=True,
         )
         resp = self.client.get('/api/v1/questions/mistakes/')
         ids = {item['id'] for item in resp.json()['data']['items']}
@@ -45,11 +46,11 @@ class FragileAnswersAPITests(CacheClearingTestCase):
     def test_lists_correct_but_not_confident(self):
         q1 = make_question(owner=self.u)
         q2 = make_question(owner=self.u)
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q1,
             last_correct=True, last_confidence=False,
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q2,
             last_correct=True, last_confidence=True,
         )
@@ -85,17 +86,17 @@ class AttemptSummaryAPITests(CacheClearingTestCase):
         future = timezone.now() + timedelta(days=7)
         past = timezone.now() - timedelta(days=1)
 
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q1,
             ever_correct=True, last_correct=True, last_confidence=False,
             next_due=future,
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q2,
             ever_correct=False,
             next_due=future,
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q3,
             ever_correct=True, last_correct=True, last_confidence=True,
             next_due=past,
@@ -123,11 +124,11 @@ class SRSDueCountAPITests(CacheClearingTestCase):
     def test_counts_due_and_null_next_due(self):
         q1 = make_question(owner=self.u)
         q2 = make_question(owner=self.u)
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q1,
             next_due=timezone.now() - timedelta(hours=1),
         )
-        UserQuestionAttempt.objects.create(
+        make_attempt(
             user=self.u, question=q2,
             next_due=None,
         )

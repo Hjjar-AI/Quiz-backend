@@ -58,6 +58,7 @@ class MasterExamHTTPLifecycleTests(CacheClearingTestCase):
         )
         self.assertEqual(resp.status_code, 200)
         attempt_id = resp.json()['data']['id']
+        session_id = resp.json()['data']['session_id']
 
         resp = self.client.get(
             f'/api/v1/exam/master/{self.exam.id}/attempt/question/'
@@ -66,7 +67,8 @@ class MasterExamHTTPLifecycleTests(CacheClearingTestCase):
 
         resp = self.client.post(
             f'/api/v1/exam/master/{self.exam.id}/attempt/answer/',
-            {'question_id': self.q1.id, 'answer': 1, 'confidence': True},
+            {'question_id': self.q1.id, 'answer': 1, 'confidence': True,
+             'expected_slot': None, 'session_id': session_id},
             format='json',
         )
         self.assertEqual(resp.status_code, 200)
@@ -90,7 +92,8 @@ class MasterExamHTTPLifecycleTests(CacheClearingTestCase):
         other_q = make_question(owner=self.author)
         resp = self.client.post(
             f'/api/v1/exam/master/{self.exam.id}/attempt/answer/',
-            {'question_id': other_q.id, 'answer': 1},
+            {'question_id': other_q.id, 'answer': 1, 'expected_slot': None,
+             'session_id': str(MasterExamAttempt.objects.get(user=self.student, master_exam=self.exam).session_id)},
             format='json',
         )
         self.assertEqual(resp.status_code, 400)

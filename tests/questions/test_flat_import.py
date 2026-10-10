@@ -164,7 +164,7 @@ class FlatImportCSVTests(CacheClearingTestCase):
         self.assertEqual(result.get('code'), 400)
         self.assertEqual(Question.objects.count(), 0)
 
-    def test_duplicate_choices_rejected(self):
+    def test_duplicate_choices_are_imported_for_quality_review(self):
         row = {
             'question': 'Duplicate?',
             'choice_1': 'Yes',
@@ -172,7 +172,12 @@ class FlatImportCSVTests(CacheClearingTestCase):
             'correct_answer': 1,
         }
         result = ImportService.import_file(_csv_upload([row]), 'alice')
-        self.assertEqual(result.get('code'), 400)
+        self.assertNotIn('error', result)
+        self.assertEqual(result['quality_flags_created'], 1)
+        self.assertEqual(Question.objects.count(), 1)
+        question = Question.objects.get()
+        self.assertRegex(question.choices[1], r'^YES \[DUP-[A-Z]{4}\]$')
+        self.assertTrue(question.flags.filter(reason__contains='duplicate choices').exists())
 
     def test_transaction_is_atomic(self):
         """

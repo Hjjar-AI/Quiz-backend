@@ -73,7 +73,7 @@ Keep credentials in ignored `backend/.env`. Use the actual database name/port an
 | Key | Current PostgreSQL | MariaDB example |
 | --- | --- | --- |
 | `DB_ENGINE` | `postgresql` | `mariadb` |
-| `DB_NAME` | `quiz` (lowercase, verified) | Your existing database |
+| `DB_NAME` | `quiz_fresh` (user-bootstrap completed) | Your existing database |
 | `DB_USER` | `mpsql` | Your application user |
 | `DB_PASSWORD` | That user's database password | That user's database password |
 | `DB_HOST` | `127.0.0.1` | `127.0.0.1` |
@@ -95,7 +95,7 @@ If existing migration files need to represent deliberate model changes, use `mak
 python manage.py migrate --settings=config.settings_local
 ```
 
-`start.py postgres`, `start.py mariadb`, direct `runserver` and the interactive menu do not initialize schema/seed data. The latest supplied PostgreSQL startup reached HTTP on 5005 but reported **39 unapplied migrations**; bootstrap completion has not been reported.
+`start.py postgres`, `start.py mariadb`, direct `runserver` and the interactive menu do not initialize schema/seed data. The user subsequently completed PostgreSQL bootstrap on `quiz_fresh`; the old `quiz` database remains separate.
 
 HTTP and nginx/gunicorn HTTPS need no `django-sslserver`. `config.settings_local` disables that optional app and uses HTTP-compatible cookies. The optional Django HTTPS command requires installing `django-sslserver` and explicitly setting `DJANGO_ENABLE_SSLSERVER=True` with normal settings. `DB_SSLMODE` controls PostgreSQL connection TLS separately.
 
@@ -153,7 +153,7 @@ Use your actual venv path; explicit `--venv` does not silently fall back. Diagno
 | Symptom | Action |
 | --- | --- |
 | Missing Python package | Install the matching dependency set/client in the selected venv. |
-| Missing PostgreSQL `Quiz` | Current database is lowercase `quiz`; use [name/login checks](POSTGRESQL_SETUP.md#connection-and-name-errors). |
+| Missing PostgreSQL `Quiz` | Use the actual catalog name; current initialized DB is `quiz_fresh`. See [name/login checks](POSTGRESQL_SETUP.md#connection-and-name-errors). |
 | Unapplied migrations | Stop server and run bootstrap for first setup, or deliberate `migrate` for pending schema updates. |
 | Cache connection error | Start the configured Memcached/Redis service; match its client/location. |
 | Login lost on HTTP | Use the development overlays/launchers, which disable secure-only cookies. |
