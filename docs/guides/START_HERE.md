@@ -1,148 +1,167 @@
-# Starting Quiz
+# Quiz startup: SQLite, PostgreSQL and MariaDB
 
-Run `python` commands from `backend/`; use `python3` where needed. Absolute script paths work elsewhere; relative data paths use `backend/`.
+Updated 2026-10-10. Run backend commands from `backend/` and frontend commands from `frontend/`. Use your active Python environment; this computer's existing shortcut is `quizon` (`/home/mhmmd/Envs/quiz`). Otherwise activate your own venv. Run commands separately and stop at any failure.
 
-## Interactive launch
+## Choose your scenario
+
+| Scenario | First setup | Everyday backend command | HTTP port |
+| --- | --- | --- | --- |
+| Portable/local SQLite | Install `requirements-sqlite.txt`; normal launch initializes schema/seed data | `python start.py sqlite --no-setup` | 5004 |
+| Separate SQLite instance | Normal launch with `--data-root PATH` | `python start.py sqlite --data-root PATH --no-setup` | 5004 unless changed |
+| Existing PostgreSQL database | Install `requirements-postgresql.txt`; configure `.env`; bootstrap below | `python start.py postgres` | 5005 |
+| Existing MariaDB/MySQL database | Install `requirements.txt` plus cache client; configure `.env`; bootstrap below | `python start.py mariadb` | 5005 |
+| Database selected in `.env` | Complete its corresponding setup | `python start.py` | SQLite 5004; server DB 5005 |
+| Initialized backend + Vue together | Both dependency sets and database ready | `python start.py -i` | Backend 5004/5005; Vue 5173 |
+
+Explicit modes override `DB_ENGINE` for that run. Environment variables override `.env`. Missing `DB_ENGINE` retains the legacy MariaDB default. Specify another port after the mode, e.g. `python start.py postgres 5010`.
+
+## Python dependencies
+
+Reuse your working environment. For a new one:
 
 ```bash
-python start.py -i
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-Choose `.env`, separate SQLite, PostgreSQL or MariaDB, then backend + frontend, backend only, read-only diagnostics or command preview. Enter accepts defaults; `0` cancels menus. Optional customization covers ports, LAN browser address, Python venv and separate SQLite data directories.
+Choose one dependency file:
 
-The combined launch sets Vite's API/media proxy and backend browser origin for the selected ports, overriding inherited frontend API/proxy settings for that process. No `.env` edits are needed; credentials remain there. Open the printed frontend URL once Vite is ready. Ctrl+C stops both processes; either process exiting stops its companion. Backend auto-reload is disabled in this menu; restart after backend source edits. Frontend hot reload remains enabled.
-
-Requires existing database/schema and installed Python dependencies; combined mode also requires pnpm and installed frontend dependencies. The menu skips SQLite schema setup/seeding and never installs dependencies or provisions databases. Use diagnostics first for startup failures. `.env` mode defaults to port 5005 even when its selected engine is SQLite; separate SQLite defaults to 5004. Existing CLI commands below retain their behavior.
-
-## Choose the database
-
-For PostgreSQL, follow the [complete setup guide](POSTGRESQL_SETUP.md) before launching. It covers the existing `mpsql` user / lowercase `quiz` database, optional fresh creation, Python/cache dependencies, schema/seeding, HTTP without `sslserver` and web/Android access.
-
-Set the engine in `backend/.env`, alongside its credentials:
-
-```dotenv
-DB_ENGINE=postgresql
-DB_NAME=quiz
-DB_USER=quiz
-DB_PASSWORD=replace-me
-DB_HOST=localhost
-DB_PORT=5432
+```bash
+# SQLite
+python -m pip install -r requirements-sqlite.txt
+# PostgreSQL: shared core + Psycopg + Memcached client
+python -m pip install -r requirements-postgresql.txt
+# MariaDB/production dependency set; includes mysqlclient
+python -m pip install -r requirements.txt
 ```
 
-Run `python start.py`; `.env` engines: `mariadb`/3306, `postgresql`/5432, `sqlite` with `DB_NAME=SQLite/db.sqlite3`. Change/remove `DB_PORT` when switching; explicit port wins. Missing `DB_ENGINE` defaults MariaDB. Environment overrides `.env`; explicit modes override engine for that run.
+Server-database modes need a running cache: default Memcached with `pymemcache`, or Redis with `django-redis`. Install the matching client in the selected environment. SQLite uses an isolated in-process cache. Keep repository version pins; select a compatible Python interpreter if pip rejects them. [Native/PDF/OS dependencies](DEPLOYMENT.md#1-system-packages).
 
-| Scenario | Backend command | Backend HTTP address |
+## SQLite: first run and isolation
+
+```bash
+python start.py sqlite
+```
+
+This normally ensures package files, generates initial migrations for model apps without migration files, applies pending migrations and seeds categories/settings/capabilities. It creates the default admin only when no superuser exists; save any printed credential and change it on first login. It starts HTTP on 5004, with an address prompt when appropriate.
+
+| Case | Command/options |
+| --- | --- |
+| Default root | `python start.py sqlite` → `backend/SQLite/` |
+| Existing initialized instance; skip setup | `python start.py sqlite --no-setup` |
+| Separate instance and port | `python start.py sqlite 5006 --data-root SQLite/sandbox` |
+| Select only the database file | `python start.py sqlite --db-path /path/to/db.sqlite3` |
+| Avoid address prompt | Add `--no-prompt`, or supply a port / `host:port` |
+| Optional moderator/pro accounts | Add `--seed-pro-users` during normal setup |
+| Disable backend autoreload | Add `--noreload` |
+| Explicit concurrent development requests | Add `--allow-threading`; only for trusted light use |
+
+`--data-root` moves database/media/uploads/exports/backups together; `--db-path` changes only the database. Roots isolate cache/cookies as well. An empty root is a new instance, not a copy. To relocate existing SQLite data, stop its server and copy the whole root before selecting the copied path. Never overwrite an active instance.
+
+SQLite defaults to `--nothreading` and `BEGIN IMMEDIATE`. If model apps have no migration files, normal setup creates initial migrations from current models. If migration files already exist, deleting the database alone does not generate migrations for later model changes. See [schema readiness](../contracts/schemaReadiness.md).
+
+For Termux/private phone storage:
+
+```bash
+python start.py sqlite --data-root "$HOME/.local/share/quiz"
+```
+
+## Server databases: configuration and bootstrap
+
+Keep credentials in ignored `backend/.env`. Use the actual database name/port and preserve the existing secret key and unrelated settings.
+
+| Key | Current PostgreSQL | MariaDB example |
 | --- | --- | --- |
-| SQLite on this computer | `python start.py sqlite` | `http://localhost:5004` |
-| SQLite on another port | `python start.py sqlite 5006` | `http://localhost:5006` |
-| Separate SQLite instance | `python start.py sqlite 5006 --data-root SQLite/sandbox` | `http://localhost:5006` |
-| Database selected in `.env` | `python start.py` | `http://localhost:5005` (SQLite: 5004) |
-| Existing PostgreSQL | `python start.py postgres` | `http://localhost:5005` |
-| Existing MariaDB | `python start.py mariadb` | `http://localhost:5005` |
-| Existing MariaDB on another port | `python start.py mariadb 5010` | `http://localhost:5010` |
+| `DB_ENGINE` | `postgresql` | `mariadb` |
+| `DB_NAME` | `quiz` (lowercase, verified) | Your existing database |
+| `DB_USER` | `mpsql` | Your application user |
+| `DB_PASSWORD` | That user's database password | That user's database password |
+| `DB_HOST` | `127.0.0.1` | `127.0.0.1` |
+| `DB_PORT` | `5432` | `3306` |
 
-`python start.py sqlite` uses `scripts/start_sqlite.py`; direct invocation is `python scripts/start_sqlite.py`. First-run setup runs unless `--no-setup`. New entry point never deletes/resets data. Server modes run no setup/migrations/seeders; initialize those instances through existing deployment workflow.
-
-All development modes use HTTP cookies despite production `.env` `USE_HTTPS=True`. Server credentials/cache remain configured. SQLite isolates database/files/local cache/cookies; distinct databases get distinct cookies because browsers do not isolate by port.
-
-## Start the frontend against the selected backend
-
-The backend is the API server. The frontend development page is normally at `http://localhost:5173`. Start it separately from `frontend/`:
+PostgreSQL database/user must already exist: [PostgreSQL cases](POSTGRESQL_SETUP.md). For an existing PostgreSQL or MariaDB database, stop the server and initialize it:
 
 ```bash
-pnpm dev
+python manage.py bootstrap --no-db-setup --settings=config.settings_local
 ```
 
-The default proxy target is SQLite on port 5004. For MariaDB or any other backend port, put this in the uncommitted `frontend/.env.local`, then restart `pnpm dev`:
+Add `--with-sample-questions` for demo questions. Bootstrap applies migrations and runs `seed_data`, `seed_tips` and `seed_capabilities`; it generates initial migrations when model apps lack migration files. It does not generate every later model change automatically. Normal bootstrap preserves existing data; seeders may sync defaults/add records.
+
+For MariaDB database/user provisioning, omit `--no-db-setup` and configure `DB_ADMIN_USER` / `DB_ADMIN_PASSWORD` in `.env`. PostgreSQL provisioning is external. `--clean` destroys data and migration files and supports only SQLite/MariaDB; it is not a PostgreSQL initialization option.
+
+If existing migration files need to represent deliberate model changes, use `makemigrations` explicitly before applying them. If only pending migrations need applying, use:
+
+```bash
+python manage.py migrate --settings=config.settings_local
+```
+
+`start.py postgres`, `start.py mariadb`, direct `runserver` and the interactive menu do not initialize schema/seed data. The latest supplied PostgreSQL startup reached HTTP on 5005 but reported **39 unapplied migrations**; bootstrap completion has not been reported.
+
+HTTP and nginx/gunicorn HTTPS need no `django-sslserver`. `config.settings_local` disables that optional app and uses HTTP-compatible cookies. The optional Django HTTPS command requires installing `django-sslserver` and explicitly setting `DJANGO_ENABLE_SSLSERVER=True` with normal settings. `DB_SSLMODE` controls PostgreSQL connection TLS separately.
+
+## Vue: separate terminal or combined menu
+
+From `frontend/`, install dependencies with `pnpm install` if needed. Set the selected backend in ignored `.env.local`, then restart Vite:
 
 ```dotenv
 VITE_BACKEND_PROXY_TARGET=http://127.0.0.1:5005
 ```
 
-Use selected backend port; keep `VITE_API_BASE_URL` unset or `/api/v1` so requests use proxy. Remove conflicting frontend env values. Proxy forwards `/media` question images.
-
-The frontend now refuses an occupied port instead of changing origin silently. Choose another port explicitly if you need two frontend instances.
-
-## Two databases at the same time
-
-Use two backend terminals:
+Use 5004 for default SQLite. Keep `VITE_API_BASE_URL` unset or `/api/v1`, and remove conflicting process overrides.
 
 ```bash
-python start.py sqlite 5004
-python start.py mariadb 5005
+pnpm dev
 ```
 
-Point the frontend proxy at whichever instance you want to use, and restart the frontend when changing its env file. To keep both UIs open, use separate frontend processes with distinct ports and proxy targets. For example on Linux/Termux:
+Open `http://localhost:5173`. Backend `/` may not display Vue without a frontend bundle. An occupied Vite port is an error; select another explicitly, e.g. `pnpm dev --port 5174`, then trust that origin in the backend.
+
+For a combined initialized launch, run `python start.py -i` from `backend/`. Choose the database, then backend + frontend. Customization offers ports, LAN address, venv and SQLite root. Enter accepts defaults; `0` cancels. The menu configures the proxy/origin, skips schema/seed setup and does not install dependencies. Backend autoreload is disabled; restart after backend edits. Ctrl+C or either process exiting stops both.
+
+## Phone, LAN and parallel instances
+
+Replace `192.168.1.10` with the computer's reachable LAN IP (`hostname -I`). Both devices need network access; allow the chosen HTTP ports through any enabled firewall only from your trusted LAN.
+
+| Client | Backend launch | Client address |
+| --- | --- | --- |
+| Android + SQLite | `python start.py sqlite 0.0.0.0:5004 --no-setup` | `http://192.168.1.10:5004` |
+| Android + PostgreSQL | `python start.py postgres 0.0.0.0:5005` | `http://192.168.1.10:5005` |
+| Android + MariaDB | `python start.py mariadb 0.0.0.0:5005` | `http://192.168.1.10:5005` |
+| Phone browser + PostgreSQL | Add `--frontend-origin http://192.168.1.10:5173` to the LAN launch | `http://192.168.1.10:5173` |
+| Phone browser + SQLite/MariaDB | Same origin option, matching mode/port | `http://192.168.1.10:5173` |
+| Android emulator on this PC | Backend accepts host connections | `http://10.0.2.2:5004` or `:5005` |
+
+For phone browsers run Vue with `pnpm dev --host 0.0.0.0`. Its proxy remains `127.0.0.1:BACKEND_PORT` when both servers run on this computer. `0.0.0.0` is a bind address, not a client URL; phone `localhost` means the phone. Android accepts an origin or full `/api/v1/` URL through **Change server**, without rebuilding. [Native address/TLS rules](../../../Android/docs/contracts/serverConfiguration.md).
+
+For two instances, choose distinct backend ports and SQLite roots where relevant. Example backend terminals: SQLite 5004 and PostgreSQL 5005. Choose either proxy target, or use separate Vue terminals:
 
 ```bash
 VITE_BACKEND_PROXY_TARGET=http://127.0.0.1:5004 pnpm dev --port 5173
 VITE_BACKEND_PROXY_TARGET=http://127.0.0.1:5005 pnpm dev --port 5174
 ```
 
-Pass the matching browser origin to each backend if needed:
+Trust each matching browser origin with `--frontend-origin`. Stop development servers with Ctrl+C; their data remains. [Production HTTPS](DEPLOYMENT.md).
 
-```bash
-python start.py sqlite 5004 --frontend-origin http://localhost:5173
-python start.py mariadb 5005 --frontend-origin http://localhost:5174
-```
-
-## Termux or a different computer
-
-For a new SQLite environment, install `requirements-sqlite.txt`, which avoids the MariaDB driver, gunicorn and optional PDF dependencies:
-
-```bash
-python -m venv .venv
-.venv/bin/python -m pip install -r requirements-sqlite.txt
-python start.py sqlite --venv .venv --diagnose
-```
-
-Windows: `.venv\Scripts\python.exe -m pip install -r requirements-sqlite.txt`; `--venv .venv` works on either system. MariaDB needs `requirements.txt` plus configured DB/cache. PostgreSQL HTTP development uses `requirements-postgresql.txt` (shared core pins, `psycopg[binary]`, `pymemcache`) plus a running Memcached service; Redis users add `django-redis` and configure Redis instead. Neither PostgreSQL HTTP nor nginx/gunicorn HTTPS requires `django-sslserver`. The optional Django HTTPS command requires installing that package and explicitly setting `DJANGO_ENABLE_SSLSERVER=True`; the HTTP settings overlay disables it. Versions unchanged. PostgreSQL also accepts `psycopg2`, never requires MySQLdb. Native Termux dependencies: `DEPLOYMENT.md`.
-
-PostgreSQL database/users must exist beforehand. Native backup/restore and the MariaDB provisioning workflow do not yet support PostgreSQL. These settings and launcher changes remain unverified against a live PostgreSQL server.
-
-On Termux keep runtime data in private storage, even if the source checkout is on shared storage:
-
-```bash
-python start.py sqlite --data-root "$HOME/.local/share/quiz"
-```
-
-Separate instances need separate roots; empty root creates new data, not a copy. To move SQLite, stop instance, copy complete data directory/media, select copied `--data-root`; never overwrite an active instance.
-
-For a phone/browser on your trusted local network, bind the backend to all interfaces and trust the actual browser origin, replacing the example IP:
-
-```bash
-python start.py sqlite 0.0.0.0:5004 --frontend-origin http://192.168.1.10:5173
-```
-
-Run the frontend with `pnpm dev --host 0.0.0.0`, keeping its proxy target pointed at the backend address reachable **from the frontend server**, normally `http://127.0.0.1:5004`. Open `http://192.168.1.10:5173` on the phone. `0.0.0.0` is a bind address, not a browser address. These are development servers; production HTTPS still uses `scripts/quiz_start.sh` and `DEPLOYMENT.md`.
-
-## Diagnose before launching
+## Diagnose and recover
 
 ```bash
 python start.py sqlite --diagnose
-python start.py --diagnose
-python start.py postgres --diagnose
-python start.py sqlite --venv /path/to/venv --data-root /path/to/data --diagnose
+python start.py postgres --venv /home/mhmmd/Envs/quiz --diagnose
 ```
 
-Diagnostics list dependencies/interpreter candidates/settings without server, DB connection or setup; connectivity remains unverified. Startup selects only module-complete environments; explicit `--venv` never silently falls back.
+Use your actual venv path; explicit `--venv` does not silently fall back. Diagnostics check interpreter/dependencies without DB connections, setup or server launch. They do not establish cache, schema or PDF readiness.
 
-| Symptom | Check |
+| Symptom | Action |
 | --- | --- |
-| Missing Python packages | Use `--diagnose`, then install the matching requirements into the selected venv. |
-| UI opens but API requests fail | Match `VITE_BACKEND_PROXY_TARGET` to the backend port and restart Vite; check any overriding `VITE_API_BASE_URL`. |
-| Login does not stay signed in on HTTP | Use these development launchers; they override inherited secure-cookie settings. |
-| CSRF rejection | Pass the exact browser scheme/host/port using `--frontend-origin`. |
-| MariaDB/cache connection failure | Verify existing `.env` configuration and that the relevant services are running. |
-| Backend `/` has no page | Use the Vite frontend URL if no built frontend bundle exists. |
-| SQLite shows different/empty data | Check the printed database path and `--data-root`/`--db-path`. |
+| Missing Python package | Install the matching dependency set/client in the selected venv. |
+| Missing PostgreSQL `Quiz` | Current database is lowercase `quiz`; use [name/login checks](POSTGRESQL_SETUP.md#connection-and-name-errors). |
+| Unapplied migrations | Stop server and run bootstrap for first setup, or deliberate `migrate` for pending schema updates. |
+| Cache connection error | Start the configured Memcached/Redis service; match its client/location. |
+| Login lost on HTTP | Use the development overlays/launchers, which disable secure-only cookies. |
+| CSRF failure | Pass the exact browser scheme/host/port through `--frontend-origin`. |
+| Vue API/media failure | Match proxy target/port, remove conflicting API overrides and restart Vite. |
+| Empty/different SQLite content | Check the printed DB path and selected root; a new root is a separate instance. |
+| Port occupied | Stop the intended old listener or choose another port and update client/proxy URLs. |
 
-## Entry points and tutorial
+The read-only desktop tutorial is `python scripts/startup_tutorial.py` (Tkinter/display needed); it provides copyable plans without launching/installing/setup. Root Python entry points remain `start.py` and `manage.py`; direct SQLite compatibility entry is `scripts/start_sqlite.py`.
 
-The backend root keeps two Python entry points: `start.py` for development and `manage.py` for Django administration. Supporting launch code lives in `scripts/`; production HTTPS still uses `scripts/quiz_start.sh`. Old `python start_sqlite.py` commands become `python start.py sqlite` (same flags/setup behavior), or `python scripts/start_sqlite.py`.
-
-For the standalone, read-only desktop tutorial, run `python scripts/startup_tutorial.py` from `backend/`. It needs Tkinter/display support; it does not launch the app, read its configuration/data, or change its files.
-
-The tutorial now opens a guided sequence. Use **Next / Back** (or Alt+Right / Alt+Left); each command page shows **where to paste**, **the exact command**, and **what to expect**. The setup dropdown selects the lesson scenario; the left step navigator revisits pages. Neither starts a server. **Copy command** copies only the current command/URL; **Copy full launch plan** copies study notes.
-
-The default guided path is: choose setup → open the backend folder → check dependencies → run `python start.py -i` and enter the listed menu answers → open the frontend URL → learn how to stop. It uses existing initialized databases. **Advanced options** holds ports, paths and command-shell format; **Separate terminals** provides complete backend/frontend blocks, including process environment assignments. **Need help** opens troubleshooting separately and keeps your current step. LAN lessons expose the address field so you can replace the illustrative IP with the actual computer address. Progress stays in this window; no commands, installs or database setup run automatically.
+Source-aligned instructions do not prove runtime correctness. Record actual setup/device results; keep [schema/rollout gates](../contracts/schemaReadiness.md) and the [manual matrix](../../../Android/docs/verification/manualVerification.md) separate.

@@ -6,7 +6,7 @@ The seven rescan and eight deeper-review findings are source-complete. Do not re
 
 ## Pending verification
 
-- Verify application startup/schema and cache against `mpsql` / lowercase `quiz` using the user's `/home/mhmmd/Envs/quiz` environment. A read-only catalog connection succeeded and the database-name mismatch is corrected; this does not verify the application's tables, cache service or HTTP workflows. Follow the [PostgreSQL guide](guides/POSTGRESQL_SETUP.md).
+- Complete PostgreSQL bootstrap and verify schema/cache/workflows against `mpsql` / lowercase `quiz`. The user's `/home/mhmmd/Envs/quiz` server reached HTTP on 5005 with 39 unapplied migrations; no bootstrap completion has been reported. Follow the [PostgreSQL guide](guides/POSTGRESQL_SETUP.md).
 
 - Prepare/verify matching [schema and coordinated clients](contracts/schemaReadiness.md); no readiness is inferred from source or database deletion.
 - Execute the [shared functional matrix](../../Android/docs/verification/manualVerification.md), especially lost responses, account/attempt switches, receipts, permissions, revisions, imports/parent locking and planner late/midnight evidence.
