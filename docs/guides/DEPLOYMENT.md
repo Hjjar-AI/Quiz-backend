@@ -109,6 +109,14 @@ Accounts match by username. Existing passwords/display names and unrelated per-u
 
 New-account passwords come from `SEED_PRO_USER_PASSWORD` or its development fallback `1234test`, and require first-login change. Credentials for created/reset accounts print to stderr. `--reset-passwords` explicitly resets existing seeded accounts. `reset_admin_password --qr` optionally displays an ASCII QR credential; keep terminal credential output private.
 
+To choose a fixed temporary admin password, use hidden prompts (enter it twice):
+
+```bash
+python manage.py reset_admin_password --prompt-password --settings=config.settings_local
+```
+
+The chosen password must pass configured validation (currently at least six characters). It is not printed back; the admin must change it on next login. Omit `--prompt-password` to generate/print a random temporary password as before. A canceled, mismatched or invalid entry leaves the old password unchanged.
+
 `doctor` reports configuration, database/migration state, cache, PDF/font, directories and frontend bundle availability. It is a diagnostic command, not initialization; cache probes may access the cache. A report does not replace functional/device verification. Missing frontend bundle is expected when using separate Vite development.
 
 ## 4. Production HTTPS

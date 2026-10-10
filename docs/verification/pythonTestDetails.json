@@ -2890,5 +2890,26 @@
       "seconds": 0.5
     },
     "limits": "Focused isolated tests only. Application seeder and full suite were not run."
+  },
+  "admin_prompt_password_regression": {
+    "date": "2026-10-10",
+    "scope": "tests.management.test_seeders.ResetAdminPasswordTests",
+    "sqlite": {
+      "run": 8,
+      "passed": 8,
+      "seconds": 0.1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "postgresql": {
+      "run": 8,
+      "passed": 8,
+      "seconds": 0.14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "limits": "Isolated focused tests only; application credentials unchanged; full suite not rerun."
   }
 }

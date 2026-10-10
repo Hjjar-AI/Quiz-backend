@@ -31,6 +31,8 @@ from io import StringIO
 from unittest.mock import patch
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.test import override_settings
 
 from apps.core.models import Setting, Tip
 from apps.questions.models import Question, Category, ClinicalCase, Tag
@@ -227,3 +229,47 @@ class ResetAdminPasswordTests(CacheClearingTestCase):
         with redirect_stderr(buf):
             call_command('reset_admin_password', '--qr')
         self.assertIn('New Password:', buf.getvalue())
+
+    def test_prompt_sets_chosen_temporary_password_without_printing_it(self):
+        admin = make_admin('admin', 'original-pw-1234')
+        admin.must_change_password = False
+        admin.save()
+        output = StringIO()
+        password = 'chosen-temporary-credential'
+        with patch('apps.core.management.commands.reset_admin_password.getpass', side_effect=[password, password]), redirect_stderr(output):
+            call_command('reset_admin_password', '--prompt-password')
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password(password))
+        self.assertTrue(admin.must_change_password)
+        self.assertNotIn(password, output.getvalue())
+        self.assertIn('Chosen temporary password saved', output.getvalue())
+
+    def test_bad_prompt_input_preserves_existing_password_and_flag(self):
+        admin = make_admin('admin', 'original-pw-1234')
+        admin.must_change_password = False
+        admin.save()
+        for entries in (['', ''], ['first-value', 'different-value']):
+            with self.subTest(entries=entries):
+                with patch('apps.core.management.commands.reset_admin_password.getpass', side_effect=entries), self.assertRaises(CommandError):
+                    call_command('reset_admin_password', '--prompt-password')
+                admin.refresh_from_db()
+                self.assertTrue(admin.check_password('original-pw-1234'))
+                self.assertFalse(admin.must_change_password)
+
+    @override_settings(AUTH_PASSWORD_VALIDATORS=[{
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 6},
+    }])
+    def test_prompt_checks_configured_password_rules_before_saving(self):
+        admin = make_admin('admin', 'original-pw-1234')
+        with patch('apps.core.management.commands.reset_admin_password.getpass', side_effect=['short', 'short']), self.assertRaises(CommandError):
+            call_command('reset_admin_password', '--prompt-password')
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password('original-pw-1234'))
+
+    def test_canceled_prompt_preserves_existing_password(self):
+        admin = make_admin('admin', 'original-pw-1234')
+        with patch('apps.core.management.commands.reset_admin_password.getpass', side_effect=EOFError), self.assertRaises(CommandError):
+            call_command('reset_admin_password', '--prompt-password')
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password('original-pw-1234'))

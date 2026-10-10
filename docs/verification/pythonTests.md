@@ -21,6 +21,10 @@ The 20-test `tests.exams.test_exam_service` module passes on isolated PostgreSQL
 
 After changing `seed_pro_users` to member accounts and adding three missing offline learners, all nine `tests.management.test_seed_pro_users` tests pass on SQLite (0.500s) and isolated PostgreSQL (1.534s), with zero failures/errors/skips. They verify the five per-user full-bank grants, normal member permissions, role/staff flag repair, preserved unrelated overrides/passwords/names, missing-user creation and credential/reset behavior. Application seeding and a full-suite rerun were not performed.
 
+## Later chosen temporary admin password regression run
+
+All eight `tests.management.test_seeders.ResetAdminPasswordTests` pass on SQLite (0.1s) and isolated PostgreSQL (0.14s). They cover random reset/output/QR compatibility, chosen temporary passwords with mandatory change and no plaintext output, cancellation, mismatch/empty input and configured validator rejection. Application credentials were untouched; no full-suite rerun.
+
 ## What was verified and changed
 
 - Added [35 PostgreSQL concurrency scenarios](concurrencyLimits.md), with three passing focused runs plus the full suite: retries, revisions, learning counters, quotas, imports, admin preservation, approximate throttling and timeout rollback/recovery. Tests use up to 16 independent workers. SQLite skips these 35 cases plus the original locking test; maximum deployed user/HTTP capacity remains unmeasured.
