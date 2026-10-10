@@ -1,8 +1,12 @@
 # Backend Python verification
 
+Latest complete run: **2026-10-10, current source `0540f8f`, 982 tests**. PostgreSQL passed 982/982 with no skips; SQLite passed 946 with 36 intentional locking skips. PostgreSQL line/branch coverage is **71.75% / 56.87%**; SQLite is **70.49% / 54.95%**. See the [complete suite and coverage report](backendCoverage.md) and [per-file uncovered lines/branches](backendCoverage.json). The retained PostgreSQL test schema needed its missing `ClinicalCase.translations` model field initialized before the final passing run. Application databases were untouched. The older results below remain historical evidence.
+
+## Earlier suite and focused runs
+
 2026-10-10 · baseline revision `8274707` plus the test changes below · Python 3.14.4 / Django 6.1.2 / PostgreSQL 18.6.
 
-The last full discovered suite **passed on both databases** after failure triage and repairs, before the later session-label changes below. [Structured results and historical failure/function inventory](pythonTestDetails.json) contain no credentials or raw logs. The earlier 930-test run had 42 failures and 109 errors on each database; those failures are resolved in the final suite.
+The earlier full discovered suite **passed on both databases** after failure triage and repairs, before the later session-label changes below. [Structured results and historical failure/function inventory](pythonTestDetails.json) contain no credentials or raw logs. The earlier 930-test run had 42 failures and 109 errors on each database; those failures were resolved in that suite.
 
 | Database | Run | Passed | Failures | Errors | Skipped |
 | --- | ---: | ---: | ---: | ---: | ---: |
