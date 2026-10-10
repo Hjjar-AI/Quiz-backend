@@ -240,7 +240,7 @@ def _runtime_candidates():
 
     if os.environ.get('QUIZ_VENV'):
         add_venv(os.environ['QUIZ_VENV'])
-    # docs/DEPLOYMENT.md creates .venv while the shell is in backend/. Keep
+    # docs/guides/DEPLOYMENT.md creates .venv while the shell is in backend/. Keep
     # repository-root layouts as fallbacks for existing installations.
     add_venv(backend_dir / 'venv')
     add_venv(backend_dir / '.venv')

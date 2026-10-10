@@ -2,7 +2,7 @@
 
 ## Working rules
 
-- Read applicable instructions and [workPlan](docs/workPlan.md)/[workDone](docs/workDone.md)
+- Start at [documentation index](docs/README.md). Read applicable instructions and [workPlan](docs/workPlan.md)/[workDone](docs/workDone.md)
   first; inspect current production source and the working tree. Preserve unrelated
   edits and existing authorization; do not commit unless requested.
 - Trace affected contracts and callers before making focused corrections. Do not
@@ -45,7 +45,7 @@
   reconciliation/receipt support and its absence without inventing guarantees.
 - Keep PDF theme names, palette seeds and aliases aligned with the frontend theme
   registry/bootstrap/locales. Renames must preserve existing export requests;
-  honor intentional theme-aware print colors. See the [theme guide](../frontend/docs/theme-guidelines.md).
+  honor intentional theme-aware print colors. See the [theme guide](../frontend/docs/guides/theme-guidelines.md).
 - Never expose credentials, storage paths or internal exceptions through APIs;
   do not commit secrets or private logs.
 - Select the database through `.env`/`DB_ENGINE`; keep driver requirements, ports and
@@ -61,7 +61,7 @@
   not generate migrations for model changes. `manage.py runserver` and interactive
   `python start.py -i` skip schema setup. Explain these distinctions without running
   setup or migration work unless explicitly requested; never infer verified schema
-  readiness from deletion or source checks. See [startup](docs/START_HERE.md).
+  readiness from deletion or source checks. See [startup](docs/guides/START_HERE.md).
 - PostgreSQL configuration exists; live integration and database administration
-  support remain separate pending work. Check [startup](docs/START_HERE.md) and
-  [review limits](docs/backendReview.md) before claiming backend support.
+  support remain separate pending work. Check [startup](docs/guides/START_HERE.md) and
+  [review limits](docs/archive/reviews/2026-10-08-backendReview.md) before claiming backend support.

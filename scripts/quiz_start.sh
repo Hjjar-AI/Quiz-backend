@@ -32,7 +32,7 @@ fail() { echo "ERROR: $*" >&2; exit 1; }
 
 # ── Virtualenv discovery ──────────────────────────────────────────
 # Priority: $QUIZ_VENV override > backend-local environments > project-local
-# environments > ~/Environments/quizenv. docs/DEPLOYMENT.md creates backend/.venv,
+# environments > ~/Environments/quizenv. docs/guides/DEPLOYMENT.md creates backend/.venv,
 # so keep that location first among the automatic candidates.
 if [ -n "${QUIZ_VENV:-}" ] && [ -x "$QUIZ_VENV/bin/python" ]; then
     VENV="$QUIZ_VENV"

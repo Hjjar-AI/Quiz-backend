@@ -1,6 +1,8 @@
+> Historical source review; findings may have subsequent fixes. Use [current status](../../workDone.md) and [remaining work](../../workPlan.md) before acting on them.
+
 # Backend models and learning logic review — 2026-10-09
 
-The findings below are the original review evidence. They are now addressed in source with the policies and limits recorded in [learning consistency implementation](learningConsistency.md). A matching fresh schema and runtime verification remain pending; this review is not a current unfixed-defect list.
+The findings below are the original review evidence. They are now addressed in source with the policies and limits recorded in [learning consistency implementation](../../contracts/learningConsistency.md). A matching fresh schema and runtime verification remain pending; this review is not a current unfixed-defect list.
 
 ## Assessment and scope
 
@@ -49,13 +51,13 @@ The last two branches explain one reporting mismatch below: valid incremental le
 - Grading uses frozen content; current mastery uses assessed-content fingerprints. Historical scores should remain valid after an edit without implying mastery of the replacement content.
 - Ordinary study/recall records first attempts incrementally with `learning_recorded` markers. Pause, finish and discard should retain real learning without counting the same answer again.
 - Ordinary completion identity, locked master completion and offline UUID/body receipts supply different replay protections. Preserve those protections and avoid automatically retrying uncertain writes without reconciliation.
-- Current automatic selection preserves eligibility, blueprint quotas, manual IDs, SRS ordering and fixed master composition. Unseen questions are preferred, followed by fewer/older allocations with random ties; see [selection policy](questionSelection.md).
+- Current automatic selection preserves eligibility, blueprint quotas, manual IDs, SRS ordering and fixed master composition. Unseen questions are preferred, followed by fewer/older allocations with random ties; see [selection policy](../../contracts/questionSelection.md).
 
 ## Prioritized findings
 
 ### 1. High — live question statistics include obsolete assessed content
 
-**Evidence:** [question counters](../apps/exams/services/exam_service.py#L713) update by question ID alone. [Completion side effects](../apps/exams/services/exam_service.py#L731) increment those counters before [SRS provenance checks](../apps/learning/srs_service.py#L211). [Question edits](../apps/questions/services/question_service.py#L193) invalidate changed learning evidence, but do not version/reset these counters. [Difficulty calibration](../apps/analytics/services/admin_advanced.py#L69) uses the counters with the current difficulty.
+**Evidence:** [question counters](../../../apps/exams/services/exam_service.py#L713) update by question ID alone. [Completion side effects](../../../apps/exams/services/exam_service.py#L731) increment those counters before [SRS provenance checks](../../../apps/learning/srs_service.py#L211). [Question edits](../../../apps/questions/services/question_service.py#L193) invalidate changed learning evidence, but do not version/reset these counters. [Difficulty calibration](../../../apps/analytics/services/admin_advanced.py#L69) uses the counters with the current difficulty.
 
 **Example:** a learner starts an exam, an editor replaces the stem/correct answer, then the learner finishes the old snapshot. Historical grading remains legitimate and SRS rejects the outdated evidence, but the live question's answered/correct totals still increase. Existing pre-edit totals also remain attributed to the replacement content.
 
@@ -63,7 +65,7 @@ The last two branches explain one reporting mismatch below: valid incremental le
 
 ### 2. High — offline synchronization loses learning chronology
 
-**Evidence:** [CompletionRequest](../apps/exams/views/offline_views.py#L50) accepts identity, signed material, answers and elapsed duration, but no occurrence timestamp. [Completion processing](../apps/exams/views/offline_views.py#L212) uses the common side effects and saves history at `timezone.now()`. [SRS](../apps/learning/srs_service.py#L208), [planner](../apps/planning/services.py#L96) and [study streak](../apps/users/models.py#L359) use processing time/current day. Android retains a local start time, but its [upload payload](../../Android/app/src/main/java/com/mukhtabir/android/data/remote/OfflineStudyService.kt#L55) sends duration and answers rather than learning timestamps.
+**Evidence:** [CompletionRequest](../../../apps/exams/views/offline_views.py#L50) accepts identity, signed material, answers and elapsed duration, but no occurrence timestamp. [Completion processing](../../../apps/exams/views/offline_views.py#L212) uses the common side effects and saves history at `timezone.now()`. [SRS](../../../apps/learning/srs_service.py#L208), [planner](../../../apps/planning/services.py#L96) and [study streak](../../../apps/users/models.py#L359) use processing time/current day. Android retains a local start time, but its [upload payload](../../../../Android/app/src/main/java/com/mukhtabir/android/data/remote/OfflineStudyService.kt#L55) sends duration and answers rather than learning timestamps.
 
 **Examples:** Friday's offline practice uploaded Sunday earns Sunday activity. An older offline wrong answer uploaded after newer online correct practice can become `last_correct=False` and schedule a lapse even though the actual learning order was the reverse. The existing receipt prevents duplicate uploads, not this ordering problem.
 
@@ -71,23 +73,23 @@ The last two branches explain one reporting mismatch below: valid incremental le
 
 ### 3. High — assessed translations are outside learning provenance
 
-**Evidence:** [fingerprint content](../apps/learning/evidence.py#L31) includes base stem/choices/answer, base concept content, case stem and image name, but no question or concept translations. [Knowledge evidence fields](../apps/learning/evidence.py#L7) likewise exclude translations. Question translation writes therefore can change the text a learner is assessed on without changing the fingerprint or invalidating mastery.
+**Evidence:** [fingerprint content](../../../apps/learning/evidence.py#L31) includes base stem/choices/answer, base concept content, case stem and image name, but no question or concept translations. [Knowledge evidence fields](../../../apps/learning/evidence.py#L7) likewise exclude translations. Question translation writes therefore can change the text a learner is assessed on without changing the fingerprint or invalidating mastery.
 
-Both [Android](../../Android/app/src/main/java/com/mukhtabir/android/data/remote/QuestionLocalization.kt#L17) and [Vue](../../frontend/src/utils/localizedQuestion.js) actually render translated question text and translated choices. Thus a semantic correction to translated assessed content can leave old mastery intact and let old translated snapshots qualify as current learning. This differs from explanation-only wording changes, which need not invalidate assessment evidence.
+Both [Android](../../../../Android/app/src/main/java/com/mukhtabir/android/data/remote/QuestionLocalization.kt#L17) and [Vue](../../../../frontend/src/utils/localizedQuestion.js) actually render translated question text and translated choices. Thus a semantic correction to translated assessed content can leave old mastery intact and let old translated snapshots qualify as current learning. This differs from explanation-only wording changes, which need not invalidate assessment evidence.
 
 **Recommendation:** define assessed translation/version provenance explicitly. Include relevant translated stems/choices and concept content, or retain a locale-specific assessed version. Decide what invalidates each learner's evidence rather than indiscriminately resetting it for every editorial change.
 
-**Related validation gap:** [translation normalization](../apps/questions/translation_validation.py#L16) bounds translated choice counts independently of the base question, and [question-write validation](../apps/questions/serializers/question_write.py#L63) does not enforce matching counts. Vue/Android guard against mismatched lengths by falling back to base choices, so the supported finding is a mixed-language display, not proven misgrading. Reject incompatible counts and document that translated options must retain the base option/index correspondence.
+**Related validation gap:** [translation normalization](../../../apps/questions/translation_validation.py#L16) bounds translated choice counts independently of the base question, and [question-write validation](../../../apps/questions/serializers/question_write.py#L63) does not enforce matching counts. Vue/Android guard against mismatched lengths by falling back to base choices, so the supported finding is a mixed-language display, not proven misgrading. Reject incompatible counts and document that translated options must retain the base option/index correspondence.
 
 ### 4. Medium — an immediate correct answer can bypass a relearning delay
 
-**Evidence:** [_apply_review](../apps/learning/srs_service.py#L28) prevents early correct practice from earning spaced credit only when the previous answer was also correct ([guard](../apps/learning/srs_service.py#L63)). A wrong answer resets repetitions and schedules a 10-minute/1-hour/6-hour/12-hour relearning step. A correct answer immediately afterward bypasses that guard and starts a successful interval, commonly one day. The [study queue](../apps/learning/services.py#L93) can select fragile/wrong questions without requiring their due time.
+**Evidence:** [_apply_review](../../../apps/learning/srs_service.py#L28) prevents early correct practice from earning spaced credit only when the previous answer was also correct ([guard](../../../apps/learning/srs_service.py#L63)). A wrong answer resets repetitions and schedules a 10-minute/1-hour/6-hour/12-hour relearning step. A correct answer immediately afterward bypasses that guard and starts a successful interval, commonly one day. The [study queue](../../../apps/learning/services.py#L93) can select fragile/wrong questions without requiring their due time.
 
 **Recommendation:** separate early practice from credited relearning steps. Require the scheduled step to become due before awarding retention/schedule advancement, or define an explicit relearning sequence. Preserve answer/confidence recording and deliberate immediate practice; those are useful even when no spaced credit is earned.
 
 ### 5. Medium — planner/streak credit and activity statistics disagree
 
-**Evidence:** [incremental study/recall](../apps/exams/services/exam_service.py#L741) feeds planner and streak effects before final completion. [Daily activity](../apps/exams/services/activity.py#L111) and [group activity](../apps/exams/services/activity.py#L136) derive from completed TestHistory/MasterExamAttempt rows. [Member advanced statistics](../apps/analytics/services/member_advanced.py#L64) count active days from completed sessions while also exposing the stored study streak.
+**Evidence:** [incremental study/recall](../../../apps/exams/services/exam_service.py#L741) feeds planner and streak effects before final completion. [Daily activity](../../../apps/exams/services/activity.py#L111) and [group activity](../../../apps/exams/services/activity.py#L136) derive from completed TestHistory/MasterExamAttempt rows. [Member advanced statistics](../../../apps/analytics/services/member_advanced.py#L64) count active days from completed sessions while also exposing the stored study streak.
 
 **Example:** answer questions and pause/discard today: mastery, planner and streak can increase, while completed-session charts/leaderboard activity remain zero. Conversely, completing an unanswered exam creates session activity without answered-learning streak credit.
 
@@ -95,15 +97,15 @@ Both [Android](../../Android/app/src/main/java/com/mukhtabir/android/data/remote
 
 ### 6. Medium improvement — automatic variety is allocation-based and question-ID-based
 
-**Evidence:** [exposure collection](../apps/exams/services/question_selection.py#L10) reads retained history result IDs and ordinary/master allocation IDs. [Selection](../apps/exams/services/question_selection.py#L47) materializes the full eligible pool and sorts by count/recency. This improves repeated category/tag/blueprint starts, but does not prove a question was displayed or answered.
+**Evidence:** [exposure collection](../../../apps/exams/services/question_selection.py#L10) reads retained history result IDs and ordinary/master allocation IDs. [Selection](../../../apps/exams/services/question_selection.py#L47) materializes the full eligible pool and sorts by count/recency. This improves repeated category/tag/blueprint starts, but does not prove a question was displayed or answered.
 
-Known limits: unseen screens allocated to an abandoned session count as exposed; deleting/replacing the only retained allocation/history can lose evidence. Retained SRS evidence is not consulted by this helper. Edited content keeps its old question-ID exposure while learning evidence resets. New variants of the same concept appear unseen. Every start scans the user's retained JSON history, and concurrent selections are not a global atomic reservation. These are also documented in the [existing selection policy](questionSelection.md).
+Known limits: unseen screens allocated to an abandoned session count as exposed; deleting/replacing the only retained allocation/history can lose evidence. Retained SRS evidence is not consulted by this helper. Edited content keeps its old question-ID exposure while learning evidence resets. New variants of the same concept appear unseen. Every start scans the user's retained JSON history, and concurrent selections are not a global atomic reservation. These are also documented in the [existing selection policy](../../contracts/questionSelection.md).
 
 **Recommendation:** add durable, version-aware exposure aggregates distinguishing allocated, presented, answered and mastered. Use indexed summaries for large histories. Add concept diversity within eligible category/tag/blueprint pools and respect clinical-case sibling grouping where appropriate. Preserve deliberate repetition for due reviews, manual selections and curated master exams.
 
 ### 7. Policy decision — full-bank permission gates the workflow, not total offline volume
 
-**Evidence:** the catalogue requires `tests.download_full_bank`; [pack requests](../apps/exams/views/offline_views.py#L33) default `full_bank` to false and [the extra gate](../apps/exams/views/offline_views.py#L113) applies only when that client flag is true. Ordinary selected packs still require `tests.start` and independent visibility/readiness checks. The authenticated [question list](../apps/questions/views/question_views.py#L147) can supply accessible public IDs.
+**Evidence:** the catalogue requires `tests.download_full_bank`; [pack requests](../../../apps/exams/views/offline_views.py#L33) default `full_bank` to false and [the extra gate](../../../apps/exams/views/offline_views.py#L113) applies only when that client flag is true. Ordinary selected packs still require `tests.start` and independent visibility/readiness checks. The authenticated [question list](../../../apps/questions/views/question_views.py#L147) can supply accessible public IDs.
 
 A caller denied the bulk capability can obtain successive allowed selected packs without the bulk flag, eventually collecting the accessible bank. This does not grant access to unauthorized questions; it means the permission currently controls the convenient catalogue/bulk workflow rather than enforcing a total-download entitlement.
 
@@ -111,9 +113,9 @@ A caller denied the bulk capability can obtain successive allowed selected packs
 
 ## Further learning improvements and explicit policy choices
 
-- **Concept coverage:** current concept mastery intentionally averages attempted variants; unseen variants contribute coverage information separately. One repeatedly practiced variant can therefore support a high mastery label at low coverage. Consider requiring minimum distinct variants or reporting qualified mastery/coverage together. See [mastery policy](../apps/learning/mastery.py).
+- **Concept coverage:** current concept mastery intentionally averages attempted variants; unseen variants contribute coverage information separately. One repeatedly practiced variant can therefore support a high mastery label at low coverage. Consider requiring minimum distinct variants or reporting qualified mastery/coverage together. See [mastery policy](../../../apps/learning/mastery.py).
 - **Quality of progress:** planner/leaderboard answered-volume counts can reward repeated easy practice even when SRS grants no spaced credit. Add unique concepts, due reviews completed and mastery improvement alongside volume; do not silently redefine existing counters.
-- **History retention:** `MasterExamAttempt.master_exam` uses CASCADE; deleting a master exam can remove completed attempts while durable learning/planner credit remains. If learner history is expected to survive administrative cleanup, archive completed exams or retain a standalone immutable completion record. See [attempt relationship](../apps/master_exams/models.py#L263).
+- **History retention:** `MasterExamAttempt.master_exam` uses CASCADE; deleting a master exam can remove completed attempts while durable learning/planner credit remains. If learner history is expected to survive administrative cleanup, archive completed exams or retain a standalone immutable completion record. See [attempt relationship](../../../apps/master_exams/models.py#L263).
 - **Adaptive selection:** offer an explicit “new coverage” versus “review weaknesses” balance. Use confidence/error patterns, due concepts and coverage inside the chosen filter; novelty alone is not a complete learning policy. Clinical cases and fixed exams need their own presentation rules.
 - **Recovery:** explicit bookmark set/unset and create-operation receipts would improve uncertain-write recovery. Row locks/transactions prevent races but cannot tell a disconnected client whether a toggle or duplication succeeded. Existing Android cross-cutting findings already track those client limits.
 - **Concurrent editing:** retain current locked rereads and optional revision checks. Where collaboration needs stale-edit rejection, make the relevant revision contract mandatory and align both clients. Locks alone do not reject a stale same-field replacement.

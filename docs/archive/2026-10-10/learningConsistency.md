@@ -1,6 +1,8 @@
+> Historical snapshot before the 2026-10-10 documentation reorganization. Current status: [documentation index](../../README.md). Do not use unchecked items here as the current queue.
+
 # Learning consistency implementation — 2026-10-09
 
-Implements the seven findings and learning/recovery improvements in [the review](backendLearningReview.md). Source completion is separate from schema preparation, compilation and live verification.
+Implements the seven findings and learning/recovery improvements in [the review](../reviews/2026-10-09-backendLearningReview.md). Source completion is separate from schema preparation, compilation and live verification.
 
 ## Durable evidence and assessed versions
 
@@ -44,7 +46,7 @@ Question and knowledge edits require `expected_version` even on partial updates;
 
 New tables: `LearningEvent`, `LearningDay`, `QuestionExposure`, `QuestionPresentation`, `OfflineQuestionGrant`, `QuestionWriteReceipt`. New fields: question stats fingerprint, SRS relearning flag, group version and archived-master History metadata. The database clear operation includes these records and resets retained users' streaks. No clear/setup/seed/migration/database action was executed by the agent.
 
-The user plans a fresh database. Follow [startup guidance](START_HERE.md): normal SQLite startup generates initial migrations only for model apps whose migration folders are absent. Deleting the database while keeping old migrations does not generate the new schema. `runserver` and interactive startup do not prepare schema. Existing data was not backfilled; this implementation targets the authorized fresh-schema workflow. Reload matching backend and rebuild matching Android only after schema preparation.
+The user plans a fresh database. Follow [startup guidance](../../guides/START_HERE.md): normal SQLite startup generates initial migrations only for model apps whose migration folders are absent. Deleting the database while keeping old migrations does not generate the new schema. `runserver` and interactive startup do not prepare schema. Existing data was not backfilled; this implementation targets the authorized fresh-schema workflow. Reload matching backend and rebuild matching Android only after schema preparation.
 
 Source checks: Python production AST, JavaScript/extracted Vue scripts, locale JSON, Android XML/resource references/placeholder agreement, Kotlin delimiters and diff whitespace. These do not establish Django imports, SQL/transactions, HTTP, Kotlin/Vue compilation, device/browser accessibility or runtime correctness. No builds, suites or migration work were run.
 

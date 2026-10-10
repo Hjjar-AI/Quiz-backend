@@ -252,7 +252,7 @@ def lesson_plan(key, method, backend_port, frontend_port, browser_host, data_roo
                     'Install Python, Node and pnpm using the instructions for your OS. '
                     'If .env mode selects SQLite, use requirements-sqlite.txt instead. '
                     'These optional commands create/install local dependencies when YOU run them. '
-                    'They do not initialize a database. For a new database, use docs/START_HERE.md '
+                    'They do not initialize a database. For a new database, use docs/guides/START_HERE.md '
                     'and the existing setup/deployment workflow before continuing.')
     lessons = [
         Lesson('Choose your setup',

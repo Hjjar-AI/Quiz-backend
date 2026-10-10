@@ -1,6 +1,8 @@
+> Historical source review; findings may have subsequent fixes. Use [current status](../../workDone.md) and [remaining work](../../workPlan.md) before acting on them.
+
 # Backend logic and model review — 2026-10-08
 
-Latest model/learning assessment and pending findings: [2026-10-09 review](backendLearningReview.md). The corrected findings below are historical work records, not an unimplemented defect list.
+Latest model/learning assessment and pending findings: [2026-10-09 review](2026-10-09-backendLearningReview.md). The corrected findings below are historical work records, not an unimplemented defect list.
 
 ## Additional relationship review — findings corrected (2026-10-08)
 

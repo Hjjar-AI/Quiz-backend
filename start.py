@@ -13,7 +13,7 @@
 No mode (or 'env') selects DB_ENGINE from .env. Explicit database modes override
 DB_ENGINE for this process. SQLite forwards to scripts/start_sqlite.py with its setup
 options; server databases use an existing schema without setup or seeding.
-Production HTTPS uses scripts/quiz_start.sh and docs/DEPLOYMENT.md instead.
+Production HTTPS uses scripts/quiz_start.sh and docs/guides/DEPLOYMENT.md instead.
 """
 
 import argparse

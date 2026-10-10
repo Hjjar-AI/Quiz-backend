@@ -1,5 +1,7 @@
 # Mukhtabir Backend
 
+
+Documentation: [current map](docs/README.md) · [remaining work](docs/workPlan.md) · [source status](docs/workDone.md). Archived findings are historical; current contracts and verification gates are linked from the map.
 Django REST backend: authentication/permissions, question bank, exams/study, analytics/admin, import/export and production Vue SPA serving.
 
 ## Main capabilities
@@ -24,11 +26,11 @@ Stack: Django/DRF, MariaDB/MySQL/SQLite, Memcached/Redis, pandas/openpyxl/xlrd, 
 - System packages required by the chosen database and export features
 - The sibling frontend when Django will serve the compiled SPA
 
-See `docs/DEPLOYMENT.md` for production OS packages and service configuration.
+See `docs/guides/DEPLOYMENT.md` for production OS packages and service configuration.
 
 ## Quick start: SQLite
 
-Interactive startup: `python start.py -i` chooses the database and can launch backend + frontend with matching ports/proxy. Uses existing databases without setup/seeding. Ports, database switching, Termux/Windows and diagnostics: [START_HERE.md](docs/START_HERE.md). CLI: `python start.py sqlite` or `.env`-selected `python start.py`.
+Interactive startup: `python start.py -i` chooses the database and can launch backend + frontend with matching ports/proxy. Uses existing databases without setup/seeding. Ports, database switching, Termux/Windows and diagnostics: [START_HERE.md](docs/guides/START_HERE.md). CLI: `python start.py sqlite` or `.env`-selected `python start.py`.
 
 ```bash
 python -m venv .venv
@@ -75,9 +77,9 @@ PostgreSQL: `DB_ENGINE=postgresql`, `DB_PORT=5432`, compatible `psycopg`/`psycop
 
 SQLite: `DB_ENGINE=sqlite`, `DB_NAME=SQLite/db.sqlite3`; relative paths use `backend/`. `python start.py` selects portable overlay; `manage.py` retains independent cache/storage. Explicit `python start.py sqlite` ignores server `DB_NAME` in `.env`.
 
-Database administration (native backup/restore/provisioning) supports MariaDB/MySQL/SQLite only; PostgreSQL configuration adds none. Startup/dependencies: [START_HERE.md](docs/START_HERE.md).
+Database administration (native backup/restore/provisioning) supports MariaDB/MySQL/SQLite only; PostgreSQL configuration adds none. Startup/dependencies: [START_HERE.md](docs/guides/START_HERE.md).
 
-Use `python manage.py bootstrap` for the guided MariaDB bootstrap flow. Read its `--help` and `docs/DEPLOYMENT.md` before supplying administrative database credentials.
+Use `python manage.py bootstrap` for the guided MariaDB bootstrap flow. Read its `--help` and `docs/guides/DEPLOYMENT.md` before supplying administrative database credentials.
 
 ## Configuration
 
@@ -167,7 +169,7 @@ pnpm build
 cd ../backend
 ```
 
-Production: Gunicorn behind HTTPS proxy; secure cookies, explicit hosts/origins, trusted proxy handling, shared cache, persistent media/backups and scheduled cleanup/sweepers. Never production `runserver`/SQLite. Guide: `docs/DEPLOYMENT.md`.
+Production: Gunicorn behind HTTPS proxy; secure cookies, explicit hosts/origins, trusted proxy handling, shared cache, persistent media/backups and scheduled cleanup/sweepers. Never production `runserver`/SQLite. Guide: `docs/guides/DEPLOYMENT.md`.
 
 ## Troubleshooting
 
@@ -186,4 +188,4 @@ See the [documentation index](docs/README.md) for all supporting guides.
 - [Agents.md](Agents.md) — local contributor constraints
 - [workPlan.md](docs/workPlan.md) — current planned work
 - [workDone.md](docs/workDone.md) — completed work log
-- [DEPLOYMENT.md](docs/DEPLOYMENT.md) — detailed deployment guide
+- [DEPLOYMENT.md](docs/guides/DEPLOYMENT.md) — detailed deployment guide
