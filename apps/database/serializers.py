@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from apps.questions.export_options import manual_export_limit
 
+class ImportUnlockSerializer(serializers.Serializer):
+    admin_password = serializers.CharField(trim_whitespace=False, max_length=1024, write_only=True)
+
+
 class RestoreBackupSerializer(serializers.Serializer):
     backup_name = serializers.CharField()
     admin_password = serializers.CharField()

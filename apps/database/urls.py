@@ -10,6 +10,7 @@ urlpatterns = [
     path('backups/', views.ListBackupsView.as_view(), name='db-backups-list'),
     path('restore/', views.RestoreBackupView.as_view(), name='db-restore'),
     path('clear/', views.ClearDatabaseView.as_view(), name='db-clear'),
+    path('import/unlock/', views.ImportLimitUnlockView.as_view(), name='db-import-unlock'),
     path('import/', views.ImportDatabaseView.as_view(), name='db-import'),
     path('import/telegram/', views.ImportTelegramView.as_view(), name='db-import-telegram'),
 

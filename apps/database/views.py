@@ -12,6 +12,7 @@ import logging
 from .services import BackupService
 from .serializers import (
     RestoreBackupSerializer,
+    ImportUnlockSerializer,
     ClearDatabaseSerializer,
     PdfExportRequestSerializer,
     QuestionExportRequestSerializer,
@@ -20,6 +21,7 @@ from apps.core.permissions import HasCapability
 from apps.core.utils import api_success, api_error
 from apps.core.audit import log_privileged_action
 from apps.core.reauth import admin_password_matches
+from apps.core.import_limits import import_unlock_status, unlock_import_limit, IMPORT_UNLOCK_SECONDS
 from apps.core.throttles import (
     ImportRateThrottle,
     BackupRateThrottle,
@@ -320,6 +322,28 @@ class ClearDatabaseView(APIView):
         )
 
         return api_success(data=result)
+
+
+class ImportLimitUnlockView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get_throttles(self):
+        return [AdminPasswordRateThrottle()] if self.request.method == 'POST' else []
+
+    def get(self, request):
+        return api_success(data=import_unlock_status(request))
+
+    def post(self, request):
+        serializer = ImportUnlockSerializer(data=request.data)
+        if not serializer.is_valid():
+            return api_error('كلمة مرور المدير الحالية مطلوبة', 400, details=serializer.errors)
+        if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
+            return api_error('كلمة مرور المدير غير صحيحة', 403)
+        status = unlock_import_limit(request)
+        log_privileged_action(request, action='db.import_limit_unlock',
+                              target_repr='database:imports', details={'duration_seconds': IMPORT_UNLOCK_SECONDS})
+        return api_success(data=status)
 
 
 class ImportDatabaseView(APIView):

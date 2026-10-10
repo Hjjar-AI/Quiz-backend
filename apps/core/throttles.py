@@ -1,5 +1,6 @@
 # backend/apps/core/throttles.py
 from rest_framework.throttling import SimpleRateThrottle
+from .import_limits import import_unlock_status
 
 
 # ═════════════════════════════════════════════════════════════════════
@@ -90,6 +91,13 @@ class CsrfRateThrottle(_IpScopedThrottle):
 
 class ImportRateThrottle(_IpScopedThrottle):
     scope = 'import'
+
+    def allow_request(self, request, view):
+        if import_unlock_status(request)['active']:
+            return True
+        # Preserve the normal history; bypassed requests neither consume nor
+        # reset it, and the original limit resumes when the grant expires.
+        return super().allow_request(request, view)
 
 
 class BackupRateThrottle(_IpScopedThrottle):
