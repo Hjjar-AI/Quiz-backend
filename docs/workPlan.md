@@ -1,0 +1,52 @@
+# Django remaining work
+
+## Backend strengthening verification
+
+- Reload/deploy matching source, then verify two-stage pack capture/preparation/finalization under concurrent content/category/tag/case/knowledge/image-name changes, closed-exam start, account/capability changes and selected-download quota races. Confirm failed preparation/revalidation consumes no grants, text-only/default byte ceilings persist, and image IO/encoding is outside transactions on the deployed database.
+- Verify offline receipt replay/conflict after response loss, concurrent UUID/source-session collisions and unrelated integrity failures retaining normal 500 diagnostics/rollback. Verify old receipt/revision hashes and caller payload compatibility, unchanged learning chronology and fresh answer withholding. Capture `django.server.offline` success/failure records and `X-Offline-Operation-ID` with permission, validation, changed-content, receipt and server failures; no token/body/user/image/answer data in these records. Server dispatch timing does not measure client delivery. No suite/database/HTTP runtime verification has been performed for these changes.
+
+Updated 2026-10-10. [Current source status](workDone.md) · [Project map](../../Android/docs/README.md).
+
+The seven rescan and eight deeper-review findings are source-complete. Do not reopen historical unchecked items without tracing current production source. Add new defects with reproduction, affected clients/contracts and priority.
+
+## Selected offline functionality verification
+
+- Deploy/reload the additive offline catalogue/pack backend, then rebuild/install only when authorized. Verify permission grant/revocation and direct handler/server checks, combined filters and frozen resume/reset, old whole-bank requests, text-only omission/legacy rejection/byte limits, changed/unchanged/unavailable material and preservation of old packs. Exercise completed offline review, multiple independent pack uploads/local answers/navigation, lost responses and durable receipts, serialized storage/capacity failures and account/server cleanup. Verify ordinary Sync during new answers/revisions/navigation, conflict/latest queue merges, duplicate Sync, local study finish/restart/exit/finalize/lost finish response, and unchanged timed-exam deadlines/recall. Include RTL/large text/TalkBack; source checks do not establish compilation/concurrency/device or HTTP behavior.
+
+## 2026-10-13 remaining presentation verification
+
+- Deploy/reload matching PDF palette source and verify themed body/card/alternate surfaces, accents/text, tables/charts and actual exported/printed output against Android/web. Keys/aliases are retained; source AST/colour comparisons do not establish rendering.
+
+## Pending verification
+
+- Verify the updated study prefetch on matching Android/backend: owned study bundles include frozen keys and original/translated explanations; exam bundles withhold both; single-page study/recall reads reveal keys only alongside allowed saved feedback. Check deleted/edited snapshot questions, legacy fallback, unseen exposure, other-account rejection and explicit queued-answer sync. No schema changes; AST/source checks do not establish live HTTP/device correctness.
+
+- Verify category merge and direct tag merge controls after matching backend/client rollout: all source links, planner targets/progress, overlapping blueprint weights, editor revisions, receipt/review recovery, concurrent changes, Arabic/English/RTL and large text. Source checks passed; HTTP, browser/device, concurrency and compilation remain unverified.
+
+
+- Verify backend-first full available counts and book-specific category/tag refinements on matching clients: >200 matching questions with the unchanged session cap, combined filters, changed/cleared books, read failure/Retry, rapid switches and saved setup. Source checks passed; compilation, template/browser/device and live API verification remain pending.
+
+- Deploy/verify ordinary owned-session `GET /exam/questions/`: frozen pages, reveal/feedback withholding, no unseen exposure, legacy/deleted questions and other-account rejection. Verify matching Android downloaded-answer sync with existing expected-index/slot writes, concurrent changes, lost responses, partial confirmation and unchanged server exam deadlines. No schema changes; source AST/resource checks do not establish live HTTP or locking correctness.
+
+- Verify the source-complete request-read ENETUNREACH and WSGI response-send ETIMEDOUT handlers after normal reload/restart: single transport entries, immediate failed-response connection cleanup, no unread-body drain/double iterable close, preserved HTTP/HEAD/static/414/application diagnostics and socket/database cleanup. Existing read ECONNREFUSED/ETIMEDOUT guard is evidenced active; keepalive values and new runtime behavior remain unverified. The user confirms frequent Android errors, HTTP configuration and different connection types. Correlate exact client errors/failed endpoints with actual Wi-Fi/mobile/VPN routes; identify TLS-to-HTTP senders separately. Curated samples lack frequency/duration/correlation; root cause remains unresolved. Verify reduced Android sync reads and lost-response/conflict/deadline recovery after matching rebuild.
+
+- Verify `/questions/source-books/` on the running PostgreSQL backend after reload: existing null source titles should be omitted without HTTP 500, with exact valid titles/counts still available in Vue/Android. Two regressions and the 18-test question API run pass on SQLite; no application data repair is required.
+
+- Verify member creation/duplication defaults and individual admin exceptions on the deployed backend and refreshed Vue/Android profiles. Existing stored member role grants remain authoritative; disable these in the permissions panel if still enabled. Focused 49-test SQLite verification passed; live PostgreSQL/browser/device behavior remains unverified.
+
+- Verify [temporary import-limit bypass](contracts/importLimits.md) on the deployed session/cache stack and both clients: correct/wrong passwords, separate sessions, expiry at ten minutes, retained hourly quota and explicit resumption after HTTP 429. Focused SQLite/frontend checks do not establish live HTTP/device behavior.
+
+- Expand behavioral coverage beyond the passing [982-test suite and coverage report](verification/backendCoverage.md), prioritizing its measured uncovered lines/branches. PostgreSQL line/branch coverage is 71.75%/56.87%; passing suites do not verify every function or deployed behavior. The user's requested complete existing-suite run and coverage report are complete.
+- Verify deployed PostgreSQL/cache/workflows against `mpsql` / `quiz_fresh`. The user reported successful bootstrap; the older `quiz` database remains separate recovery work. Follow the [PostgreSQL guide](guides/POSTGRESQL_SETUP.md).
+
+- Prepare/verify matching [schema and coordinated clients](contracts/schemaReadiness.md); no readiness is inferred from source or database deletion.
+- Execute the [shared functional matrix](../../Android/docs/verification/manualVerification.md), especially lost responses, account/attempt switches, receipts, permissions, revisions, imports/parent locking and planner late/midnight evidence.
+- Extend the passing [35-scenario PostgreSQL concurrency matrix](verification/concurrencyLimits.md) to deployed HTTP/multiple processes/production cache, sustained load and large mixed imports before claiming user capacity. Verify startup/session integration, exports/PDFs and deliberately isolated backup/restore/clear. PostgreSQL administration remains unsupported.
+
+Builds, suites, migrations/setup, destructive operator actions and versions follow [explicit-request policies](../Agents.md). The user's Python-test authorization covered these isolated suites and test database initialization; their results do not establish complete deployed readiness.
+
+## 2026-10-10 parity-review follow-up
+
+All seven native gaps, smaller workflow differences and shared web defects from the [latest parity review](../../Android/docs/archive/reviews/2026-10-10-androidParityReview.md) are source-complete. Verify the dedicated account set-state route, partial/unknown batch outcomes, clock-read ownership and the shared manual matrix after matching rollout. Old servers reject the new route without changing account state. Earlier completed fixes remain complete.
+
+Optional clinical-case translations are source-complete; verify matching `ClinicalCase.translations` schema and Android rollout, snapshots, editor recovery and legacy import/export behavior. See the [contract](contracts/caseTranslations.md). No schema setup has been performed for this extension.

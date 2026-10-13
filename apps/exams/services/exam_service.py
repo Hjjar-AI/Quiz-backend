@@ -1,0 +1,1181 @@
+# backend/apps/exams/services/exam_service.py
+
+import uuid
+from datetime import timedelta
+from typing import NamedTuple, Optional
+
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
+from django.db.models import Q, F
+
+from apps.users.models import User
+from apps.questions.models import Question
+from apps.questions.payloads import (
+    build_grading_snapshot,
+    case_block_from_live,
+    case_block_from_snapshot,
+    exam_question_payload,
+    resolve_choice_ceiling,
+    snapshot_image_url,
+    without_translation_explanations,
+)
+from apps.learning.srs_service import SRSService
+from apps.learning.confidence import normalize_confidence, is_confident
+from ..models import ExamSession, TestHistory, Blueprint
+
+
+def _max_choices():
+    return getattr(settings, 'MAX_CHOICES', 8)
+
+
+def _bounded_session_label(label):
+    """Bound display metadata only; question selection uses separate filters."""
+    if label is None:
+        return None
+    limit = min(
+        ExamSession._meta.get_field('tag').max_length,
+        TestHistory._meta.get_field('tag').max_length,
+    )
+    return label if len(label) <= limit else label[:limit - 1] + '…'
+
+
+class AnswerSubmission(NamedTuple):
+    """
+    Return value for `ExamService.submit_answer`.
+
+    Two fields travel together because they are two halves of the
+    same fact — which question was answered, and what the session
+    looked like after the write.
+
+    WHY THE ID IS CARRIED OUT OF THE SERVICE
+    ----------------------------------------
+    Before this type existed, `submit_answer` returned only the
+    `ExamSession`, and its one caller — `SubmitAnswerView.post` —
+    separately recomputed the answered question id from its own
+    PRE-lock snapshot of `session.current_index`. In the sequential
+    path the two agreed by construction. Under concurrent
+    submissions on the same session (two tabs, a network retry, a
+    browser-restore from a second device) the caller's pre-lock
+    snapshot could diverge from the row the lock eventually
+    serialized, and the study-mode feedback lookup —
+    `study_feedback(session, answered_qid, answer)` — would then
+    resolve an explanation for a question other than the one the
+    answer was actually written against.
+
+    Carrying the id out of the service removes the divergence
+    entirely: the id and the session are both read from the same
+    `locked` row, inside the same transaction, before any mutation
+    of `current_index` runs.
+
+    `answered_qid` is `None` when the submission was not directed
+    at a specific question — the current index was out of range
+    for this session's `question_ids` list. Callers that also
+    gate on `answer is not None` (the only caller does) will
+    short-circuit before touching this field in the common case.
+    """
+    session: ExamSession
+    answered_qid: Optional[int]
+
+
+class ExamTimeExpired(ValueError):
+    """Raised when an ordinary exam tries to mutate after its frozen limit."""
+
+
+class SessionProgressConflict(ValueError):
+    """The submitted question index no longer matches the locked session."""
+
+
+class ExamService:
+
+    # ═══════════════════════════════════════════════════════════════
+    # Answer-slot parsing — single source of truth
+    # ═══════════════════════════════════════════════════════════════
+    #
+    # The `session.answers` JSONField stores one entry per question
+    # index. Two shapes exist on disk:
+    #
+    #   • Modern  — {"answer": int, "confidence": 1|2|3,
+    #                "error_reason": str | None}
+    #   • Legacy  — a bare int (pre-dict-migration sessions)
+    #
+    # Before this consolidation, four methods independently branched
+    # on `isinstance(raw, dict)`:
+    #
+    #   • `_saved_answer`      — read the answer index
+    #   • `_saved_confidence`  — read the confidence flag
+    #   • `_unpack_answer`     — read all three (used by grade_exam)
+    #   • an inline block in `get_question`'s study-mode branch
+    #
+    # `_read_answer_slot` is now the ONE place that decides the
+    # dict-or-raw split. The four callers above delegate to it and
+    # apply their own semantics for the "missing slot" case.
+
+    @staticmethod
+    def _read_answer_slot(raw):
+        """
+        Parse one stored answer slot.
+
+        Returns (answer, confidence, error_reason) where any of the
+        three may be None:
+
+          • raw is None           → (None, None, None)
+          • raw is a dict         → the dict's values, with
+                                    confidence defaulted to True
+          • raw is a bare value   → (raw, None, None)
+                                    (legacy pre-dict shape)
+
+        `confidence=None` in the legacy/missing cases is deliberate:
+        each caller applies its own policy on top — `_unpack_answer`
+        for the grader defaults to True, `_saved_confidence` for the
+        API preserves None so the client can distinguish "the user
+        was never shown a confidence prompt" from "the user
+        confirmed their confidence."
+        """
+        if raw is None:
+            return None, None, None
+        if isinstance(raw, dict):
+            return (
+                raw.get('answer'),
+                normalize_confidence(raw.get('confidence', 3)),
+                raw.get('error_reason'),
+            )
+        return raw, None, None
+
+    @staticmethod
+    def _unpack_answer(raw, *, use_first_attempt=False):
+        """
+        Grader-facing wrapper: a missing or legacy slot implies
+        confidence=True (the historical default for sessions that
+        predate the confidence feature).
+        """
+        answer, confidence, error_reason = ExamService._read_answer_slot(raw)
+        if use_first_attempt and isinstance(raw, dict) and 'first_answer' in raw:
+            answer = raw.get('first_answer')
+            confidence = normalize_confidence(
+                raw.get('first_confidence', raw.get('confidence', 3)),
+            )
+            error_reason = raw.get('first_error_reason')
+        if confidence is None:
+            confidence = 3
+        return answer, confidence, error_reason
+
+    @staticmethod
+    def _saved_answer(session, index):
+        raw = session.answers.get(str(index))
+        answer, _, _ = ExamService._read_answer_slot(raw)
+        return answer
+
+    @staticmethod
+    def _saved_confidence(session, index):
+        raw = session.answers.get(str(index))
+        if isinstance(raw, dict) and raw.get('confidence_provided') is False:
+            return None
+        _, confidence, _ = ExamService._read_answer_slot(raw)
+        return confidence
+
+    @staticmethod
+    def _saved_pre_answer(session, index):
+        raw = session.answers.get(str(index))
+        if not isinstance(raw, dict):
+            return None
+        return raw.get('pre_answer') or None
+
+    @staticmethod
+    def start_session(
+        user, mode, question_ids, tag=None, blueprint=None,
+        duration_minutes=None,
+    ):
+        tag = _bounded_session_label(tag)
+        session_id = str(uuid.uuid4())
+
+        with transaction.atomic():
+            # Serialize starts per user. Without this lock, two concurrent
+            # requests could both delete the old row and then each create a
+            # new "current" session for the same mode.
+            User.objects.select_for_update().get(pk=user.pk)
+            previous = list(
+                ExamSession.objects
+                .select_for_update()
+                .filter(user=user, mode=mode)
+            )
+            for old_session in previous:
+                ExamService._record_pending_learning_locked(old_session)
+                old_session.delete()
+
+            session = ExamSession.objects.create(
+                session_id=session_id,
+                user=user,
+                mode=mode,
+                question_ids=question_ids,
+                tag=tag,
+                blueprint=blueprint,
+                duration_minutes=duration_minutes,
+                # Freeze grading inputs before the session is
+                # answerable. Any concurrent edit to a Question row
+                # after this point does not affect this session.
+                grading_snapshot=build_grading_snapshot(question_ids),
+            )
+
+            from apps.learning.exposure import record_allocations
+            record_allocations(user, session.grading_snapshot)
+
+        return session
+
+    @staticmethod
+    def elapsed_seconds(session, now=None):
+        """Return active time, including the current running segment."""
+        elapsed = max(0, int(session.accumulated_time or 0))
+        if session.is_active and session.started_at:
+            now = now or timezone.now()
+            elapsed += max(0, int((now - session.started_at).total_seconds()))
+        return elapsed
+
+    @staticmethod
+    def is_time_expired(session, now=None):
+        if session.mode != 'exam' or not session.duration_minutes:
+            return False
+        return ExamService.elapsed_seconds(session, now=now) >= (
+            int(session.duration_minutes) * 60
+        )
+
+    @staticmethod
+    def _snapshot_entry(session, question_id):
+        return (session.grading_snapshot or {}).get(str(question_id))
+
+    @staticmethod
+    def get_question(session, index, *, record_exposure=True, live_questions=None,
+                     include_study_feedback=False):
+        if index >= len(session.question_ids):
+            return None
+
+        qid = session.question_ids[index]
+        snapshot = ExamService._snapshot_entry(session, qid)
+
+        if live_questions is not None:
+            question = live_questions.get(qid)
+        else:
+            try:
+                question = Question.objects.select_related('case').get(id=qid)
+            except Question.DoesNotExist:
+                question = None
+
+        # Both the snapshot and the live row are gone — this can only
+        # happen for a session created before the snapshot column
+        # existed, whose question has since been deleted.
+        if question is None and not snapshot:
+            return None
+
+        if snapshot:
+            # Display the frozen payload. A question edited or deleted
+            # mid-session still renders identically to how it looked
+            # when the candidate opened it.
+            #
+            # The case block is produced by `case_block_from_snapshot`
+            # so it carries the same four keys as every other case
+            # block in the codebase (previously it omitted `title`).
+            payload = {
+                'id': qid,
+                'text': snapshot.get('question') or '',
+                'choices': snapshot.get('choices') or [],
+                'translations': snapshot.get('translations') or {},
+                'image_url': snapshot_image_url(snapshot),
+                'case': case_block_from_snapshot(snapshot.get('case')),
+            }
+            payload['verified'] = question.verified if question else False
+            payload['verified_by'] = question.verified_by if question else None
+        else:
+            payload = exam_question_payload(question)
+            payload['verified'] = question.verified
+            payload['verified_by'] = question.verified_by
+
+        if record_exposure:
+            from apps.learning.exposure import record_presentation
+            record_presentation(session.user_id, f'ordinary:{session.session_id}', qid, snapshot)
+        saved_answer = ExamService._saved_answer(session, index)
+        saved_pre_answer = ExamService._saved_pre_answer(session, index)
+        may_show_feedback = (
+            session.mode in ('study', 'recall')
+            and saved_answer is not None
+            and (session.mode != 'recall' or bool(saved_pre_answer))
+        )
+        saved_is_correct = None
+        saved_error_reason = None
+        download_feedback = include_study_feedback and session.mode == 'study'
+        if may_show_feedback or download_feedback:
+            payload['correct_answer'] = (snapshot.get('correct_answer') if snapshot
+                                         else question.correct_answer)
+        if download_feedback:
+            payload['explanation'] = (snapshot.get('explanation') if snapshot
+                                      else question.explanation)
+        if may_show_feedback:
+            # A read restores the latest saved answer's feedback without another
+            # submission. Use the same frozen grading source as answer writes;
+            # first-attempt grading is reserved for results/learning credit.
+            explanation, saved_is_correct, _ = ExamService.study_feedback(
+                session, qid, saved_answer,
+            )
+            payload['explanation'] = explanation
+            if saved_is_correct is False:
+                _, _, saved_error_reason = ExamService._read_answer_slot(
+                    session.answers.get(str(index)),
+                )
+        elif not download_feedback:
+            payload.pop('explanation', None)
+            payload['translations'] = without_translation_explanations(
+                payload.get('translations'),
+            )
+
+        if session.mode == 'recall' and not saved_pre_answer:
+            payload['choices'] = []
+            payload['choices_hidden'] = True
+            payload['translations'] = {
+                locale: {'question': content.get('question', '')}
+                for locale, content in (payload.get('translations') or {}).items()
+                if isinstance(content, dict)
+            }
+        else:
+            payload['choices_hidden'] = False
+
+        return {
+            'index': index,
+            'total': len(session.question_ids),
+            'question': payload,
+            'saved_answer': saved_answer,
+            'saved_is_correct': saved_is_correct,
+            'saved_error_reason': saved_error_reason,
+            'saved_confidence': ExamService._saved_confidence(session, index),
+            'saved_pre_answer': saved_pre_answer,
+            'tag': session.tag,
+            'blueprint_id': session.blueprint_id,
+        }
+
+    @staticmethod
+    def submit_answer(
+        session, answer, action, target_index=None, confidence=None,
+        error_reason=None, pre_answer=None, expected_index=None, expected_slot=None,
+    ):
+        """
+        Record one answer slot and advance the session's current index.
+
+        RETURNS
+        -------
+        `AnswerSubmission` — a named tuple of `(session, answered_qid)`.
+        See the class docstring for why the id travels with the
+        session.
+
+        CONCURRENCY
+        -----------
+        Wrapped in a `select_for_update()` transaction. Without the
+        lock, two concurrent submissions on the same session (two
+        tabs, a network retry, a browser-restore from a second
+        device) would both read the same `answers` JSONField, both
+        mutate their own in-memory copy, and both write with
+        `save(update_fields=['answers', 'current_index'])`. The
+        second write silently clobbered the first — the first
+        answer would be gone from the persisted dict even though the
+        response for it had already reported success.
+
+        The row lock serializes the read-modify-write at the database
+        layer, so the second submission sees the first one's result
+        before applying its own mutation.
+
+        ANSWERED-QUESTION ID
+        --------------------
+        The `answered_qid` in the return value is read from the
+        LOCKED row's `current_index`, taken BEFORE the mutation of
+        `current_index` runs. That ordering matters: if the id were
+        read after the increment/decrement, the id would refer to
+        the NEXT question rather than the one that was answered.
+
+        This is the whole reason the field is returned rather than
+        left for the caller to recompute — the caller's own
+        pre-lock snapshot can diverge from the locked row under
+        concurrent submissions, and the study-mode feedback lookup
+        must use the id of the question the answer was actually
+        written against.
+
+        REJECTION CASES
+        ---------------
+        • The row is gone (bare `ValueError`) — the session was
+          deleted between the caller's fetch and the lock. The
+          caller's own `get_object_or_404` makes this rare; the
+          check here is the second line of defence.
+        """
+        with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
+            locked = (
+                ExamSession.objects
+                .select_for_update()
+                .filter(pk=session.pk)
+                .first()
+            )
+            if locked is None:
+                raise ValueError('الجلسة غير موجودة أو تم إنهاؤها مسبقاً')
+            if ExamService.is_time_expired(locked):
+                raise ExamTimeExpired('انتهى وقت الامتحان. سيتم إنهاء الجلسة الآن')
+
+            idx = locked.current_index
+            if expected_index is not None and (expected_index != idx or not locked.is_active):
+                raise SessionProgressConflict('تغير تقدم الجلسة. حدّث الحالة قبل المحاولة مجدداً')
+            answered_qid = None
+            question = None
+
+            if idx < len(locked.question_ids):
+                answered_qid = locked.question_ids[idx]
+                question = Question.objects.filter(id=answered_qid).first()
+
+            if expected_slot is not None:
+                _, _, saved_reason = ExamService._read_answer_slot(locked.answers.get(str(idx)))
+                if locked.mode not in ('study', 'recall'):
+                    saved_reason = None
+                elif ExamService._saved_answer(locked, idx) is not None:
+                    _, correct, _ = ExamService.study_feedback(locked, answered_qid, ExamService._saved_answer(locked, idx))
+                    if correct is not False:
+                        saved_reason = None
+                actual_slot = {
+                    'answer': ExamService._saved_answer(locked, idx),
+                    'confidence': ExamService._saved_confidence(locked, idx),
+                    'pre_answer': ExamService._saved_pre_answer(locked, idx),
+                    'error_reason': saved_reason,
+                }
+                if actual_slot != expected_slot:
+                    raise SessionProgressConflict('تغيرت الإجابة المحفوظة. حدّث الحالة قبل المحاولة مجدداً')
+
+            existing_slot = locked.answers.get(str(idx))
+            existing_slot = existing_slot if isinstance(existing_slot, dict) else {}
+            clean_pre_answer = None
+            if pre_answer is not None:
+                clean_pre_answer = str(pre_answer).strip()[:1000]
+
+            if (
+                answer is not None
+                and locked.mode == 'recall'
+                and not (clean_pre_answer or existing_slot.get('pre_answer'))
+            ):
+                raise ValueError('اكتب إجابتك أولاً قبل إظهار الخيارات')
+
+            if answer is not None:
+                if isinstance(answer, bool) or not isinstance(answer, int) or answer < 1:
+                    raise ValueError('إجابة غير صالحة. يجب أن تكون رقماً موجباً')
+
+                # Choice ceiling — shared with the master-exam grader
+                # via `resolve_choice_ceiling`, so the fallback order
+                # (snapshot choices → live question choices →
+                # MAX_CHOICES) cannot drift between the two graders.
+                snap = None
+                if idx < len(locked.question_ids):
+                    snap = ExamService._snapshot_entry(locked, locked.question_ids[idx])
+                max_choice = resolve_choice_ceiling(snap, question)
+
+                if max_choice is not None:
+                    if answer > max_choice:
+                        raise ValueError(
+                            f'إجابة غير صالحة. هذا السؤال يحتوي على {max_choice} خيارات فقط'
+                        )
+                else:
+                    ceiling = _max_choices()
+                    if answer > ceiling:
+                        raise ValueError(
+                            f'إجابة غير صالحة. يجب أن تكون بين 1 و {ceiling}'
+                        )
+
+            if answer is not None or clean_pre_answer:
+                # NOTE: this in-place mutation only persists because
+                # `save(update_fields=['answers', ...])` forces the
+                # field to be written. Do NOT drop `'answers'` from
+                # the update_fields list — JSONField mutations are
+                # invisible to Django's change detection.
+                slot = dict(existing_slot)
+                if clean_pre_answer:
+                    slot['pre_answer'] = clean_pre_answer
+                if answer is not None:
+                    # Missing study confidence is deliberately conservative:
+                    # it is "uncertain", never silently promoted to certain.
+                    normalized_confidence = normalize_confidence(
+                        confidence,
+                        default=2 if locked.mode in ('study', 'recall') else 3,
+                    )
+                    slot['confidence_provided'] = (
+                        slot.get('confidence_provided', False)
+                        or confidence is not None
+                    )
+                    # The first submitted answer is immutable evidence for
+                    # study/recall learning. The editable ``answer`` remains
+                    # the user's latest choice, which preserves ordinary exam
+                    # review/navigation semantics.
+                    if 'first_answer' not in slot:
+                        slot['first_answered_at'] = timezone.now().isoformat()
+                        slot['first_answer'] = answer
+                        slot['first_confidence'] = normalized_confidence
+                        slot['first_error_reason'] = error_reason
+                        slot['first_answer_changed'] = False
+                    elif answer != slot.get('first_answer'):
+                        slot['first_answer_changed'] = True
+                    elif (
+                        not slot.get('first_answer_changed', False)
+                        and not slot.get('learning_recorded', False)
+                    ):
+                        # Confidence is collected after the answer in the UI.
+                        # Until the learner leaves the question, a save of the
+                        # same first answer refines that one learning event.
+                        slot['first_confidence'] = normalized_confidence
+                    if (
+                        error_reason is not None
+                        and slot.get('first_error_reason') in (None, '')
+                        and answer == slot.get('first_answer')
+                        and not slot.get('learning_recorded', False)
+                    ):
+                        # Reflection is collected after correctness feedback,
+                        # so it legitimately arrives in a later request.
+                        slot['first_error_reason'] = error_reason
+
+                    slot['answered_at'] = timezone.now().isoformat()
+                    slot['answer'] = answer
+                    slot['confidence'] = normalized_confidence
+                    # Navigation and confidence-only saves omit the reason;
+                    # omission must not erase a reflection saved earlier.
+                    if error_reason is not None:
+                        slot['error_reason'] = error_reason
+                locked.answers[str(idx)] = slot
+
+            if action == 'next':
+                locked.current_index += 1
+            elif action == 'previous' and idx > 0:
+                locked.current_index -= 1
+            elif action == 'goto' and target_index is not None:
+                if 0 <= target_index < len(locked.question_ids):
+                    locked.current_index = target_index
+
+            if locked.current_index != idx:
+                ExamService._record_pending_learning_locked(locked, indexes=[idx])
+
+            locked.save(update_fields=['answers', 'current_index'])
+            return AnswerSubmission(session=locked, answered_qid=answered_qid)
+
+    @staticmethod
+    def _merged_question_data(question, snapshot):
+        """
+        Return the field set `grade_exam` reads, sourced from the
+        snapshot when one exists and from the live Question row
+        otherwise. Returns None when neither source is available.
+
+        The dict shape is intentionally flat (not the nested payload
+        shape) because `grade_exam` only reads individual fields and
+        then repackages them into the results list.
+
+        The `case` block is normalized through
+        `case_block_from_snapshot` / `case_block_from_live` so a
+        session whose snapshot predates the addition of `title`
+        still produces the same four-key shape as a fresh one.
+        """
+        if snapshot:
+            return {
+                'learning_fingerprint': snapshot.get('learning_fingerprint'),
+                'knowledge_object_id': snapshot.get('knowledge_object_id'),
+                'id': question.id if question is not None else None,
+                'correct_answer': snapshot.get('correct_answer'),
+                'question': snapshot.get('question'),
+                'choices': snapshot.get('choices') or [],
+                'explanation': snapshot.get('explanation'),
+                'category_id': snapshot.get('category_id'),
+                'category_name': snapshot.get('category_name'),
+                'category_color': snapshot.get('category_color'),
+                'tag_names': snapshot.get('tag_names') or [],
+                'difficulty': snapshot.get('difficulty'),
+                'case': case_block_from_snapshot(snapshot.get('case')),
+                'image_url': snapshot_image_url(snapshot),
+            }
+        if question is None:
+            return None
+        from apps.learning.evidence import question_learning_fingerprint
+        return {
+            'learning_fingerprint': question_learning_fingerprint(question),
+            'knowledge_object_id': question.knowledge_object_id,
+            'id': question.id,
+            'correct_answer': question.correct_answer,
+            'question': question.question,
+            'choices': question.choices or [],
+            'explanation': question.explanation,
+            'category_id': question.category_id,
+            'category_name': question.category.name if question.category else None,
+            'category_color': question.category.color if question.category else None,
+            'tag_names': [tag.name for tag in question.tags.all()],
+            'difficulty': question.difficulty,
+            'case': case_block_from_live(question.case) if question.case_id else None,
+            'image_url': question.image.url if question.image else None,
+        }
+
+    @staticmethod
+    def grade_exam(
+        question_ids, answers, question_snapshots=None,
+        *, use_first_attempt=False,
+    ):
+        questions = {
+            question.id: question
+            for question in (
+                Question.objects
+                .filter(id__in=question_ids)
+                .select_related('case', 'category', 'knowledge_object')
+                .prefetch_related('tags')
+            )
+        }
+        correct_count = 0
+        present_count = 0
+        answered_count = 0
+        confidence_correct = 0
+        confidence_fragile = 0
+        results = []
+
+        for idx, qid in enumerate(question_ids):
+            q = questions.get(qid)
+            snapshot = (question_snapshots or {}).get(str(qid), {})
+            merged = ExamService._merged_question_data(q, snapshot)
+
+            # Neither the live row nor a snapshot exists — only
+            # possible for a legacy session predating the snapshot
+            # column. Skip, exactly as the previous implementation
+            # did.
+            if merged is None:
+                continue
+
+            correct_answer = merged['correct_answer']
+
+            present_count += 1
+            raw = answers.get(str(idx))
+            final_answer, final_confidence, final_error_reason = (
+                ExamService._unpack_answer(raw)
+            )
+            user_ans, confidence_score, error_reason = ExamService._unpack_answer(
+                raw,
+                use_first_attempt=use_first_attempt,
+            )
+            pre_answer = raw.get('pre_answer') if isinstance(raw, dict) else None
+
+            if user_ans is not None:
+                answered_count += 1
+
+            is_correct = (user_ans == correct_answer) if user_ans is not None else False
+
+            if is_correct:
+                correct_count += 1
+                if is_confident(confidence_score):
+                    confidence_correct += 1
+                else:
+                    confidence_fragile += 1
+
+            results.append({
+                'answered_at': raw.get('first_answered_at' if use_first_attempt else 'answered_at') if isinstance(raw, dict) else None,
+                'learning_fingerprint': merged.get('learning_fingerprint'),
+                'knowledge_object_id': merged.get('knowledge_object_id'),
+                'question_id': merged['id'] if merged['id'] is not None else qid,
+                'question': merged['question'],
+                'choices': merged['choices'],
+                'image_url': merged['image_url'],
+                'correct_answer': correct_answer,
+                'user_answer': user_ans,
+                'final_answer': final_answer,
+                'final_confidence_score': final_confidence,
+                'final_error_reason': final_error_reason,
+                'used_first_attempt': bool(use_first_attempt),
+                'is_correct': is_correct,
+                'confidence': is_confident(confidence_score),
+                'confidence_score': confidence_score,
+                'pre_answer': pre_answer,
+                'error_reason': error_reason if not is_correct else None,
+                'explanation': merged['explanation'],
+                'category_id': merged['category_id'],
+                'category_name': merged['category_name'],
+                'category_color': merged['category_color'],
+                'tag_names': merged['tag_names'],
+                'difficulty': merged['difficulty'],
+                'case': merged['case'],
+            })
+
+        accuracy = (correct_count / present_count * 100) if present_count else 0
+
+        return {
+            'questions': results,
+            'correct_count': correct_count,
+            'total_questions': present_count,
+            'answered_count': answered_count,
+            'accuracy': accuracy,
+            'confidence_correct': confidence_correct,
+            'confidence_fragile': confidence_fragile,
+        }
+
+    @staticmethod
+    def study_feedback(session, question_id, answer):
+        """
+        Return (explanation, is_correct, translated explanations) for the
+        study-mode answer
+        just submitted. Uses the session's frozen snapshot so mid-
+        session edits to the question cannot flip the feedback the
+        candidate sees. Falls back to the live row only when the
+        snapshot has no entry (legacy sessions).
+        """
+        if question_id is None:
+            return None, None, {}
+        snap = ExamService._snapshot_entry(session, question_id)
+        if snap:
+            explanation = snap.get('explanation')
+            correct = snap.get('correct_answer')
+            translations = snap.get('translations') or {}
+        else:
+            q = (
+                Question.objects
+                .filter(id=question_id)
+                .only('explanation', 'correct_answer', 'translations')
+                .first()
+            )
+            if q is None:
+                return None, None, {}
+            explanation = q.explanation
+            correct = q.correct_answer
+            translations = q.translations or {}
+
+        feedback_translations = {
+            locale: {'explanation': content.get('explanation') or ''}
+            for locale, content in translations.items()
+            if isinstance(content, dict)
+        }
+
+        if answer is None:
+            return explanation, None, feedback_translations
+        return explanation, (answer == correct), feedback_translations
+
+    @staticmethod
+    @transaction.atomic
+    def record_completion_side_effects(user, results, *, source_key, occurred_at=None):
+        from apps.learning.events import record_events
+        from apps.planning.services import StudyPlannerService
+        User.objects.select_for_update().only('id').get(pk=user.pk)
+        newly_recorded = record_events(user, results, source_key, occurred_at)
+        if newly_recorded:
+            StudyPlannerService.record_learning_progress(user, newly_recorded, occurred_at=occurred_at)
+            user.record_study_day()
+
+    @staticmethod
+    def _record_pending_learning_locked(session, indexes=None):
+        """Apply each study/recall first attempt exactly once.
+
+        The caller must hold a transaction/row lock when the session is
+        concurrently reachable. A marker lives in the answer slot itself,
+        making navigation retries, pause, finish, replacement, discard and
+        cleanup all idempotent without a second event table.
+        """
+        if session.mode not in ('study', 'recall'):
+            return []
+
+        allowed = set(indexes) if indexes is not None else None
+        pending = []
+        for index, question_id in enumerate(session.question_ids):
+            if allowed is not None and index not in allowed:
+                continue
+            raw = session.answers.get(str(index))
+            if raw is None:
+                continue
+            if isinstance(raw, dict):
+                slot = dict(raw)
+                answer = slot.get('first_answer', slot.get('answer'))
+            else:
+                answer = raw
+                slot = {
+                    'answer': raw,
+                    'first_answer': raw,
+                    'first_confidence': 2,
+                    'first_answer_changed': False,
+                }
+            if answer is None or slot.get('learning_recorded'):
+                continue
+            pending.append((index, question_id, slot))
+
+        if not pending:
+            return []
+
+        question_ids = [question_id for _, question_id, _ in pending]
+        answers = {
+            str(result_index): slot
+            for result_index, (_, _, slot) in enumerate(pending)
+        }
+        snapshots = {
+            str(question_id): snapshot
+            for question_id in question_ids
+            if (snapshot := ExamService._snapshot_entry(session, question_id))
+        }
+        result = ExamService.grade_exam(
+            question_ids,
+            answers,
+            question_snapshots=snapshots,
+            use_first_attempt=True,
+        )
+        ExamService.record_completion_side_effects(
+            session.user,
+            result['questions'],
+            source_key=f'ordinary:{session.session_id}',
+        )
+        for index, _, slot in pending:
+            slot['learning_recorded'] = True
+            session.answers[str(index)] = slot
+        return result['questions']
+
+    @staticmethod
+    def flush_session_learning(session):
+        """Public lock-safe flush used by lifecycle and cleanup paths."""
+        with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
+            locked = (
+                ExamSession.objects
+                .select_for_update()
+                .select_related('user')
+                .filter(pk=session.pk)
+                .first()
+            )
+            if locked is None:
+                return 0
+            recorded = ExamService._record_pending_learning_locked(locked)
+            if recorded:
+                locked.save(update_fields=['answers'])
+            return len(recorded)
+
+    @staticmethod
+    def discard_sessions(sessions):
+        """Flush visible learning, then delete the selected live sessions."""
+        selected = list(sessions.values_list('pk', 'user_id'))
+        session_ids = [pk for pk, _ in selected]
+        if not session_ids:
+            return 0
+        with transaction.atomic():
+            # Starts/resumes lock the learner before sessions. Use that same
+            # order for all writers, including multi-user cleanup batches.
+            list(User.objects.select_for_update().filter(
+                pk__in={user_id for _, user_id in selected},
+            ).order_by('pk').only('id'))
+            locked_sessions = list(
+                ExamSession.objects
+                .select_for_update()
+                .select_related('user')
+                .filter(pk__in=session_ids)
+            )
+            for session in locked_sessions:
+                ExamService._record_pending_learning_locked(session)
+            ExamSession.objects.filter(pk__in=session_ids).delete()
+        return len(locked_sessions)
+
+    @staticmethod
+    def finish_session(session, user):
+
+        with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
+            # Re-read under lock. If the row is gone, someone else
+            # finished this session concurrently.
+            locked = (
+                ExamSession.objects
+                .select_for_update()
+                .filter(pk=session.pk)
+                .first()
+            )
+            if locked is None:
+                raise ValueError('الجلسة غير موجودة أو تم إنهاؤها مسبقاً')
+            if not locked.is_active:
+                raise ValueError('الجلسة غير نشطة ولا يمكن إنهاؤها مرة أخرى')
+
+            started_at = locked.started_at or timezone.now()
+            total_time = ExamService.elapsed_seconds(locked)
+            if locked.mode == 'exam' and locked.duration_minutes:
+                total_time = min(total_time, int(locked.duration_minutes) * 60)
+
+            # Mark inactive BEFORE doing any write work, so a
+            # re-entrant call sees the change even if the delete has
+            # not yet run.
+            locked.is_active = False
+            locked.save(update_fields=['is_active'])
+
+            # Study/recall effects are committed incrementally. Flush the
+            # final visible question here; previously recorded slots carry an
+            # idempotency marker and are skipped.
+            ExamService._record_pending_learning_locked(locked)
+
+            result = ExamService.grade_exam(
+                locked.question_ids,
+                locked.answers,
+                question_snapshots=locked.grading_snapshot,
+                use_first_attempt=locked.mode in ('study', 'recall'),
+            )
+
+            if locked.mode not in ('study', 'recall'):
+                ExamService.record_completion_side_effects(user, result['questions'], source_key=f'ordinary:{locked.session_id}')
+            ExamService.save_history(
+                user,
+                locked.mode,
+                locked.tag,
+                result['total_questions'],
+                result['answered_count'],
+                result['correct_count'],
+                result['accuracy'],
+                total_time,
+                started_at,
+                result['questions'],
+                source_session_id=locked.session_id,
+            )
+            # Delete inside the transaction so a mid-flight failure
+            # rolls the delete back together with the results rows.
+            locked.delete()
+
+        return {
+            'results': result['questions'],
+            'correct_count': result['correct_count'],
+            'total_questions': result['total_questions'],
+            'accuracy': result['accuracy'],
+            'total_time': total_time,
+            'answered_count': result['answered_count'],
+            'confidence_correct': result['confidence_correct'],
+            'confidence_fragile': result['confidence_fragile'],
+        }
+
+    @staticmethod
+    def save_history(
+        user, mode, tag, total_questions, answered_count, correct_count,
+        accuracy, time_spent, started_at=None, results=None, *, source_session_id=None, completed_at=None,
+    ):
+        """
+        Write the history row for a finished session. This is now the
+        ONLY writer of session history — `save_session_result` was
+        removed during the StudySession/TestHistory consolidation.
+        """
+        tag = _bounded_session_label(tag)
+        history = TestHistory.objects.create(
+            user=user,
+            mode=mode,
+            tag=tag,
+            total_questions=total_questions,
+            answered_count=answered_count,
+            correct_count=correct_count,
+            accuracy=accuracy,
+            time_spent=time_spent,
+            started_at=started_at,
+            results=results or [],
+            source_session_id=source_session_id,
+            completed_at=completed_at or timezone.now(),
+        )
+        return history
+
+    @staticmethod
+    def completed_result(history):
+        """Read frozen results only; no grading, learning writes or session replay."""
+        rows = history.results or []
+        correct_rows = [row for row in rows if row.get('is_correct') is True]
+        return {
+            'source_session_id': history.source_session_id,
+            'history_id': history.id,
+            'mode': history.mode,
+            'results': rows,
+            'correct_count': history.correct_count,
+            'total_questions': history.total_questions,
+            'accuracy': history.accuracy,
+            'total_time': history.time_spent,
+            'answered_count': history.answered_count,
+            'confidence_correct': sum(row.get('confidence') is True for row in correct_rows),
+            'confidence_fragile': sum(row.get('confidence') is not True for row in correct_rows),
+        }
+
+    @staticmethod
+    def pause_session(session):
+        """
+        Mark a session inactive and fold the elapsed time into
+        `accumulated_time`.
+
+        CONCURRENCY
+        -----------
+        Wrapped in a `select_for_update()` transaction. Without the
+        lock, two concurrent pause calls (a double-click, a slow
+        network retry, two tabs) would both read the same
+        `accumulated_time` and `started_at`, both compute the same
+        elapsed interval, and both write the incremented value.
+        Depending on timing the interval could be double-counted
+        (each writer adds the same elapsed to a different starting
+        base and the second write wins), or the second write could
+        silently overwrite the first. The row lock serializes the
+        read-modify-write, and the terminal check on `is_active` is
+        re-run against the locked row so the second call is a no-op.
+
+        The caller's snapshot is returned unchanged if the row is
+        gone (the session was concurrently deleted by
+        `finish_session`). This mirrors the pre-lock behaviour — the
+        view responds 200 with the session id it had, and no write
+        occurs. There is nothing to pause.
+        """
+        with transaction.atomic():
+            User.objects.select_for_update().only('id').get(pk=session.user_id)
+            locked = (
+                ExamSession.objects
+                .select_for_update()
+                .filter(pk=session.pk)
+                .first()
+            )
+            if locked is None:
+                return session
+
+            if not locked.is_active:
+                return locked
+
+            if locked.started_at:
+                locked.accumulated_time += int(
+                    (timezone.now() - locked.started_at).total_seconds()
+                )
+            ExamService._record_pending_learning_locked(locked)
+            locked.is_active = False
+            # While paused, started_at is the pause timestamp. Cleanup can
+            # therefore expire a session one day after it was paused instead
+            # of one day after it was originally created.
+            locked.started_at = timezone.now()
+            locked.save(update_fields=[
+                'answers', 'accumulated_time', 'is_active', 'started_at',
+            ])
+            return locked
+
+    @staticmethod
+    def resume_session(session):
+        """
+        Transition a paused session back to active.
+
+        CONCURRENCY
+        -----------
+        Wrapped in a `select_for_update()` transaction. The pre-lock
+        version was a bare read-modify-write:
+
+            if session.is_active: return session
+            session.is_active = True
+            session.started_at = timezone.now()
+            session.save(update_fields=['is_active', 'started_at'])
+
+        Two concurrent resumes both read `is_active = False`, both
+        set `started_at = now()`, and the second write wins — the
+        timer starts marginally later in the persisted row. That
+        alone is a minor discrepancy, but the same shape races
+        unpredictably against `pause_session`: the final DB state
+        depends on write ordering and on which stale snapshot each
+        caller held, and is not predictable from the code. The lock
+        serializes the two transitions against the same row and
+        makes the outcome deterministic.
+
+        The terminal check on `is_active` is re-run against the
+        locked row, so a second concurrent resume that acquires the
+        lock after the first is a no-op — it returns the
+        already-active session without rewriting `started_at`.
+
+        If a concurrent start/finish already removed the requested row,
+        the service raises instead of returning a stale object that would
+        falsely look resumed to the client.
+        """
+        with transaction.atomic():
+            User.objects.select_for_update().get(pk=session.user_id)
+            same_mode = list(
+                ExamSession.objects
+                .select_for_update()
+                .select_related('user')
+                .filter(user_id=session.user_id, mode=session.mode)
+            )
+            locked = next((row for row in same_mode if row.pk == session.pk), None)
+            if locked is None:
+                raise ValueError('الجلسة لم تعد متاحة للاستئناف')
+
+            # Older data may contain more than one paused row. Resuming one
+            # makes it canonical and safely retires every sibling.
+            for sibling in same_mode:
+                if sibling.pk == locked.pk:
+                    continue
+                ExamService._record_pending_learning_locked(sibling)
+                sibling.delete()
+
+            if locked.is_active:
+                return locked
+
+            locked.is_active = True
+            locked.started_at = timezone.now()
+            locked.save(update_fields=['is_active', 'started_at'])
+            return locked
+
+
+class BlueprintService:
+    @staticmethod
+    def select_question_ids(blueprint, count, filters=None, user=None, strategy='coverage'):
+        from math import floor, isfinite
+
+        from django.db.models import Count as DjCount
+        from apps.questions.services.question_service import QuestionService
+
+        if count <= 0:
+            return []
+
+        from .question_selection import question_exposure_scores, select_varied_question_ids
+        exposure = question_exposure_scores(user)
+        from collections import Counter
+        selected_concepts = Counter()
+        base = QuestionService.get_questions(filters, user=None)
+        weights = {
+            entry.category_id: entry.weight
+            for entry in blueprint.weight_entries.all()
+        }
+
+        if not weights:
+            return select_varied_question_ids(base, count, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
+
+        normalized = {}
+        for cid, w in weights.items():
+            try:
+                weight = float(w)
+            except (ValueError, TypeError):
+                continue
+            if isfinite(weight) and weight > 0:
+                normalized[cid] = weight
+
+        if not normalized:
+            return select_varied_question_ids(base, count, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
+
+        # Relative weights are scale invariant. Scaling first prevents finite
+        # inputs such as 1e308 from overflowing during summation/allocation.
+        largest_weight = max(normalized.values())
+        normalized = {cid: weight / largest_weight for cid, weight in normalized.items()}
+        total_weight = sum(normalized.values())
+        available = dict(
+            base.order_by()
+            .filter(category_id__in=normalized.keys())
+            .values_list('category_id')
+            .annotate(c=DjCount('id'))
+        )
+
+        # Largest-remainder allocation guarantees that quotas sum to the
+        # requested count. Independent round() calls could allocate zero
+        # questions for count=1 with two equal categories, or over-allocate
+        # in other distributions.
+        ideals = {
+            cid: count * weight / total_weight
+            for cid, weight in normalized.items()
+        }
+        quotas = {cid: floor(value) for cid, value in ideals.items()}
+        unallocated = count - sum(quotas.values())
+        for cid in sorted(
+            normalized,
+            key=lambda key: (ideals[key] - quotas[key], normalized[key]),
+            reverse=True,
+        )[:unallocated]:
+            quotas[cid] += 1
+
+        selected = []
+        selected_set = set()
+        for cid, target in quotas.items():
+            avail = available.get(cid, 0)
+            take = min(target, avail)
+            if take > 0:
+                ids = select_varied_question_ids(base.filter(category_id=cid), take, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
+                selected.extend(ids)
+                selected_set.update(ids)
+
+        if len(selected) < count:
+            remaining = count - len(selected)
+            extras = select_varied_question_ids(base.exclude(id__in=selected_set), remaining, user=user, exposure=exposure, strategy=strategy, selected_concepts=selected_concepts)
+            selected.extend(extras)
+
+        from .question_selection import order_case_groups
+        return order_case_groups(selected)[:count]

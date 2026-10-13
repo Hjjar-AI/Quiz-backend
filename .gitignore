@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+.DS_Store
+**migrations/
+/exports/
+/cert/
+/backups/
+/media/
+/uploads/
+/staticfiles/
+.env
+/SQLite/
+/import_data/
+/scripts/content

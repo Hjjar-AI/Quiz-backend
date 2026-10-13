@@ -1,0 +1,21 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('offline/catalog/', views.OfflineCatalogView.as_view(), name='offline-study-catalog'),
+    path('offline/packs/', views.OfflinePackView.as_view(), name='offline-study-pack'),
+    path('offline/completions/', views.OfflineCompletionView.as_view(), name='offline-study-completion'),
+    path('start/<str:mode>/', views.StartSessionView.as_view(), name='start-session'),
+    path('question/', views.GetQuestionView.as_view(), name='get-question'),
+    path('questions/', views.GetSessionQuestionsView.as_view(), name='get-session-questions'),
+    path('answer/', views.SubmitAnswerView.as_view(), name='submit-answer'),
+    path('results/', views.FinishSessionView.as_view(), name='finish-session'),
+    path('pause/', views.PauseSessionView.as_view(), name='pause-session'),
+    path('resume/', views.ResumeSessionView.as_view(), name='resume-session'),
+    path('discard/', views.DiscardProgressView.as_view(), name='discard-progress'),
+    path('status/', views.StatusView.as_view(), name='status'),
+    path('history/', views.TestHistoryView.as_view(), name='test-history'),
+
+    path('blueprints/', views.BlueprintListView.as_view(), name='blueprint-list'),
+    path('blueprints/<int:blueprint_id>/', views.BlueprintDetailView.as_view(), name='blueprint-detail'),
+]

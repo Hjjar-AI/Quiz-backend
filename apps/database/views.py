@@ -1,0 +1,602 @@
+# backend/apps/database/views.py
+
+from rest_framework.views import APIView
+from rest_framework.negotiation import DefaultContentNegotiation
+from rest_framework.exceptions import MethodNotAllowed
+from django.http import FileResponse
+from django.conf import settings
+import mimetypes
+import json
+import logging
+
+from .services import BackupService
+from .serializers import (
+    RestoreBackupSerializer,
+    ImportUnlockSerializer,
+    ClearDatabaseSerializer,
+    PdfExportRequestSerializer,
+    QuestionExportRequestSerializer,
+)
+from apps.core.permissions import HasCapability
+from apps.core.utils import api_success, api_error
+from apps.core.audit import log_privileged_action
+from apps.core.reauth import admin_password_matches
+from apps.core.import_limits import import_unlock_status, unlock_import_limit, IMPORT_UNLOCK_SECONDS
+from apps.core.throttles import (
+    ImportRateThrottle,
+    BackupRateThrottle,
+    ClearDatabaseRateThrottle,
+    AdminPasswordRateThrottle,
+    PdfExportRateThrottle,
+)
+from apps.questions.services import ImportService, ExportService
+from apps.questions.services.content_quality import (
+    build_data_quality_report,
+    flag_data_quality_report,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _import_file_or_error(request, *, max_size=None):
+    file = request.FILES.get('file')
+    if not file:
+        return None, api_error('لم يتم اختيار ملف', 400)
+    size_limit = settings.MAX_UPLOAD_SIZE if max_size is None else max_size
+    if file.size > size_limit:
+        return None, api_error(
+            f'حجم الملف يتجاوز الحد الأقصى '
+            f'({size_limit // (1024 * 1024)} ميجابايت)',
+            400,
+        )
+    return file, None
+
+
+_EXPORT_CONTENT_TYPES = {
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.xls': 'application/vnd.ms-excel',
+    '.csv': 'text/csv; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.pdf': 'application/pdf',
+}
+
+
+def _export_response(result, content_type=None):
+    if 'error' in result:
+        return api_error(result['error'], result['code'])
+    if content_type is None:
+        suffix = str(result.get('filename') or '').lower()
+        suffix = '.' + suffix.rsplit('.', 1)[-1] if '.' in suffix else ''
+        content_type = _EXPORT_CONTENT_TYPES.get(suffix)
+        if content_type is None:
+            content_type = mimetypes.guess_type(result['filename'])[0]
+        content_type = content_type or 'application/octet-stream'
+    return FileResponse(
+        open(result['filepath'], 'rb'),
+        as_attachment=True,
+        filename=result['filename'],
+        content_type=content_type,
+    )
+
+
+# Every view in this module is gated by 'admin.database'. The
+# capability is deliberately singular rather than split per operation:
+# anyone who can clear the database can also read its size, and
+# granting one without the other would be a footgun. If a future
+# deployment needs read-only database info, split the capability and
+# change required_capability on DatabaseInfoView only.
+
+
+# ── Export filter extraction ──────────────────────────────────────
+#
+# The two export views below accept the same optional filter set the
+# question list endpoint accepts. Every key is read verbatim from the
+# query string; `flat_export._build_export_queryset` is the single
+# place that validates and applies them.
+#
+# Only keys that are actually present in the query string are
+# forwarded. A missing key is NOT sent as an empty string — the
+# queryset builder already treats `None` and `''` as "no filter", so
+# the two are equivalent, but omitting the key keeps the log line
+# shorter and prevents a future reader from thinking the caller
+# intended to filter on empty.
+_EXPORT_FILTER_KEYS = (
+    'search',
+    'difficulty',
+    'category_ids',
+    'tag',
+    'tags_filter',
+)
+
+
+def _extract_export_filters(request):
+    """
+    Return the filter dict for an export request, or None when no
+    filter keys were provided at all.
+    """
+    filters = {}
+    for key in _EXPORT_FILTER_KEYS:
+        value = request.query_params.get(key)
+        if value is None:
+            continue
+        value = str(value).strip()
+        if value:
+            filters[key] = value
+    return filters or None
+
+
+def _extract_export_title(request):
+    """
+    Read the optional `title` query param.
+
+    The title is NOT a filter — it does not narrow the queryset. It is
+    a document label that PDF export uses for the header banner and
+    the generated filename. The other three formats ignore it.
+
+    Stripped and length-capped (150 chars, matching the cap in
+    `pdf_export.export_questions_pdf`) so a runaway title in the query
+    string cannot push the header banner across the whole first page.
+
+    Returns None when the param is absent or empty. `ExportService`
+    treats None as "use the default title".
+    """
+    raw = request.query_params.get('title')
+    if not raw:
+        return None
+    cleaned = str(raw).strip()
+    if not cleaned:
+        return None
+    return cleaned[:150]
+
+
+def _extract_export_theme(request):
+    """Read the client-local theme used by PDF export."""
+    raw = request.query_params.get('theme')
+    if not raw:
+        return None
+    return str(raw).strip().lower()[:32] or None
+
+
+def _extract_export_locale(request):
+    """Return a supported PDF locale, preferring the request language."""
+    raw = request.query_params.get('locale')
+    if not raw:
+        raw = getattr(request, 'LANGUAGE_CODE', None)
+    value = str(raw or 'ar').strip().lower().split('-', 1)[0]
+    return value if value in {'ar', 'en'} else 'ar'
+
+
+def _post_question_export(request, fmt, *, verified_only):
+    if fmt not in {'pdf', 'excel', 'csv', 'json'}:
+        raise MethodNotAllowed('POST')
+    serializer_class = PdfExportRequestSerializer if fmt == 'pdf' else QuestionExportRequestSerializer
+    serializer = serializer_class(data=request.data, context={'format': fmt})
+    if not serializer.is_valid():
+        return api_error(
+            'خيارات التصدير غير صالحة',
+            400,
+            details=serializer.errors,
+        )
+
+    data = serializer.validated_data
+    result = ExportService.export_questions(
+        fmt=fmt,
+        verified_only=verified_only,
+        filters=data.get('filters') or None,
+        title=data.get('title') or None,
+        theme=data.get('theme') or None,
+        locale=data.get('locale') or _extract_export_locale(request),
+        front_matter=data.get('front_matter') or None,
+        pdf_mode=data.get('pdf_mode', 'study'),
+        answer_layout=data.get('answer_layout', 'inline'),
+        question_ids=data.get('question_ids'),
+        user=request.user,
+    )
+    return _export_response(result)
+
+
+class DatabaseInfoView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get(self, request):
+        result = BackupService.get_info()
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+        return api_success(data=result)
+
+
+class DataQualityReportView(APIView):
+    """Inspect question-bank quality and optionally create moderation flags."""
+
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get(self, request):
+        return api_success(data=build_data_quality_report())
+
+    def post(self, request):
+        report = build_data_quality_report()
+        created = flag_data_quality_report(report, request.user)
+        # Re-scan after flag creation so the response immediately reflects
+        # `has_open_quality_flag=True`; otherwise the UI would invite the
+        # admin to submit the same flags again until the next manual refresh.
+        report = build_data_quality_report()
+        report['flags_created'] = created
+        log_privileged_action(
+            request,
+            action='db.data_quality_flag',
+            target=None,
+            target_repr='question-bank:data-quality',
+            details={'flags_created': created},
+        )
+        return api_success(data=report)
+
+
+class CreateBackupView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    throttle_classes = [BackupRateThrottle]
+
+    def post(self, request):
+        result = BackupService.create_backup()
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+        return api_success(data=result, code=201)
+
+
+class ListBackupsView(APIView):
+    """
+    List backup files on disk.
+
+    On a backend the service does not support, `list_backups()`
+    returns `{'error': ..., 'code': 500}`. That shape is passed
+    through `api_error` so the client sees the documented error
+    envelope, matching every other view in this module.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get(self, request):
+        result = BackupService.list_backups()
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+        return api_success(data=result)
+
+
+class RestoreBackupView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    throttle_classes = [BackupRateThrottle, AdminPasswordRateThrottle]
+
+    def post(self, request):
+        serializer = RestoreBackupSerializer(data=request.data)
+        if not serializer.is_valid():
+            return api_error('بيانات الطلب غير مكتملة', 400, details=serializer.errors)
+
+        if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
+            return api_error('كلمة مرور المدير غير صحيحة', 403)
+
+        backup_name = serializer.validated_data['backup_name']
+        result = BackupService.restore_backup(backup_name)
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+
+        log_privileged_action(
+            request,
+            action='db.restore',
+            target=None,
+            target_repr=f'backup:{backup_name}',
+            details={'backup_name': backup_name},
+        )
+
+        return api_success(data=result)
+
+
+class ClearDatabaseView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    throttle_classes = [ClearDatabaseRateThrottle, AdminPasswordRateThrottle]
+
+    def post(self, request):
+        serializer = ClearDatabaseSerializer(data=request.data)
+        if not serializer.is_valid():
+            return api_error(
+                'كلمة مرور المدير الحالية مطلوبة', 400,
+                details=serializer.errors,
+            )
+
+        if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
+            return api_error('كلمة مرور المدير غير صحيحة', 403)
+
+        result = BackupService.clear_database()
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+
+        log_privileged_action(
+            request,
+            action='db.clear',
+            target=None,
+            target_repr='database:all_content',
+            details={'safety_backup_created': True},
+        )
+
+        return api_success(data=result)
+
+
+class ImportLimitUnlockView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get_throttles(self):
+        return [AdminPasswordRateThrottle()] if self.request.method == 'POST' else []
+
+    def get(self, request):
+        return api_success(data=import_unlock_status(request))
+
+    def post(self, request):
+        serializer = ImportUnlockSerializer(data=request.data)
+        if not serializer.is_valid():
+            return api_error('كلمة مرور المدير الحالية مطلوبة', 400, details=serializer.errors)
+        if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
+            return api_error('كلمة مرور المدير غير صحيحة', 403)
+        status = unlock_import_limit(request)
+        log_privileged_action(request, action='db.import_limit_unlock',
+                              target_repr='database:imports', details={'duration_seconds': IMPORT_UNLOCK_SECONDS})
+        return api_success(data=status)
+
+
+class ImportDatabaseView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    throttle_classes = [ImportRateThrottle]
+
+    def post(self, request):
+        file, error = _import_file_or_error(request)
+        if error is not None:
+            return error
+
+        result = ImportService.import_file(file, request.user.username)
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+        return api_success(data=result, code=201)
+
+
+class ImportTelegramView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    throttle_classes = [ImportRateThrottle]
+
+    def post(self, request):
+        file, error = _import_file_or_error(request)
+        if error is not None:
+            return error
+
+        result = ImportService.import_telegram(file, request.user.username)
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+        return api_success(data=result, code=201)
+
+
+class _PdfExportThrottleMixin:
+    """Throttle only the expensive PDF branch, not flat file downloads."""
+
+    def get_throttles(self):
+        if self.kwargs.get('fmt') == 'pdf':
+            return [PdfExportRateThrottle()]
+        return super().get_throttles()
+
+
+class ExportDatabaseView(_PdfExportThrottleMixin, APIView):
+    """
+    Flat export of every question (or every matching question, when
+    filters are supplied in the query string).
+
+    QUERY PARAMS
+    ------------
+    Filters (narrow the queryset — see flat_export._build_export_queryset):
+
+        search=<text>              min length 2
+        difficulty=easy,medium     comma-separated
+        category_ids=<int>,<int>   positive ints
+        tag=<name>                 single tag
+        tags_filter=<name>,<name>  multi-tag (OR within the list)
+
+    Document label (PDF only, ignored by Excel/CSV/JSON):
+
+        title=<text>               max 150 chars; becomes the PDF
+                                   header and the filename's
+                                   descriptive segment
+
+        theme=<name>               active client theme; validated by the
+                                   PDF renderer, defaults to Stone
+
+    When no params are supplied, the response is byte-identical to the
+    pre-filter export.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get(self, request, fmt):
+        filters = _extract_export_filters(request)
+        title = _extract_export_title(request)
+        theme = _extract_export_theme(request)
+        locale = _extract_export_locale(request)
+        result = ExportService.export_questions(
+            fmt=fmt,
+            verified_only=False,
+            filters=filters,
+            title=title,
+            theme=theme,
+            locale=locale,
+        )
+        return _export_response(result)
+
+    def post(self, request, fmt):
+        """Generate configurable exports without putting selections in a URL."""
+        return _post_question_export(request, fmt, verified_only=False)
+
+
+class ExportVerifiedDatabaseView(_PdfExportThrottleMixin, APIView):
+    """
+    Flat export of verified questions only. Accepts the same filter
+    set and `title` param as ExportDatabaseView; the two are composed
+    with AND.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+
+    def get(self, request, fmt):
+        filters = _extract_export_filters(request)
+        title = _extract_export_title(request)
+        theme = _extract_export_theme(request)
+        locale = _extract_export_locale(request)
+        result = ExportService.export_questions(
+            fmt=fmt,
+            verified_only=True,
+            filters=filters,
+            title=title,
+            theme=theme,
+            locale=locale,
+        )
+        return _export_response(result)
+
+    def post(self, request, fmt):
+        return _post_question_export(request, fmt, verified_only=True)
+
+
+class StateExportNegotiation(DefaultContentNegotiation):
+    def filter_renderers(self, renderers, format):
+        # "format" selects the exported file, not a DRF response renderer.
+        # Keep Accept-header negotiation and validate the file format in the view.
+        return renderers
+
+
+class ExportStateView(APIView):
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    content_negotiation_class = StateExportNegotiation
+
+    def get(self, request):
+        include_images = request.query_params.get('include_images', 'true') != 'false'
+        verified_only = request.query_params.get('verified_only', 'false') == 'true'
+        fmt = request.query_params.get('format', 'json').lower().strip()
+        filters = _extract_export_filters(request)
+
+        result = ExportService.export_state(
+            include_images=include_images,
+            verified_only=verified_only,
+            fmt=fmt,
+            filters=filters,
+        )
+        return _export_response(result)
+
+
+class ImportStateView(APIView):
+    """
+    Import a state envelope. Requires 'admin.database'.
+
+    Body (multipart):
+        file            the .json envelope or full .xlsx workbook (required)
+        mode            'merge' (default) | 'replace'
+        dry_run         'true' | 'false' (default) — write nothing,
+                        return counts only
+        analyze         'true' | 'false' (default) — write nothing,
+                        return counts AND the list of unknown author
+                        names. This drives the frontend's mapping
+                        modal: the modal is shown only when the
+                        response carries a non-empty
+                        `unknown_authors` list.
+        mapping         JSON string, e.g.
+                        {"Ali": {"action": "user", "user_id": 12},
+                         "Sara": {"action": "stub"}}
+                        Per-call decisions for unknown author names.
+                        Overrides any persisted ExternalAuthorMapping
+                        for this import AND is persisted at the end so
+                        the next import of the same source skips the
+                        prompt.
+        conflict_strategy
+                        keep_local | use_imported | review
+        conflict_resolutions
+                        JSON object keyed by question UUID. Values are
+                        keep_local or use_imported; used by review mode.
+        admin_password  required when mode='replace' AND
+                        dry_run=false AND analyze=false
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'admin.database'
+    throttle_classes = [ImportRateThrottle, AdminPasswordRateThrottle]
+
+    def post(self, request):
+        # Use the same bound as state export.  A successfully generated state
+        # artifact is therefore always accepted by this application version.
+        state_limit = min(
+            settings.MAX_STATE_TRANSFER_SIZE,
+            settings.MAX_UPLOAD_SIZE,
+        )
+        file, error = _import_file_or_error(request, max_size=state_limit)
+        if error is not None:
+            return error
+
+        mode = request.data.get('mode', 'merge')
+        dry_run = request.data.get('dry_run', 'false') == 'true'
+        analyze = request.data.get('analyze', 'false') == 'true'
+
+        mapping = None
+        mapping_raw = request.data.get('mapping')
+        if mapping_raw:
+            try:
+                parsed = json.loads(mapping_raw)
+            except (TypeError, ValueError):
+                return api_error('صيغة mapping غير صالحة', 400)
+            if not isinstance(parsed, dict):
+                return api_error('mapping يجب أن يكون كائناً', 400)
+            mapping = parsed
+
+        conflict_strategy = request.data.get('conflict_strategy') or None
+        conflict_resolutions = None
+        resolutions_raw = request.data.get('conflict_resolutions')
+        if resolutions_raw:
+            try:
+                conflict_resolutions = json.loads(resolutions_raw)
+            except (TypeError, ValueError):
+                return api_error('صيغة conflict_resolutions غير صالحة', 400)
+            if not isinstance(conflict_resolutions, dict):
+                return api_error('conflict_resolutions يجب أن يكون كائناً', 400)
+
+        is_write = not dry_run and not analyze
+        if mode == 'replace' and is_write:
+            admin_password = request.data.get('admin_password') or ''
+            if not admin_password_matches(request.user, admin_password):
+                return api_error('كلمة مرور المدير غير صحيحة', 403)
+
+        result = ImportService.import_state(
+            file,
+            request.user.username,
+            mode=mode,
+            dry_run=dry_run,
+            analyze=analyze,
+            mapping=mapping,
+            conflict_strategy=conflict_strategy,
+            conflict_resolutions=conflict_resolutions,
+        )
+        if 'error' in result:
+            return api_error(result['error'], result['code'])
+
+        if is_write:
+            log_privileged_action(
+                request,
+                action='db.import_state',
+                target=None,
+                target_repr='state:questions',
+                details={
+                    'mode': mode,
+                    'counts': result.get('counts', {}),
+                    'mapping_applied': bool(mapping),
+                },
+            )
+
+        return api_success(
+            data=result,
+            code=200 if (dry_run or analyze) else 201,
+        )

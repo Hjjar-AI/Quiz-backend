@@ -1,0 +1,14 @@
+# Temporary import-limit bypass
+
+The normal import throttle remains `10/hour`, keyed by client IP and shared by question-file, Telegram and portable-state imports. An authenticated user with `admin.database` can reauthenticate using their own current administrator password to bypass **this import throttle** for ten minutes, scoped to their current login session and user ID.
+
+- `GET /api/v1/database/import/unlock/` returns the current session grant as `{active, expires_at, expires_in}`. `expires_at` is server epoch seconds or `null`; `expires_in` is remaining seconds.
+- `POST /api/v1/database/import/unlock/` accepts JSON `{admin_password}`. A correct password starts/renews a 600-second grant. Missing/invalid input returns 400; a wrong password or missing capability returns 403. This endpoint remains reachable when imports have reached their quota. Password attempts use the existing `admin_password` throttle (50/hour per authenticated user).
+- Grants live in the authenticated Django session, contain only user ID/expiry, and expire server-side. Other users/sessions at the same IP retain their normal quota. Logout/new login and normal session invalidation revoke access to the grant; account capability/authentication checks still run on every import.
+- Bypassed requests do not consume or clear normal import history. At expiry, the ordinary hourly history resumes, so an already exhausted quota can still reject imports until its original window ends. Correct-password reauthentication can start another ten-minute grant.
+- File-size, format, ownership/capability, package replace-password and other endpoint-specific protections remain enforced. The bypass never retries an import or grants import permissions.
+- Successful grants emit `db.import_limit_unlock` audit records with the duration and no password. Passwords are neither stored in grants nor saved in client drafts.
+
+Vue and Android show password unlock controls and clear entered passwords after submitting. Both recover uncertain unlock responses using GET rather than automatic POST replay. The server is authoritative for expiry; client success feedback expires locally. A confirmed HTTP 429 import rejection stays queued and can be explicitly retried after unlocking, followed by the unsent files; confirmed successes are never resent. Lost/unknown import responses retain their existing review behavior.
+
+Deploy the backend endpoint before the updated clients. No model/schema or dependency change is required. Focused verification: 12 SQLite backend tests (eight new grant/rejection/isolation/expiry cases and existing throttle tests) and 96 frontend tests passed. Source AST, Vue/JavaScript parsing, Kotlin lexical/resource references, bilingual XML/JSON and diff whitespace checks passed. Android builds/suites, live browser/device/session/HTTP/cache integration and deployed expiry remain unverified.

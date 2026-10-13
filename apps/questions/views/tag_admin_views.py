@@ -1,0 +1,355 @@
+# backend/apps/questions/views/tag_admin_views.py
+
+from apps.core.revisions import expected_revision, check_revision, settings_revision, lock_revision
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
+from django.db.models import Count, Q
+from django.db.models.deletion import ProtectedError
+from django.shortcuts import get_object_or_404
+
+from ..models import Tag, Question, QuestionTag, TAG_NAME_MAX_LENGTH
+from ..serializers import TagRenameSerializer, TagMergeSerializer
+from apps.core.permissions import HasCapability
+from apps.core.utils import api_success, api_error
+from apps.core.audit import log_privileged_action
+
+
+def _validate_tag_name(raw, *, required_message):
+    """
+    Validate a user-supplied tag name.
+
+    Returns (cleaned_name, None) on success, or (None, error_message)
+    on failure.
+
+    `required_message` is a parameter because the two callers
+    address the field differently in their user-facing text:
+
+      • `AdminTagRenameView.post` — "الاسم الجديد مطلوب" (the NEW
+        name is required).
+      • `AdminTagMergeView.post` — "الوسم الهدف مطلوب" (the TARGET
+        tag is required).
+
+    The two messages are not interchangeable: the rename view has a
+    `old_name` from the URL and needs to distinguish "you did not
+    provide the new name" from "the tag you are renaming does not
+    exist"; the merge view has a list of source tags and needs to
+    distinguish "you did not provide a target" from "you did not
+    provide any source".
+
+    The `length` failure message is shared — the same Arabic string
+    was hand-copied into both views before this helper existed.
+
+    Both serializer fields (`TagRenameSerializer.new_name`,
+    `TagMergeSerializer.target_tag`) are bare `CharField()` WITHOUT
+    a `max_length` argument, deliberately. If DRF short-circuited
+    an over-long name here it would emit its own English message
+    ("Ensure this field has no more than N characters") and this
+    view would never see the request — the caller would get a
+    different error for the same rule depending on which endpoint
+    they hit. See the docstring on `serializers/tag.py` for the
+    full rationale.
+    """
+    cleaned = '' if raw is None else str(raw).strip()
+    if not cleaned:
+        return None, required_message
+    if len(cleaned) > TAG_NAME_MAX_LENGTH:
+        return None, (
+            f'اسم الوسم يجب ألا يتجاوز {TAG_NAME_MAX_LENGTH} حرفاً'
+        )
+    return cleaned, None
+
+
+class TagListView(APIView):
+    """
+    User-facing tag list with counts. Read-only; any authenticated
+    user.
+
+    The former `AdminTagListView` endpoint has been deleted — it
+    returned a byte-identical payload behind a stricter capability
+    gate. The admin tag panel now calls this endpoint.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        visible = Q(questiontag__question__in=Question.objects.visible_to(request.user))
+        tags = Tag.objects.annotate(
+            count=Count('questiontag', filter=visible),
+            verified_count=Count(
+                'questiontag__question',
+                filter=visible & Q(questiontag__question__verified=True),
+            ),
+        )
+        data = [
+            {
+                'name': tag.name,
+                'count': tag.count,
+                'verified_count': tag.verified_count,
+            }
+            for tag in tags
+        ]
+        return api_success(data={'items': data, 'total': len(data)})
+
+
+class AdminTagTreeView(APIView):
+    """
+    Hierarchical tag tree built from the self-referential `parent`
+    FK. Requires 'questions.manage_tags'.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'questions.manage_tags'
+
+    @transaction.atomic
+    def get(self, request):
+        version = settings_revision('_tag_hierarchy_lock')
+        tags = list(Tag.objects.all())
+        tag_map = {
+            tag.id: {'id': tag.id, 'name': tag.name, 'children': []}
+            for tag in tags
+        }
+        roots = []
+        for tag in tags:
+            if tag.parent_id is None:
+                roots.append(tag_map[tag.id])
+            else:
+                parent = tag_map.get(tag.parent_id)
+                if parent:
+                    parent['children'].append(tag_map[tag.id])
+        check_revision(settings_revision('_tag_hierarchy_lock'), version)
+        return api_success(data={'tree': roots, 'version': version})
+
+
+class AdminTagRenameView(APIView):
+    """
+    Rename a tag. The rename is a single UPDATE — existing QuestionTag
+    rows reference the tag by id, so they follow automatically.
+    Requires 'questions.manage_tags'.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'questions.manage_tags'
+
+    @transaction.atomic
+    def post(self, request, old_name):
+        from apps.users.models import User
+        User.objects.select_for_update().get(pk=request.user.pk)
+        from ..hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
+        body = TagRenameSerializer(data=request.data)
+        if not body.is_valid():
+            return api_error('بيانات غير صالحة', 400, details=body.errors)
+
+        new_name, err = _validate_tag_name(
+            body.validated_data['new_name'],
+            required_message='الاسم الجديد مطلوب',
+        )
+        if err is not None:
+            return api_error(err, 400)
+
+        tag = get_object_or_404(Tag, name=old_name)
+        if Tag.objects.filter(name=new_name).exists():
+            return api_error('الوسم الجديد موجود مسبقاً', 400)
+
+        tag.name = new_name
+        tag.save(update_fields=['name'])
+        log_privileged_action(request, 'tag.rename', target=tag,
+                              details={'old_name': old_name})
+        return api_success(message='تمت إعادة التسمية')
+
+
+class AdminTagDeleteView(APIView):
+    """
+    Delete a tag. QuestionTag rows referencing it are removed via
+    cascade; the questions themselves are untouched.
+    Requires 'questions.manage_tags'.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'questions.manage_tags'
+
+    @transaction.atomic
+    def delete(self, request, name):
+        from apps.users.models import User
+        User.objects.select_for_update().get(pk=request.user.pk)
+        from ..hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
+        tag = get_object_or_404(Tag, name=name)
+        tag_id = tag.id
+        try:
+            tag.delete()
+        except ProtectedError:
+            return api_error('الوسم مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409)
+        log_privileged_action(request, 'tag.delete', target_repr=name,
+                              details={'tag_id': tag_id})
+        return api_success(message='تم حذف الوسم')
+
+
+class AdminTagMergeView(APIView):
+    """
+    Move every QuestionTag row from each source tag to the target tag,
+    then delete the source tags. Requires 'questions.manage_tags'.
+
+    The target tag is created if it does not exist. A source entry
+    equal to the target is skipped.
+
+    NON-QUESTION RELATIONSHIPS (fix — issue: merge drops them)
+    ---------------------------------------------------------
+    Before this revision, the merge moved `QuestionTag` rows and then
+    deleted each source tag. That cascade silently dropped every
+    OTHER relationship the tag participated in:
+
+      • `StudyPlanner.target_tags` — a planner whose tag list
+        contained a merged source tag silently lost that
+        subscription.
+      • `Tag.parent` — every child of a merged source tag had its
+        `parent_id` set to NULL.
+
+    The merge now handles both relations BEFORE deleting the source.
+    """
+    permission_classes = [HasCapability]
+    required_capability = 'questions.manage_tags'
+
+    @transaction.atomic
+    def post(self, request):
+        from apps.users.models import User
+        User.objects.select_for_update().get(pk=request.user.pk)
+        from ..hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
+        body = TagMergeSerializer(data=request.data)
+        if not body.is_valid():
+            return api_error('بيانات غير صالحة', 400, details=body.errors)
+
+        source_tags = body.validated_data['source_tags']
+
+        # Source-empty check runs first — the original order. When a
+        # caller sends neither sources nor a target, the error they
+        # see is the source one, matching the pre-refactor behaviour.
+        if not source_tags:
+            return api_error('يجب اختيار وسم واحد على الأقل للدمج', 400)
+
+        target_name, err = _validate_tag_name(
+            body.validated_data['target_tag'],
+            required_message='الوسم الهدف مطلوب',
+        )
+        if err is not None:
+            return api_error(err, 400)
+
+        target, _ = Tag.objects.get_or_create(name=target_name)
+        target = Tag.objects.select_for_update().get(pk=target.pk)
+
+        affected_qids=Question.objects.filter(Q(tags__name__in=source_tags) | Q(knowledge_object__tags__name__in=source_tags)).values('pk')
+        list(Question.objects.select_for_update().filter(pk__in=affected_qids).order_by('pk').values_list('pk',flat=True))
+
+        # Lazy import — `planning.models` has no dependency on
+        # `questions.models`, but keeping the import inside the method
+        # avoids adding a `questions → planning` edge at module load.
+        from apps.planning.models import StudyPlanner
+
+        # Merging an ancestor into one of its descendants would make the
+        # target its own ancestor when the source's children are reparented.
+        # Validate every source before moving anything so the operation cannot
+        # partially complete and then discover a cycle.
+        sources = list(
+            Tag.objects.select_for_update().filter(name__in={
+                str(name).strip() for name in source_tags
+                if str(name).strip() and str(name).strip() != target_name
+            }).order_by('pk')
+        )
+        ancestor_ids = set()
+        current = target
+        while current is not None and current.pk not in ancestor_ids:
+            ancestor_ids.add(current.pk)
+            current = (Tag.objects.select_for_update().filter(pk=current.parent_id).first()
+                       if current.parent_id else None)
+        if any(src.pk in ancestor_ids for src in sources):
+            return api_error(
+                'لا يمكن دمج وسم أب ضمن أحد الوسوم التابعة له',
+                400,
+            )
+
+        moved = 0
+        reparented = 0
+        plans_migrated = 0
+        sources_processed = []
+        changed_planners=set()
+
+        sources_by_name = {tag.name: tag for tag in sources}
+        for raw_src_name in source_tags:
+            src_name = str(raw_src_name).strip()
+            src = sources_by_name.pop(src_name, None)
+            if src is None:
+                continue
+
+            # Idempotency guard: if a previous merge already consumed
+            # this source name, skip it.
+            if src.id == target.id:
+                continue
+
+            with transaction.atomic():
+                # 1. Reparent children.
+                children_updated = Tag.objects.filter(parent=src).update(parent=target)
+                reparented += children_updated
+
+                # 2. Migrate planner subscriptions.
+                affected_planners = (
+                    StudyPlanner.objects
+                    .select_for_update()
+                    .filter(pk__in=StudyPlanner.target_tags.through.objects.filter(
+                        tag_id=src.pk,
+                    ).values_list('studyplanner_id', flat=True))
+                    .order_by('pk')
+                )
+                for planner in affected_planners:
+                    from apps.planning.services import StudyPlannerService
+                    StudyPlannerService._scope(planner)
+                    changed_planners.add(planner.pk)
+                    planner._scope_update_in_progress=True
+                    planner.target_tags.add(target)
+                    planner.target_tags.remove(src)
+                    plans_migrated += 1
+
+                # Knowledge objects share this taxonomy too. Preserve their
+                # associations before deleting the source tag's through rows.
+                for knowledge_object in src.knowledge_objects.all():
+                    knowledge_object.tags.add(target)
+
+                # 3. Move QuestionTag rows, preserving the
+                #    (question, tag) unique constraint.
+                for qt in src.questiontag_set.all():
+                    if not QuestionTag.objects.filter(
+                        question_id=qt.question_id, tag=target,
+                    ).exists():
+                        QuestionTag.objects.create(
+                            question_id=qt.question_id, tag=target,
+                        )
+                    moved += 1
+
+                # 4. Delete the source.
+                src.delete()
+
+            sources_processed.append(src_name)
+
+        from apps.planning.services import StudyPlannerService
+        for planner in StudyPlanner.objects.select_for_update().filter(pk__in=changed_planners).order_by('pk'):
+            StudyPlannerService.record_scope_change(planner,retain_today=True)
+        log_privileged_action(
+            request,
+            'tag.merge',
+            target=target,
+            details={
+                'sources': sources_processed,
+                'question_links_moved': moved,
+                'children_reparented': reparented,
+                'planners_migrated': plans_migrated,
+            },
+        )
+        return api_success(
+            data={
+                'moved': moved,
+                'reparented': reparented,
+                'planners_migrated': plans_migrated,
+                'sources': sources_processed,
+            },
+            message=f'تم دمج {len(sources_processed)} وسم',
+        )

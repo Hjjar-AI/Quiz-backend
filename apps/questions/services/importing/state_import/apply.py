@@ -1,0 +1,678 @@
+# backend/apps/questions/services/importing/state_import/apply.py
+"""
+Write pass for the state-import path.
+
+REPLACE MODE — IN-PLACE UPSERT (revised)
+----------------------------------------
+Replace mode used to delete every public question and then re-create
+each envelope entry under a fresh integer PK. That unconditionally
+CASCADEd every `Bookmark`, `QuestionFlag`, `QuestionRating`, and
+`UserQuestionAttempt` row pointing at any public question — because
+all four FKs use `on_delete=CASCADE` on `Question` — and the same
+data could not be re-associated afterward because the re-import
+produces the same uuids but new PKs. An admin running a "restore
+the question bank from backup" import therefore silently wiped
+every user's bookmarks, flags, ratings, and SRS schedule for the
+affected questions.
+
+Replace mode is now an upsert keyed on `uuid`:
+
+  • An envelope entry whose uuid already exists locally is UPDATED
+    in place — the integer PK is preserved, so every through-FK row
+    referencing that question survives (bookmarks, flags, ratings,
+    SRS attempts).
+  • An envelope entry whose uuid is new is CREATED.
+  • A local PUBLIC question (`is_draft=False`) whose uuid is NOT in
+    the envelope is an ORPHAN and is deleted. This is the only place
+    the CASCADE to Bookmark / Flag / Rating / SRS fires, and it
+    fires only for public questions the envelope does not cover —
+    which is the honest meaning of "replace the public bank."
+  • A local DRAFT whose uuid is NOT in the envelope SURVIVES. Drafts
+    are per-author working state; the admin running a state import
+    to replace the question bank is replacing the public bank, not
+    every other author's drafts. This matches the previous
+    revision's documented intent.
+
+The MasterExamQuestion pre-flight is scoped to the orphan set: a
+live exam that references a question the envelope is merely
+updating does not block the import (the FK target survives), but a
+live exam that references an orphan does, because PROTECT on the
+through-FK would refuse the orphan delete.
+
+SINGLE CREATE HELPER (fix — two byte-identical 18-line blocks)
+--------------------------------------------------------------
+The "merge mode, new uuid → create" branch and the "replace mode,
+uuid not found → CREATE" branch used to inline the same
+`Question.objects.create(...)` call, 40 lines apart, byte-identical
+in all 16 keyword arguments. Any future field addition to that
+create path had to be made twice or it silently applied to only one
+mode. Both call sites now use `_create_question_from_entry`.
+"""
+
+import logging
+from collections import Counter
+from datetime import date, datetime
+
+from django.db import transaction
+from django.utils import timezone
+
+from ....models import (
+    Question,
+    Category,
+    Tag,
+    ClinicalCase,
+    KnowledgeObject,
+    clean_tag_name,
+    CASE_STEM_MAX_LENGTH,
+    CASE_GROUP_MAX_LENGTH,
+)
+from ..author_resolution import resolve_author
+from ..image_ingest import apply_image
+from ...content_quality import (
+    flag_import_quality_issues,
+    prepare_import_content,
+    quality_key,
+)
+from ..validators import MAX_CHOICES, parse_difficulty
+from ....translation_validation import normalize_translations
+from .constants import STATE_IMPORT_MODE_REPLACE
+from .conflicts import use_imported_for
+from .identity import _find_existing_by_uuid_or_key
+from .plan import prepared_question, canonical_uuid
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_optional_datetime(value):
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except (TypeError, ValueError):
+        return None
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed
+
+
+def _parse_optional_date(value):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def _restore_question_timestamps(question, entry):
+    """Restore source audit timestamps without triggering ``auto_now``."""
+    updates = {}
+    for field in ('created_at', 'updated_at'):
+        parsed = _parse_optional_datetime(entry.get(field))
+        if parsed is not None:
+            updates[field] = parsed
+    if updates:
+        Question.objects.filter(pk=question.pk).update(**updates)
+
+
+def _create_question_from_entry(
+    *,
+    entry,
+    prepared,
+    difficulty,
+    category,
+    case,
+    knowledge_object,
+    author,
+    acting_user,
+    verified_at,
+):
+    """
+    Create one `Question` from a validated envelope entry.
+
+    This is the ONE place the create call lives. Before it existed,
+    the same call was inlined in `_apply_state` twice — merge mode
+    and replace mode each had their own copy. The two were
+    byte-identical in every keyword; only the surrounding `if/else`
+    branch differed. Any future field addition to the create path
+    would have had to be made in both, or it would silently apply
+    to only one of the two modes.
+
+    Ownership is always the acting admin. Draft ownership is the
+    acting admin when the imported question is a draft, and NULL
+    otherwise. Authorship is whatever `resolve_author` returned.
+    """
+    is_draft = prepared['is_draft']
+    return Question.objects.create(
+        uuid=prepared['uuid'],
+        question=prepared['question'],
+        choices=prepared['choices'],
+        correct_answer=prepared['correct_answer'],
+        explanation=entry.get('explanation') or '',
+        source=(entry.get('source') or '')[:200] or None,
+        source_document=(entry.get('source_document') or '')[:500] or None,
+        source_page=entry.get('source_page') or None,
+        translations=normalize_translations(
+            entry.get('translations') or {}, max_choices=MAX_CHOICES,
+        ),
+        difficulty=difficulty,
+        category=category,
+        knowledge_object=knowledge_object,
+        last_revised_at=(
+            _parse_optional_date(entry.get('last_revised_at'))
+            or timezone.localdate()
+        ),
+        case=case,
+        case_order=entry.get('case_order') or None,
+        is_draft=is_draft,
+        draft_owner=acting_user if is_draft else None,
+        verified=bool(entry.get('verified', False)),
+        verified_by=entry.get('verified_by') or None,
+        verified_at=verified_at,
+        verification_notes=entry.get('verification_notes') or None,
+        authored_by=author,
+        owned_by=acting_user,
+        updated_by=(entry.get('updated_by') or '')[:80] or None,
+        times_answered=entry.get('times_answered', 0),
+        times_correct=entry.get('times_correct', 0),
+        version=entry.get('version', 1),
+    )
+
+
+def _apply_state(
+    payload,
+    username,
+    acting_user,
+    mode,
+    uuid_to_user,
+    name_to_user,
+    persisted_mappings,
+    call_mappings,
+    conflict_strategy='keep_local',
+    conflict_resolutions=None,
+):
+    """
+    Write the envelope to the database. Runs inside the caller's outer
+    transaction so a failure here rolls back the mapping decisions
+    persisted by persist_mapping_decisions too.
+
+    Returns a counts dict that includes author-resolution breakdown
+    (local / mapped / unresolved) on top of the preview counters.
+
+    COUNTERS
+    --------
+    questions_created    — new rows (uuid not present locally)
+    questions_updated    — in-place updates (replace mode only)
+    questions_skipped    — merge mode only: uuid already local
+    questions_deleted    — replace mode only: local PUBLIC orphans removed
+    drafts_created       — subset of questions_created (drafts)
+    drafts_updated       — subset of questions_updated (drafts)
+    drafts_skipped       — subset of questions_skipped (drafts)
+    images_imported      — questions that received an image blob
+
+    TRUST RECOMPUTE
+    ---------------
+    The previous revision called `acting_user.update_trust_score()`
+    only. But per-question authorship in this path comes from
+    `resolve_author()`, which returns a *different* local user
+    whenever the envelope's author matches an existing account by
+    uuid, name, or a stored mapping.
+
+    The write pass now collects every author whose question set was
+    touched (created, updated, or removed), and calls
+    `QuestionService._recompute_author_trust` on that set, matching
+    the batch recompute that `bulk_verify` / `bulk_unverify` already
+    use for the same reason. The acting user is always included.
+    """
+    counts = {
+        'categories_created': 0,
+        'categories_updated': 0,
+        'tags_created': 0,
+        'cases_created': 0,
+        'knowledge_objects_created': 0,
+        'knowledge_objects_updated': 0,
+        'questions_created': 0,
+        'questions_updated': 0,
+        'questions_skipped': 0,
+        'questions_deleted': 0,
+        'images_imported': 0,
+        'drafts_created': 0,
+        'drafts_updated': 0,
+        'drafts_skipped': 0,
+        'questions_with_local_author': 0,
+        'questions_with_mapped_author': 0,
+        'questions_with_unresolved_author': 0,
+        'quality_flags_created': 0,
+        'duplicates_marked': 0,
+    }
+
+    # Authors whose authored_by set may have changed. Recomputed in
+    # one batch after the write loop, mirroring the pattern in
+    # QuestionService.bulk_verify.
+    affected_author_ids = set()
+    seen_question_keys = Counter(
+        quality_key(text)
+        for text in Question.objects.values_list('question', flat=True)
+        if quality_key(text)
+    )
+
+    with transaction.atomic():
+        # Operator import can touch the entire bank. Freeze dependencies once,
+        # in the same learner/question order as completion, before parent writes.
+        from apps.users.models import User
+        list(User.objects.select_for_update().order_by('pk').values_list('pk', flat=True))
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        list(Question.objects.select_for_update().order_by('pk').values_list('pk', flat=True))
+        # ── Categories ────────────────────────────────────────────
+        cat_by_uuid = {}
+        for entry in payload.get('categories') or []:
+            uuid_str = canonical_uuid(entry.get('uuid'))
+            name = (entry.get('name') or '').strip()
+            if not uuid_str or not name:
+                continue
+
+            existing, matched_by = _find_existing_by_uuid_or_key(
+                Category, uuid_str, 'name', name,
+            )
+            if existing is None:
+                cat = Category.objects.create(
+                    uuid=uuid_str,
+                    name=name,
+                    description=entry.get('description') or '',
+                    color=entry.get('color') or '#667eea',
+                    icon=entry.get('icon') or 'bi-folder',
+                )
+                counts['categories_created'] += 1
+            else:
+                cat = existing
+                if matched_by == 'key':
+                    logger.info(
+                        'Category "%s" matched by name with different '
+                        'uuid (local=%s, envelope=%s) — keeping local uuid',
+                        name, cat.uuid, uuid_str,
+                    )
+                cat.name = name
+                cat.description = entry.get('description') or cat.description
+                cat.color = entry.get('color') or cat.color
+                cat.icon = entry.get('icon') or cat.icon
+                cat.save(update_fields=[
+                    'name', 'description', 'color', 'icon', 'updated_at',
+                ])
+                counts['categories_updated'] += 1
+            cat_by_uuid[uuid_str] = cat
+
+        # ── Tags ──────────────────────────────────────────────────
+        tag_by_uuid = {}
+        for entry in payload.get('tags') or []:
+            uuid_str = canonical_uuid(entry.get('uuid'))
+            name = clean_tag_name(entry.get('name') or '')
+            if not uuid_str or not name:
+                continue
+
+            existing, matched_by = _find_existing_by_uuid_or_key(
+                Tag, uuid_str, 'name', name,
+            )
+            if existing is None:
+                tag = Tag.objects.create(uuid=uuid_str, name=name)
+                counts['tags_created'] += 1
+            else:
+                tag = existing
+                if matched_by == 'key':
+                    logger.info(
+                        'Tag "%s" matched by name with different uuid '
+                        '(local=%s, envelope=%s) — keeping local uuid',
+                        name, tag.uuid, uuid_str,
+                    )
+            tag_by_uuid[uuid_str] = tag
+
+        # Second pass: wire parent relationships now that every tag
+        # referenced by the envelope exists in tag_by_uuid.
+        for entry in payload.get('tags') or []:
+            uuid_str = canonical_uuid(entry.get('uuid'))
+            parent_uuid = canonical_uuid(entry.get('parent_uuid'))
+            if not parent_uuid:
+                continue
+            child = tag_by_uuid.get(uuid_str)
+            parent = tag_by_uuid.get(parent_uuid)
+            if child and parent and child.parent_id != parent.id:
+                child.parent = parent
+                child.save(update_fields=['parent'])
+
+        # ── Cases ─────────────────────────────────────────────────
+        case_by_uuid = {}
+        for entry in payload.get('cases') or []:
+            uuid_str = canonical_uuid(entry.get('uuid'))
+            key = (entry.get('key') or '').strip()[:CASE_GROUP_MAX_LENGTH]
+            if not uuid_str or not key:
+                continue
+            stem = (entry.get('stem') or '').strip()[:CASE_STEM_MAX_LENGTH] or None
+
+            case_author, _case_source = resolve_author(
+                name=(entry.get('authored_by_name') or '').strip() or None,
+                author_uuid=canonical_uuid(entry.get('authored_by_uuid')) or None,
+                uuid_to_user=uuid_to_user,
+                name_to_user=name_to_user,
+                persisted_mappings=persisted_mappings,
+                call_mappings=call_mappings,
+                acting_user=acting_user,
+            )
+            if case_author is None:
+                case_author = acting_user
+
+            existing, matched_by = _find_existing_by_uuid_or_key(
+                ClinicalCase, uuid_str, 'key', key,
+            )
+            if existing is None:
+                case = ClinicalCase.objects.create(
+                    uuid=uuid_str,
+                    key=key,
+                    title=(entry.get('title') or '').strip() or None,
+                    stem=stem,
+                    translations=entry.get('translations', {}),
+                    authored_by=case_author,
+                )
+                counts['cases_created'] += 1
+            else:
+                case = existing
+                if matched_by == 'key':
+                    logger.info(
+                        'Case "%s" matched by key with different uuid '
+                        '(local=%s, envelope=%s) — keeping local uuid',
+                        key, case.uuid, uuid_str,
+                    )
+                dirty = []
+                # Cases use fill-missing merge semantics; preserve local translations.
+                merged = {locale: dict(content) for locale, content in (case.translations or {}).items()}
+                for locale, content in entry.get('translations', {}).items():
+                    fields = merged.setdefault(locale, {})
+                    for field, text in content.items():
+                        if not fields.get(field):
+                            fields[field] = text
+                if merged != case.translations:
+                    case.translations = merged
+                    dirty.append('translations')
+                if not case.stem and stem:
+                    case.stem = stem
+                    dirty.append('stem')
+                if not case.title and entry.get('title'):
+                    case.title = (entry.get('title') or '').strip() or None
+                    dirty.append('title')
+                if dirty:
+                    dirty.append('updated_at')
+                    case.save(update_fields=dirty)
+            case_by_uuid[uuid_str] = case
+
+        # ── Knowledge objects ─────────────────────────────────────
+        knowledge_object_by_uuid = {}
+        for entry in payload.get('knowledge_objects') or []:
+            uuid_str = canonical_uuid(entry.get('uuid'))
+            title = (entry.get('title') or '').strip()[:200]
+            if not uuid_str or not title:
+                continue
+            existing, matched_by = _find_existing_by_uuid_or_key(
+                KnowledgeObject, uuid_str, 'title', title,
+            )
+            created_by = uuid_to_user.get(
+                canonical_uuid(entry.get('created_by_uuid')),
+            ) or acting_user
+            values = {
+                'title': title,
+                'learning_objective': (entry.get('learning_objective') or '').strip(),
+                'canonical_answer': entry.get('canonical_answer') or '',
+                'key_facts': entry.get('key_facts') or [],
+                'misconceptions': entry.get('misconceptions') or [],
+                'category': cat_by_uuid.get(
+                    canonical_uuid(entry.get('category_uuid')),
+                ),
+                'source_document': (entry.get('source_document') or '')[:500] or None,
+                'source_page': entry.get('source_page') or None,
+                'translations': entry.get('translations') or {},
+                'status': entry.get('status') or 'active',
+                'version': entry.get('version') or 1,
+                'last_revised_at': (
+                    _parse_optional_date(entry.get('last_revised_at'))
+                    or timezone.localdate()
+                ),
+                'created_by': created_by,
+            }
+            if existing is None:
+                obj = KnowledgeObject.objects.create(uuid=uuid_str, **values)
+                counts['knowledge_objects_created'] += 1
+            else:
+                obj = KnowledgeObject.objects.select_for_update().get(pk=existing.pk)
+                values['version'] = obj.version + 1
+                for field, value in values.items():
+                    setattr(obj, field, value)
+                obj.save()
+                counts['knowledge_objects_updated'] += 1
+                if matched_by == 'key':
+                    logger.info(
+                        'Knowledge object "%s" matched by title with a '
+                        'different uuid; keeping local uuid', title,
+                    )
+            object_tags = [
+                tag_by_uuid[tag_uuid]
+                for raw_uuid in entry.get('tags') or []
+                if (tag_uuid := canonical_uuid(raw_uuid)) in tag_by_uuid
+            ]
+            obj.tags.set(object_tags)
+            knowledge_object_by_uuid[uuid_str] = obj
+
+        # ── Replace mode: orphan detection and delete ─────────────
+        if mode == STATE_IMPORT_MODE_REPLACE:
+            envelope_uuids = {
+                canonical_uuid(entry.get('uuid'))
+                for entry in payload.get('questions') or []
+                if canonical_uuid(entry.get('uuid'))
+            }
+            orphans_qs = (
+                Question.objects
+                .filter(is_draft=False)
+                .exclude(uuid__in=envelope_uuids)
+            )
+            orphan_ids = list(orphans_qs.values_list('id', flat=True))
+
+            if orphan_ids:
+                from apps.master_exams.models import MasterExamQuestion
+                blocked = MasterExamQuestion.objects.filter(
+                    question_id__in=orphan_ids,
+                ).exists()
+                if blocked:
+                    raise ValueError('REPLACE_BLOCKED_BY_MASTER_EXAMS')
+
+                orphan_author_ids = list(
+                    Question.objects
+                    .filter(id__in=orphan_ids, authored_by__isnull=False)
+                    .values_list('authored_by_id', flat=True)
+                    .distinct()
+                )
+                affected_author_ids.update(orphan_author_ids)
+
+                Question.objects.filter(id__in=orphan_ids).delete()
+                counts['questions_deleted'] = len(orphan_ids)
+
+        # ── Pre-fetch existing questions by uuid ──────────────────
+        envelope_uuids_list = []
+        for entry in payload.get('questions') or []:
+            u = canonical_uuid(entry.get('uuid'))
+            if u:
+                envelope_uuids_list.append(u)
+
+        existing_q_by_uuid = {}
+        if envelope_uuids_list:
+            existing_q_by_uuid = {
+                str(q.uuid): q
+                for q in Question.objects.filter(uuid__in=envelope_uuids_list)
+            }
+
+        # ── Per-question upsert ───────────────────────────────────
+        for entry in payload.get('questions') or []:
+            prepared = prepared_question(entry)
+            if prepared is None:
+                continue
+            uuid_str = prepared['uuid']
+
+            difficulty = parse_difficulty(
+                entry.get('difficulty', 'medium'),
+            )
+
+            category = cat_by_uuid.get(
+                canonical_uuid(entry.get('category_uuid'))
+            )
+            case = case_by_uuid.get(
+                canonical_uuid(entry.get('case_uuid'))
+            )
+            knowledge_object = knowledge_object_by_uuid.get(
+                canonical_uuid(entry.get('knowledge_object_uuid'))
+            )
+
+            author, source = resolve_author(
+                name=(entry.get('authored_by_name') or '').strip() or None,
+                author_uuid=canonical_uuid(entry.get('authored_by_uuid')) or None,
+                uuid_to_user=uuid_to_user,
+                name_to_user=name_to_user,
+                persisted_mappings=persisted_mappings,
+                call_mappings=call_mappings,
+                acting_user=acting_user,
+            )
+            if source in ('local_uuid', 'local_name'):
+                counts['questions_with_local_author'] += 1
+            elif source == 'mapping':
+                counts['questions_with_mapped_author'] += 1
+            else:
+                counts['questions_with_unresolved_author'] += 1
+
+            verified_at = _parse_optional_datetime(entry.get('verified_at'))
+
+            existing_q = existing_q_by_uuid.get(uuid_str)
+
+            if existing_q is not None and not use_imported_for(
+                uuid_str, conflict_strategy, conflict_resolutions,
+            ):
+                counts['questions_skipped'] += 1
+                if prepared['is_draft']:
+                    counts['drafts_skipped'] += 1
+                continue
+
+            # The live row's current text is already in the counter. Remove
+            # that one occurrence before checking its replacement, so an
+            # unchanged update does not conflict with itself while a match to
+            # any *other* local/imported question is still marked.
+            if existing_q is not None:
+                old_key = quality_key(existing_q.question)
+                if old_key:
+                    seen_question_keys[old_key] -= 1
+
+            (
+                prepared['question'],
+                prepared['choices'],
+                quality_issues,
+            ) = prepare_import_content(
+                prepared['question'],
+                prepared['choices'],
+                seen_question_keys,
+            )
+
+            if existing_q is not None:
+                # UPDATE in place for either merge or replace when the chosen
+                # conflict policy says imported content wins.
+                if existing_q.authored_by_id is not None:
+                    affected_author_ids.add(existing_q.authored_by_id)
+
+                is_draft = prepared['is_draft']
+                existing_q.question = prepared['question']
+                existing_q.choices = prepared['choices']
+                existing_q.correct_answer = prepared['correct_answer']
+                existing_q.explanation = entry.get('explanation') or ''
+                existing_q.source = (entry.get('source') or '')[:200] or None
+                if 'source_document' in entry:
+                    existing_q.source_document = (
+                        (entry.get('source_document') or '')[:500] or None
+                    )
+                if 'source_page' in entry:
+                    existing_q.source_page = entry.get('source_page') or None
+                if 'translations' in entry:
+                    existing_q.translations = normalize_translations(
+                        entry.get('translations') or {}, max_choices=MAX_CHOICES,
+                    )
+                existing_q.difficulty = difficulty
+                existing_q.category = category
+                existing_q.knowledge_object = knowledge_object
+                if 'last_revised_at' in entry:
+                    existing_q.last_revised_at = (
+                        _parse_optional_date(entry.get('last_revised_at'))
+                        or existing_q.last_revised_at
+                    )
+                existing_q.case = case
+                existing_q.case_order = entry.get('case_order') or None
+                existing_q.is_draft = is_draft
+                existing_q.draft_owner = acting_user if is_draft else None
+                existing_q.verified = bool(entry.get('verified', False))
+                existing_q.verified_by = entry.get('verified_by') or None
+                existing_q.verified_at = verified_at
+                existing_q.verification_notes = (
+                    entry.get('verification_notes') or None
+                )
+                existing_q.authored_by = author
+                existing_q.owned_by = acting_user
+                if 'updated_by' in entry:
+                    existing_q.updated_by = (
+                        (entry.get('updated_by') or '')[:80] or None
+                    )
+                if 'times_answered' in entry:
+                    existing_q.times_answered = entry['times_answered']
+                if 'times_correct' in entry:
+                    existing_q.times_correct = entry['times_correct']
+                existing_q.version = Question.objects.select_for_update().get(pk=existing_q.pk).version + 1
+                existing_q.save()
+
+                q = existing_q
+                counts['questions_updated'] += 1
+                if is_draft:
+                    counts['drafts_updated'] += 1
+            else:
+                q = _create_question_from_entry(
+                    entry=entry,
+                    prepared=prepared,
+                    difficulty=difficulty,
+                    category=category,
+                    case=case,
+                    knowledge_object=knowledge_object,
+                    author=author,
+                    acting_user=acting_user,
+                    verified_at=verified_at,
+                )
+                counts['questions_created'] += 1
+                if prepared['is_draft']:
+                    counts['drafts_created'] += 1
+
+            if author is not None:
+                affected_author_ids.add(author.id)
+
+            tag_objs = []
+            for tag_uuid in entry.get('tags') or []:
+                tag = tag_by_uuid.get(canonical_uuid(tag_uuid))
+                if tag is not None:
+                    tag_objs.append(tag)
+            q.tags.set(tag_objs)
+
+            image_block = entry.get('image')
+            if isinstance(image_block, dict) and image_block.get('data_base64'):
+                saved = apply_image(q, image_block)
+                if saved:
+                    counts['images_imported'] += 1
+
+            _restore_question_timestamps(q, entry)
+            if quality_issues:
+                counts['duplicates_marked'] += 1
+                if flag_import_quality_issues(q, acting_user, quality_issues):
+                    counts['quality_flags_created'] += 1
+
+    # ── Trust recompute (batch) ───────────────────────────────────
+    affected_author_ids.add(acting_user.id)
+    if affected_author_ids:
+        from apps.questions.services.question_service import QuestionService
+        QuestionService._recompute_author_trust(list(affected_author_ids))
+
+    return counts
