@@ -51,6 +51,7 @@ from .composition import (
 from .draft import (
     MasterExamDraftSerializer,
     MasterExamDraftCreateSerializer,
+    MasterExamDraftUpdateSerializer,
 )
 from .exam_crud import (
     MasterExamListSerializer,
@@ -80,6 +81,7 @@ __all__ = [
     # Draft
     'MasterExamDraftSerializer',
     'MasterExamDraftCreateSerializer',
+    'MasterExamDraftUpdateSerializer',
     # Exam CRUD
     'MasterExamListSerializer',
     'MasterExamDetailSerializer',

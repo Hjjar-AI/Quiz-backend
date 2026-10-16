@@ -3,6 +3,7 @@
 from collections import defaultdict
 
 from apps.questions.models import KnowledgeObject, Question
+from apps.questions.answer_visibility import closed_book_knowledge_object_ids
 
 from .models import UserQuestionAttempt
 from .mastery import concept_mastery_summary
@@ -12,6 +13,7 @@ def build_knowledge_map(user):
     objects = list(
         KnowledgeObject.objects
         .filter(status='active', questions__is_draft=False)
+        .exclude(pk__in=closed_book_knowledge_object_ids(user))
         .select_related('category')
         .distinct()
         .order_by('category__name', 'title')

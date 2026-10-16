@@ -54,6 +54,8 @@ Production-source/control-flow and caller inspection only. No test-suite inspect
 
 ## Source corrections
 
+Follow-up review found B1 (completion blocked by overlapping master withholding), introduced by this batch's finish guard. It is now [source-corrected with B2–B4](2026-10-17-backendMajorReview.md#source-corrections): completion commits while question review may remain withheld. Earlier descriptions below record the initial correction batch; the follow-up contract supersedes its finish guard. Runtime verification remains in workPlan.
+
 Implemented after the user's explicit fix request on 2026-10-17:
 
 - L1: shared `ANSWERS_WITHHELD` enforcement for ordinary study/recall start, individual/bundle reads and writes; overlapping ordinary finish/result/history delivery and offline receipt reads also withhold material. An ordinary exam excludes its own live session from its finish check. Starts, ordinary question reads and answer feedback serialize on the learner lock. No new study write or result is produced by rejected requests; committed offline receipts remain stored and readable after the overlapping exam finishes. Already delivered/downloaded content cannot be recalled.

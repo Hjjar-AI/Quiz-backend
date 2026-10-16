@@ -1,15 +1,12 @@
 # backend/apps/users/services/authentication_service.py
 
-from datetime import timedelta
-
-from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from ..models import User, LoginAttempt
+from ..models import User
 from .login_security_service import LoginSecurityService
 
 
@@ -49,51 +46,28 @@ class AuthenticationService:
             login_security.record_attempt(ip, username, False)
             return None
 
-        # NOTE: stub users (is_stub=True) never reach this point.
-        # Django's default ModelBackend calls user_can_authenticate(),
-        # which returns False for is_active=False — and every stub is
-        # created with is_active=False AND an unusable password
-        # (`make_password(None)`). So `authenticate()` above returns
-        # None for a stub, and the `if user is None` branch records
-        # the failed attempt with the correct audit trail.
-        #
-        # If a future change replaces ModelBackend with a custom
-        # backend that skips `user_can_authenticate`, add an explicit
-        # `if user.is_stub: return None` guard right here. Until then
-        # it is redundant, and adding it would create an unreachable
-        # code path that future readers would have to reason about.
-
-        if not user.is_active:
+        # Authentication may have read before an administrator changed this
+        # account. Serialize eligibility/renewal with those account writers and
+        # refuse a password reset or disable that committed before this lock.
+        authenticated_hash = user.password
+        backend = getattr(user, 'backend', None)
+        with transaction.atomic():
+            current = User.objects.select_for_update().filter(pk=user.pk).first()
+            if current is None or not current.is_active or current.is_stub or current.password != authenticated_hash:
+                user = None
+            else:
+                user = current
+                user.renew_if_eligible()
+                if user.is_expired:
+                    user = None
+                else:
+                    user.last_login = timezone.now()
+                    user.save(update_fields=['last_login'])
+        if user is None:
             login_security.record_attempt(ip, username, False)
             return None
-
-        # Expiry gate.
-        #
-        # No `role == 'admin'` bypass here. The exemption for accounts
-        # that should never expire is enforced inside the two methods
-        # called below, both of which short-circuit on the
-        # 'system.bypass_expiry' capability:
-        #
-        #   • User.renew_if_eligible — returns False for bypass holders
-        #   • User.is_expired        — returns False for bypass holders
-        #
-        # Admin holds the capability automatically via the
-        # resolve_for_user() short-circuit. A deployment may grant it
-        # to any other role or user through the permissions panel, and
-        # the login path honors that grant without a code change.
-        #
-        # The outer `if user.expires_at` guard is a cheap opt-out for
-        # accounts with no expiry at all — it skips the capability
-        # lookup on a path that most users hit on every login.
-        if user.expires_at:
-            if user.renew_if_eligible():
-                user.save(update_fields=['expires_at'])
-            if user.is_expired:
-                login_security.record_attempt(ip, username, False)
-                return None
-
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
+        if backend is not None:
+            user.backend = backend
         login(request, user)
 
         if request is not None and hasattr(request, 'session'):

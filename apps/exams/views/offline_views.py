@@ -140,7 +140,8 @@ class OfflineCatalogView(OfflineOperationLoggingMixin, APIView):
         query = OfflineCatalogQuery(data=request.query_params)
         query.is_valid(raise_exception=True)
         values = query.validated_data
-        visible = filter_questions(Question.objects.visible_to(request.user), values)
+        visible = filter_questions(Question.objects.visible_to(request.user), values,
+                                   hidden_answer_ids=closed_book_question_ids(request.user, request=request))
         upper = values.get('upper_bound')
         if upper is None:
             upper = visible.order_by('-pk').values_list('pk', flat=True).first() or 0

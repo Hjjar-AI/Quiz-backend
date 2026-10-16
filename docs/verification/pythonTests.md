@@ -1,5 +1,7 @@
 # Backend Python verification
 
+2026-10-17 update: the latest full runs passed **1008/1008 on isolated PostgreSQL, zero skips** (101.145s), and **972 passed/36 expected locking skips on SQLite**, zero failures/errors (59.235s), after the [review corrections and test repairs](../archive/reviews/2026-10-17-testRun.md). No coverage recollected; older coverage/run figures below are historical.
+
 Latest complete run: **2026-10-10, current source `0540f8f`, 982 tests**. PostgreSQL passed 982/982 with no skips; SQLite passed 946 with 36 intentional locking skips. PostgreSQL line/branch coverage is **71.75% / 56.87%**; SQLite is **70.49% / 54.95%**. See the [complete suite and coverage report](backendCoverage.md) and [per-file uncovered lines/branches](backendCoverage.json). The retained PostgreSQL test schema needed its missing `ClinicalCase.translations` model field initialized before the final passing run. Application databases were untouched. The older results below remain historical evidence.
 
 ## Earlier suite and focused runs

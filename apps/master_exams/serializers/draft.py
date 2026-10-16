@@ -31,7 +31,7 @@ class MasterExamDraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = [
-            'id', 'question', 'choices', 'correct_answer', 'explanation',
+            'id', 'version', 'question', 'choices', 'correct_answer', 'explanation',
             'source', 'image_url', 'tags', 'difficulty',
             'category', 'category_name', 'category_color',
             'is_draft', 'draft_owner', 'created_at', 'updated_at',
@@ -58,9 +58,8 @@ class MasterExamDraftCreateSerializer(serializers.Serializer):
     The case block mirrors QuestionCreateSerializer:
       • `case_key`   — attaches / detaches / moves the draft's case.
                        Null or "" detaches.
-      • `case_stem`  — optional vignette. Applied only on case
-                       creation or when the target case has no stem
-                       yet. See _resolve_case for the fill rules.
+      • `case_stem`  — initializes a new case. Existing shared content
+                       changes use the authorized revisioned case editor.
       • `case_order` — position within the case.
     """
     question = question_text_field()
@@ -97,3 +96,7 @@ class MasterExamDraftCreateSerializer(serializers.Serializer):
         attrs['choices'] = cleaned
 
         return normalize_case_fields(attrs)
+
+
+class MasterExamDraftUpdateSerializer(MasterExamDraftCreateSerializer):
+    expected_version = serializers.IntegerField(min_value=1)

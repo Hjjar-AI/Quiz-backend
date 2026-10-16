@@ -1,6 +1,7 @@
 # backend/apps/questions/admin.py
 
 from django.contrib import admin
+from django.db import router, transaction
 from django.utils import timezone
 
 from .models import (
@@ -13,7 +14,37 @@ from .models import (
 )
 
 
-class PlannerTargetProtectionAdmin(admin.ModelAdmin):
+class ContentWriterAdmin(admin.ModelAdmin):
+    """Keep FK-link/admin audit writes in the API's learner/gate order."""
+
+    def _lock_writer(self, request, using):
+        from apps.users.models import User
+        from .hierarchy import lock_tag_hierarchy
+        User.objects.using(using).select_for_update().get(pk=request.user.pk)
+        lock_tag_hierarchy(using)
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        using = router.db_for_write(self.model)
+        with transaction.atomic(using=using):
+            if request.method == 'POST':
+                self._lock_writer(request, using)
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
+    def delete_queryset(self, request, queryset):
+        using = router.db_for_write(self.model)
+        with transaction.atomic(using=using):
+            self._lock_writer(request, using)
+            return super().delete_queryset(request, queryset)
+
+    def delete_view(self, request, object_id, extra_context=None):
+        using = router.db_for_write(self.model)
+        with transaction.atomic(using=using):
+            if request.method == 'POST':
+                self._lock_writer(request, using)
+            return super().delete_view(request, object_id, extra_context)
+
+
+class PlannerTargetProtectionAdmin(ContentWriterAdmin):
     def get_deleted_objects(self, objs, request):
         deleted, counts, permissions, protected = super().get_deleted_objects(objs, request)
         from apps.planning.models import StudyPlanner
@@ -52,7 +83,7 @@ class CaseQuestionInline(admin.TabularInline):
 
 
 @admin.register(ClinicalCase)
-class ClinicalCaseAdmin(admin.ModelAdmin):
+class ClinicalCaseAdmin(ContentWriterAdmin):
     list_display = (
         'key', 'uuid', 'title', 'question_count', 'authored_by', 'updated_at',
     )
@@ -72,7 +103,7 @@ class ClinicalCaseAdmin(admin.ModelAdmin):
 
 
 @admin.register(KnowledgeObject)
-class KnowledgeObjectAdmin(admin.ModelAdmin):
+class KnowledgeObjectAdmin(ContentWriterAdmin):
     list_display = (
         'title', 'status', 'category', 'question_count',
         'last_revised_at', 'created_by',
@@ -87,7 +118,7 @@ class KnowledgeObjectAdmin(admin.ModelAdmin):
 
 
 @admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
+class QuestionAdmin(ContentWriterAdmin):
     list_display = (
         'id', 'question_preview', 'difficulty', 'category',
         'authored_by', 'owned_by', 'verified',

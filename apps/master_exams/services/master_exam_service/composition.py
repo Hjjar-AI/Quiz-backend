@@ -87,6 +87,8 @@ def _cas_bump_version(exam, expected_version):
 @transaction.atomic
 def add_questions(exam, question_ids, request=None, expected_version=None):
     exam = _locked_editable_exam(exam, expected_version)
+    from apps.questions.hierarchy import lock_tag_hierarchy
+    lock_tag_hierarchy()
 
     existing_ids = set(
         exam.exam_questions.values_list('question_id', flat=True)
@@ -227,7 +229,11 @@ def reorder_questions(exam, ordered_ids, request=None, expected_version=None):
 
 @transaction.atomic
 def add_draft(exam, draft_payload, author, request=None, expected_version=None):
+    from apps.users.models import User
+    from apps.questions.hierarchy import lock_tag_hierarchy
+    User.objects.select_for_update().get(pk=author.pk)
     exam = _locked_editable_exam(exam, expected_version)
+    lock_tag_hierarchy()
     _check_question_limit(exam.exam_questions.count() + 1)
     draft_payload = dict(draft_payload)
 
@@ -237,11 +243,10 @@ def add_draft(exam, draft_payload, author, request=None, expected_version=None):
 
     case = None
     if case_key:
-        # Reuse the same resolver the question serializers use, so
-        # the stem-fill semantics are identical across every write
-        # path that can create a case.
+        # Existing shared cases are read/link-only; new cases initialize stem.
         from apps.questions.serializers import _resolve_case
-        case = _resolve_case(case_key, author, stem=case_stem)
+        case = _resolve_case(case_key, author, stem=case_stem,
+                             actor=request.user if request is not None else author)
 
     with transaction.atomic():
         _cas_bump_version(exam, expected_version)

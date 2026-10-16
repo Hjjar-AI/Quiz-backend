@@ -1,6 +1,9 @@
 # backend/apps/master_exams/admin.py
 
 from django.contrib import admin
+from django.db import router, transaction
+from apps.users.models import User
+from apps.questions.hierarchy import lock_tag_hierarchy
 
 from .models import (
     MasterExam,
@@ -36,6 +39,19 @@ class MasterExamAttemptInline(admin.TabularInline):
 
 @admin.register(MasterExam)
 class MasterExamAdmin(admin.ModelAdmin):
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        using = router.db_for_write(self.model)
+        try:
+            locked_id = int(object_id) if object_id is not None else None
+        except (TypeError, ValueError):
+            locked_id = None
+        with transaction.atomic(using=using):
+            if request.method == 'POST':
+                User.objects.using(using).select_for_update().only('id').get(pk=request.user.pk)
+                list(MasterExam.objects.using(using).select_for_update().filter(pk=locked_id))
+                lock_tag_hierarchy(using)
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
     list_display = (
         'name', 'primary_attending', 'stored_status', 'opens_at', 'closes_at',
         'duration_minutes', 'question_count_display',
@@ -87,6 +103,24 @@ class MasterExamQuestionAdmin(admin.ModelAdmin):
     list_filter = ('master_exam',)
     autocomplete_fields = ['question', 'master_exam']
     ordering = ('master_exam', 'order')
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        using = router.db_for_write(self.model)
+        try:
+            locked_id = int(object_id) if object_id is not None else None
+        except (TypeError, ValueError):
+            locked_id = None
+        with transaction.atomic(using=using):
+            if request.method == 'POST':
+                User.objects.using(using).select_for_update().only('id').get(pk=request.user.pk)
+                ids = set(MasterExamQuestion.objects.using(using).filter(pk=locked_id).values_list('master_exam_id', flat=True))
+                try:
+                    ids.add(int(request.POST.get('master_exam', '')))
+                except (TypeError, ValueError):
+                    pass  # Let the form render its normal validation error.
+                list(MasterExam.objects.using(using).select_for_update().filter(pk__in=ids).order_by('pk'))
+                lock_tag_hierarchy(using)
+            return super().changeform_view(request, object_id, form_url, extra_context)
 
 
 @admin.register(MasterExamAttempt)

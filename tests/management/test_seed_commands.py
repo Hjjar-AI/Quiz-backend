@@ -33,13 +33,13 @@ class SeedCapabilitiesCommandTests(CacheClearingTestCase):
         row = RoleCapabilities.objects.get(role='member')
         # Strip one capability.
         row.capabilities = [
-            c for c in row.capabilities if c != 'questions.create'
+            c for c in row.capabilities if c != 'questions.edit_own'
         ]
         row.save()
 
         call_command('seed_capabilities', stdout=StringIO())
         row.refresh_from_db()
-        self.assertIn('questions.create', row.capabilities)
+        self.assertIn('questions.edit_own', row.capabilities)
 
     def test_merge_mode_drops_unknown_caps(self):
         call_command('seed_capabilities', stdout=StringIO())

@@ -108,6 +108,14 @@ class QuestionSerializer(serializers.ModelSerializer):
             data['translations'] = without_translation_explanations(
                 data.get('translations'),
             )
+        from ..answer_visibility import closed_book_knowledge_object_ids
+        request = self.context.get('request')
+        hidden_knowledge = closed_book_knowledge_object_ids(
+            getattr(request, 'user', None), request=request,
+        )
+        if instance.knowledge_object_id in hidden_knowledge:
+            data['knowledge_object_title'] = None
+            data['knowledge_object_objective'] = None
         return data
 
     def get_case_sibling_count(self, obj):

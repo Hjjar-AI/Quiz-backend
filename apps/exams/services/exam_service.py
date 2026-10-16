@@ -11,7 +11,7 @@ from django.db.models import Q, F
 
 from apps.users.models import User
 from apps.questions.models import Question
-from apps.questions.answer_visibility import require_answers_available
+from apps.questions.answer_visibility import closed_book_question_ids, require_answers_available
 from apps.questions.payloads import (
     build_grading_snapshot,
     case_block_from_live,
@@ -223,6 +223,14 @@ class ExamService:
                 .select_for_update()
                 .filter(user=user, mode=mode)
             )
+            # Pending old-study learning locks assessed parents. Lock the
+            # replacement's question rows first too, so later allocation FK
+            # writes cannot request new question locks after those parents.
+            learning_ids = set(question_ids)
+            for old_session in previous:
+                learning_ids.update(old_session.question_ids or [])
+            list(Question.objects.select_for_update().filter(pk__in=learning_ids)
+                 .order_by('pk').values_list('pk', flat=True))
             for old_session in previous:
                 ExamService._record_pending_learning_locked(old_session)
                 old_session.delete()
@@ -917,8 +925,6 @@ class ExamService:
             if not locked.is_active:
                 raise ValueError('الجلسة غير نشطة ولا يمكن إنهاؤها مرة أخرى')
 
-            require_answers_available(user, locked.question_ids, exclude_session_id=locked.session_id)
-
             started_at = locked.started_at or timezone.now()
             total_time = ExamService.elapsed_seconds(locked)
             if locked.mode == 'exam' and locked.duration_minutes:
@@ -944,7 +950,7 @@ class ExamService:
 
             if locked.mode not in ('study', 'recall'):
                 ExamService.record_completion_side_effects(user, result['questions'], source_key=f'ordinary:{locked.session_id}')
-            ExamService.save_history(
+            history = ExamService.save_history(
                 user,
                 locked.mode,
                 locked.tag,
@@ -960,17 +966,9 @@ class ExamService:
             # Delete inside the transaction so a mid-flight failure
             # rolls the delete back together with the results rows.
             locked.delete()
-
-        return {
-            'results': result['questions'],
-            'correct_count': result['correct_count'],
-            'total_questions': result['total_questions'],
-            'accuracy': result['accuracy'],
-            'total_time': total_time,
-            'answered_count': result['answered_count'],
-            'confidence_correct': result['confidence_correct'],
-            'confidence_fragile': result['confidence_fragile'],
-        }
+            # Completion is durable regardless of review visibility. Keep the
+            # learner lock until the response's visibility decision is made.
+            return ExamService.completion_response(history, user)
 
     @staticmethod
     def save_history(
@@ -1017,6 +1015,19 @@ class ExamService:
             'confidence_correct': sum(row.get('confidence') is True for row in correct_rows),
             'confidence_fragile': sum(row.get('confidence') is not True for row in correct_rows),
         }
+
+    @staticmethod
+    def completion_response(history, user):
+        """Confirmed completion with summary; withhold only question review.
+
+        No grading or learning writes on recovery. The stored history stays
+        complete so the exact same owner lookup can reveal it later.
+        """
+        result = ExamService.completed_result(history)
+        hidden = closed_book_question_ids(user)
+        withheld = any(row.get('question_id') in hidden for row in history.results or [])
+        return {**result, 'results': [] if withheld else result['results'],
+                'completion_recorded': True, 'review_withheld': withheld}
 
     @staticmethod
     def pause_session(session):
@@ -1151,7 +1162,7 @@ class BlueprintService:
         exposure = question_exposure_scores(user)
         from collections import Counter
         selected_concepts = Counter()
-        base = QuestionService.get_questions(filters, user=None)
+        base = QuestionService.get_questions(filters, user=None, answer_user=user)
         weights = {
             entry.category_id: entry.weight
             for entry in blueprint.weight_entries.all()

@@ -102,10 +102,8 @@ FRONTEND_ENDPOINTS = (
 API_PREFIX = '/api/v1'
 
 # Substitution for a `${...}` placeholder in a builder template.
-# `1` matches every Django path converter except `<uuid:...>`, which
-# no builder in the current registry uses. If a uuid converter is
-# ever added, extend `DUMMY_SEGMENT` or introduce a per-builder
-# substitution table here.
+# Numeric routes use `1`; the receipt route receives a UUID in the
+# template extractor below, matching its Django converter.
 DUMMY_SEGMENT = '1'
 
 # Sanity thresholds for the extractor. Both are intentionally far
@@ -193,7 +191,8 @@ def _collect_frontend_paths(source: str):
         template = match.group(1)
         if template.startswith(API_PREFIX):
             continue
-        concrete = _PLACEHOLDER_RE.sub(DUMMY_SEGMENT, template)
+        segment = '00000000-0000-4000-8000-000000000001' if template.startswith('/recovery/operations/') else DUMMY_SEGMENT
+        concrete = _PLACEHOLDER_RE.sub(segment, template)
         builders.append(concrete)
 
     combined = statics | set(builders)

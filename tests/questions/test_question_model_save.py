@@ -72,3 +72,23 @@ class QuestionSaveValidationTests(CacheClearingTestCase):
         Question.objects.filter(id=q.id).update(correct_answer=99)
         q.refresh_from_db()
         self.assertEqual(q.correct_answer, 99)
+
+    def test_creation_preserves_explicit_historical_revision(self):
+        question = self._make(version=7)
+        question.refresh_from_db()
+        self.assertEqual(question.version, 7)
+
+    def test_direct_content_edit_advances_preserved_revision(self):
+        question = self._make(version=7)
+        question.question = 'Changed?'
+        question.save(update_fields=['question'])
+        question.refresh_from_db()
+        self.assertEqual(question.version, 8)
+
+    def test_stale_explicit_revision_cannot_lower_committed_token(self):
+        question = self._make(version=7)
+        Question.objects.filter(pk=question.pk).update(version=9)
+        question.version = 8
+        question.save(update_fields=['version'])
+        question.refresh_from_db()
+        self.assertEqual(question.version, 9)

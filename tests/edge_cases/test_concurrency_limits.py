@@ -243,6 +243,8 @@ class PostgreSQLConcurrencyLimitsTests(TransactionTestCase):
         self.assertEqual(exam.exam_questions.count(), 2)
 
     def test_question_creation_receipt_four_retries_create_once(self):
+        self.user.capabilities = {'questions.create': True}
+        self.user.save(update_fields=['capabilities'])
         payload = {'operation_id': str(uuid.uuid4()), 'question': 'Receipt question?',
                    'choices': ['A', 'B'], 'correct_answer': 1}
         results = self.race([lambda: self.api(self.user, 'post', '/api/v1/questions/', payload)] * 4)
@@ -252,6 +254,8 @@ class PostgreSQLConcurrencyLimitsTests(TransactionTestCase):
         self.assertEqual(Question.objects.count(), 2)
 
     def test_question_creation_changed_body_same_receipt_conflicts(self):
+        self.user.capabilities = {'questions.create': True}
+        self.user.save(update_fields=['capabilities'])
         identity = str(uuid.uuid4())
         payloads = [{'operation_id': identity, 'question': text,
                      'choices': ['A', 'B'], 'correct_answer': 1} for text in ('Receipt A?', 'Receipt B?')]

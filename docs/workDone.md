@@ -1,5 +1,33 @@
 # Current Django source status
 
+## 2026-10-17 PDF palette parity correction
+
+Matched the seven corrected web theme values in PDF palettes: Stone/Amber warning, Ruby danger and Lagoon/Slate/Ink/Ruby muted text. All 12 PDF palettes match web semantic/surface/text seeds; seven PDF-theme tests pass on isolated SQLite. The frontend full suite now passes 951/951. Existing aliases/surfaces and unrelated backend logic are retained. [Evidence](archive/reviews/2026-10-17-testRun.md#theme-token-follow-up). No browser/production build, migration, dependency/version change or actual visual/print verification.
+
+## 2026-10-17 authorized automated verification
+
+Full suites passed: PostgreSQL 1008/1008 without skips; SQLite 972 passed/36 expected locking skips, zero failures/errors out of 1008. Fixed the new Question helper's explicit-revision regression and added three model regressions. Updated stale fixtures to current permissions, draft revisions, visibility/shared-stem policy, closed-book isolation and local dates, without weakening production gates. [Full run evidence, PostgreSQL result and remaining frontend failures](archive/reviews/2026-10-17-testRun.md). No browser/Android builds, application database setup/migration/seed, dependency/version changes or coverage run.
+
+## 2026-10-17 extended logic/model corrections
+
+Corrected [C1–C4 and new C5–C7](archive/reviews/2026-10-17-remainingLogicReview.md#extended-findings-and-source-corrections): concept withholding, explanation-search inference, draft revisions/deletion and frozen pages, bank lifecycle, admin planner scope/ledger consistency and translated-choice validation and exposure/delete FK serialization. Coordinated web/native baselines, guarded writes and retained explicit review. Direct question saves/publication advance revisions; attachment API/admin coordinate deletion locks. Existing edits preserved; no schema fields or versions changed.
+
+Python AST/revision fields, JavaScript/extracted Vue scripts, imports, bilingual JSON, native caller and whitespace/source checks only. Vue parser unavailable; templates/Kotlin source-reviewed without compilation. No suites inspected/run, migrations/schema/setup/database/HTTP, builds, deployment or runtime concurrency evidence. Matching draft-client rollout/manual verification remain in workPlan.
+
+## 2026-10-17 remaining logic/model review
+
+Reviewed current model hooks, knowledge representations, master draft edit/delete, snapshots, lifecycle and Vue/native callers after the B1–B4 source fixes. Recorded four additional evidenced findings in [C1–C4](archive/reviews/2026-10-17-remainingLogicReview.md), including an omission in the earlier L2 withholding fix. Preserved existing edits; this pass adds review/plan documentation only. No suites, migrations, database/HTTP, builds/compilation, versions or deployment; source-derived sequences are not runtime reproductions.
+
+## 2026-10-17 major logic-flow corrections
+
+After the requested deeper caller/transaction review, corrected [B1–B4](archive/reviews/2026-10-17-backendMajorReview.md#source-corrections). Ordinary completion commits once and returns confirmed score/identity plus optional withheld review; owned GET reveals stored review later without learning replay. Vue/native handle that state and preserve confirmed results on refresh failure. Case resolution shares actor visibility and never edits existing stems; question/draft/case/admin/import paths coordinate structural/parent locks, with actor/FK ordering and fresh duplicate-source checks. Category/planner writes use the same structural gate before dependent locks. Renewal eligibility and persistence share a fresh account lock across middleware/login/background jobs; callers no longer save computed expiry later, and login rejects a concurrent password reset/disable observed under lock.
+
+Production Python AST, changed JavaScript/extracted Vue-script syntax, bilingual JSON/XML/resources and whitespace/source-contract checks only. Vue SFC parser unavailable; Kotlin was source-reviewed without compilation. No suites inspected/run, migrations/schema/setup/database/HTTP, builds/packaging, deployment, dependency or version changes. Deployed races, lock duration, browser/device/print/accessibility and rollout remain in workPlan; this bounded correction does not prove exhaustive backend correctness.
+
+## 2026-10-17 additional backend major-issue review
+
+Traced shared-case writers/visibility, model parent locks, planner/category merge ordering, account renewal/admin writes and ordinary completion under overlapping master work. Recorded [B1–B4](archive/reviews/2026-10-17-backendMajorReview.md), including the preceding batch's completion/withholding regression; all remain correction work in the active plan. Relevant Vue/native payload and control paths were checked. This pass changed documentation only. No suites, migrations/setup/database/HTTP, builds, versions, deployment or live concurrency evidence; source interleavings are not runtime reproductions.
+
 ## 2026-10-17 backend learning-flow source review
 
 Traced ordinary/master/offline learning producers through event identity, fingerprints, replay/SRS/mastery, exposure, activity/streaks and planner scope history, plus relevant Vue and Android callers. Recorded four evidenced source findings and the existing coordinated Vue 409/recovery defect in the [review](archive/reviews/2026-10-17-learningFlowReview.md); remaining corrections are in workPlan. Production code unchanged. Source inspection only: no suites inspected/run, migrations/setup/database/HTTP, builds/compilation, versions or deployment. Source-derived reproduction sequences do not establish runtime behavior or exhaustive correctness.

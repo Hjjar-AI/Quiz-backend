@@ -103,27 +103,31 @@ class ResolveCaseHelperTests(CacheClearingTestCase):
 
     def test_reuses_existing_case(self):
         from apps.questions.serializers import _resolve_case
-        existing = make_case('existing-case')
+        existing = make_case('existing-case', authored_by=self.user)
         case = _resolve_case('existing-case', self.user)
         self.assertEqual(case.pk, existing.pk)
 
-    def test_stem_fills_when_target_has_none(self):
+    def test_existing_blank_stem_requires_revisioned_editor(self):
         from apps.questions.serializers import _resolve_case
-        c = make_case('no-stem')
-        _resolve_case('no-stem', self.user, stem='filled in')
+        c = make_case('no-stem', authored_by=self.user)
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            _resolve_case('no-stem', self.user, stem='filled in')
         c.refresh_from_db()
-        self.assertEqual(c.stem, 'filled in')
+        self.assertFalse(c.stem)
 
     def test_stem_is_not_overwritten_on_populated_case(self):
         from apps.questions.serializers import _resolve_case
-        c = make_case('has-stem', stem='original')
-        _resolve_case('has-stem', self.user, stem='replacement')
+        c = make_case('has-stem', stem='original', authored_by=self.user)
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            _resolve_case('has-stem', self.user, stem='replacement')
         c.refresh_from_db()
         self.assertEqual(c.stem, 'original')
 
     def test_existing_case_fast_path(self):
         from apps.questions.serializers import _resolve_case
-        existing = make_case('my-case')
+        existing = make_case('my-case', authored_by=self.user)
         result = _resolve_case(
             'my-case', self.user, existing_case=existing,
         )

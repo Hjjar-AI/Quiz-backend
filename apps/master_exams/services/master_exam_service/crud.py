@@ -89,6 +89,13 @@ def create(primary_attending, data, request=None):
             raise ValueError(f'QUESTIONS_NOT_ACCESSIBLE:{missing}')
 
     with transaction.atomic():
+        User.objects.select_for_update().only('id').get(pk=primary_attending.pk)
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        lock_tag_hierarchy()
+        # Repeat visibility after the structural gate; draft deletion may have
+        # committed between the early validation and this transaction.
+        if raw_qids and Question.objects.filter(pk__in=raw_qids).visible_to(primary_attending).count() != len(raw_qids):
+            raise ValueError('QUESTIONS_NOT_ACCESSIBLE')
         exam = MasterExam.objects.create(
             name=data['name'],
             description=data.get('description') or None,

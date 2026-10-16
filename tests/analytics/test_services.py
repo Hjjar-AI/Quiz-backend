@@ -317,7 +317,7 @@ class ActiveUsersStatsTests(CacheClearingTestCase):
         u.save()
 
         rows = AnalyticsService.get_active_users_stats(days=30)
-        today = now.date().isoformat()
+        today = timezone.localdate(now).isoformat()
         today_row = next((r for r in rows if r['date'] == today), None)
         self.assertIsNotNone(today_row)
         self.assertEqual(today_row['active_users'], 1)

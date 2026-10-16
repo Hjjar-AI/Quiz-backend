@@ -6,9 +6,13 @@ from apps.questions.models import Question
 from .models import QuestionExposure, QuestionPresentation
 
 
+@transaction.atomic
 def record_allocations(user, snapshots):
+    User.objects.select_for_update().only('pk').get(pk=user.pk)
     now = timezone.now()
-    live = set(Question.objects.filter(pk__in=[int(qid) for qid in snapshots]).values_list('pk', flat=True))
+    live = set(Question.objects.select_for_update().filter(
+        pk__in=[int(qid) for qid in snapshots],
+    ).order_by('pk').values_list('pk', flat=True))
     for key, snapshot in snapshots.items():
         qid = int(key)
         fingerprint = snapshot.get('learning_fingerprint')
@@ -26,7 +30,8 @@ def record_presentation(user_id, source_key, question_id, snapshot):
     if not fingerprint:
         return
     User.objects.select_for_update().only('pk').get(pk=user_id)
-    if not Question.objects.filter(pk=question_id).exists():
+    # Keep deletion from invalidating the existence decision before FK insert.
+    if not list(Question.objects.select_for_update().filter(pk=question_id).values_list('pk', flat=True)):
         return
     _, created = QuestionPresentation.objects.get_or_create(
         user_id=user_id, source_key=source_key, question_id=question_id,

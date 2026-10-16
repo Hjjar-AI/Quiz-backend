@@ -48,7 +48,7 @@ from apps.core.utils import (
     safe_int,
 )
 from apps.questions.models import Question
-from apps.questions.answer_visibility import closed_book_question_ids, require_answers_available
+from apps.questions.answer_visibility import closed_book_question_ids
 from apps.questions.services import QuestionService
 from apps.learning.srs_service import SRSService
 from ..services.question_selection import select_varied_question_ids
@@ -142,7 +142,7 @@ class StartSessionView(APIView):
             limit = safe_int(data.get('limit'), 20, minimum=1, maximum=max_quiz)
             due_ids = SRSService.due_question_ids(request.user)
             eligible = set(
-                QuestionService.get_questions(filters, user=None)
+                QuestionService.get_questions(filters, user=None, answer_user=request.user)
                 .filter(id__in=due_ids)
                 .values_list('id', flat=True)
             )
@@ -199,7 +199,7 @@ class StartSessionView(APIView):
                 filters['tag'] = tag
 
             questions = QuestionService.get_questions(
-                filters, user=None,
+                filters, user=None, answer_user=request.user,
             )
             question_ids = select_varied_question_ids(questions, limit, user=request.user, strategy=strategy)
 
@@ -395,8 +395,10 @@ class SubmitAnswerView(APIView):
 class FinishSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def get(self, request):
         """Caller-owned exact completion lookup; independent of broad History access."""
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
         session_id = request.query_params.get('session_id', '').strip()
         mode = request.query_params.get('mode', '').strip()
         if not session_id or len(session_id) > 36:
@@ -408,8 +410,7 @@ class FinishSessionView(APIView):
         history = get_object_or_404(
             TestHistory, user=request.user, source_session_id=session_id, mode=mode,
         )
-        require_answers_available(request.user, [row['question_id'] for row in history.results or [] if row.get('question_id')])
-        return api_success(data=ExamService.completed_result(history))
+        return api_success(data=ExamService.completion_response(history, request.user))
 
     def post(self, request):
         body = SessionIdSerializer(data=request.data)

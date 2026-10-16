@@ -19,7 +19,7 @@ def require_answers_available(user, question_ids, *, hidden=None, exclude_sessio
         raise AnswersWithheld()
 
 
-def closed_book_knowledge_object_ids(user):
+def closed_book_knowledge_object_ids(user, *, request=None):
     """Protect both frozen and current concept links after content edits."""
     from apps.exams.models import ExamSession
     from apps.master_exams.models import MasterExamAttempt
@@ -27,6 +27,9 @@ def closed_book_knowledge_object_ids(user):
 
     if user is None or not getattr(user, 'is_authenticated', False):
         return set()
+    cache_name = '_closed_book_knowledge_object_ids'
+    if request is not None and hasattr(request, cache_name):
+        return getattr(request, cache_name)
     ids = set()
     question_ids = set()
     sources = (
@@ -41,6 +44,8 @@ def closed_book_knowledge_object_ids(user):
                     ids.add(snapshot['knowledge_object_id'])
     ids.update(Question.objects.filter(pk__in=question_ids, knowledge_object__isnull=False)
                .values_list('knowledge_object_id', flat=True))
+    if request is not None:
+        setattr(request, cache_name, ids)
     return ids
 
 

@@ -177,7 +177,7 @@ class QuestionListView(APIView):
         # `user=None` deliberately scopes the list to `.public()` —
         # drafts are excluded even for their own owner. The draft
         # workflow is served by the master-exam drafts library.
-        queryset = QuestionService.get_questions(filters, user=None)
+        queryset = QuestionService.get_questions(filters, user=None, answer_user=request.user)
 
         page, meta = paginate(queryset, request)
         page_list = list(page)
@@ -672,7 +672,7 @@ class AvailableCountView(APIView):
         if request.query_params.get('use_srs') == 'true':
             due_ids = SRSService.due_question_ids(request.user)
             count = (
-                QuestionService.get_questions(filters, user=None)
+                QuestionService.get_questions(filters, user=None, answer_user=request.user)
                 .filter(id__in=due_ids)
                 .count()
             )
@@ -686,9 +686,9 @@ class AvailableCountView(APIView):
                 return api_error('نموذج الامتحان غير موجود', 404)
             # The selector's weighted quotas redistribute shortages across
             # the filtered public bank; inventory is independent of session size.
-            count = QuestionService.get_questions(filters, user=None).count()
+            count = QuestionService.get_questions(filters, user=None, answer_user=request.user).count()
         else:
-            count = QuestionService.get_questions(filters, user=None).count()
+            count = QuestionService.get_questions(filters, user=None, answer_user=request.user).count()
 
         return api_success(data={
             'count': count,

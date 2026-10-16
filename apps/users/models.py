@@ -303,22 +303,37 @@ class User(InvariantValidationMixin, AbstractBaseUser, PermissionsMixin):
     # ── Lifecycle ─────────────────────────────────────────────────────
 
     def renew_if_eligible(self):
-        # Same cost-ordering rationale as `is_expired` above: the two
-        # cheap field checks run first, and the capability lookup only
-        # executes on the narrow path where the account is actually
-        # subject to renewal (has an `expires_at` and a positive
-        # `auto_renew_days`). Truth table is unchanged.
+        """Persist a renewal decision against fresh locked account policy.
+
+        The boolean reports an already saved renewal; callers must not save
+        a previously computed expiry again after this transaction ends.
+        """
         if not self.expires_at or self.auto_renew_days <= 0:
             return False
-        # A holder of 'system.bypass_expiry' has nothing to renew —
-        # they are already exempt from expiry.
-        if self.has_capability('system.bypass_expiry'):
+        if self.expires_at > timezone.now() or self.pk is None:
             return False
-        now = timezone.now()
-        if self.expires_at > now:
-            return False
-        self.expires_at = now + timedelta(days=self.auto_renew_days)
-        return True
+        using = self._state.db or 'default'
+        with transaction.atomic(using=using):
+            current = type(self).objects.using(using).select_for_update().filter(pk=self.pk).first()
+            if current is None:
+                self.is_active = False
+                return False
+            now = timezone.now()
+            renewed = bool(
+                current.is_active and not current.is_stub
+                and current.expires_at and current.expires_at <= now
+                and current.auto_renew_days > 0
+                and not current.has_capability('system.bypass_expiry')
+            )
+            if renewed:
+                current.expires_at = now + timedelta(days=current.auto_renew_days)
+                current.save(using=using, update_fields=['expires_at'])
+            # Middleware/login must use the same fresh policy, including a
+            # concurrent disable or capability change that cancelled renewal.
+            for field in self._meta.concrete_fields:
+                setattr(self, field.attname, getattr(current, field.attname))
+            self.__dict__.pop('_resolved_caps_cache', None)
+            return renewed
 
     def deactivate(self):
         """

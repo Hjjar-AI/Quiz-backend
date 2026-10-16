@@ -26,6 +26,10 @@ Assessed parent saves lock linked questions before their case/knowledge row; API
 
 ## Master attempts
 
+Draft reads expose shared Question `version`; PUT requires body `expected_version`, DELETE its query value. Direct saves track editable-state revisions; SQL CAS/bulk writers increment explicitly. Web retains uncertain/conflicted intent in account-scoped memory for read-only comparison and explicit decisions; native retains encrypted recovery/preflight and sends its baseline. No automatic replay. Legacy clients reject safely without revisions; matching rollout required.
+
+Draft deletion locks actor, discovered exams by PK, structural gate, question and memberships; unknown new links conflict before writes. App creation/publication and admin attachments coordinate the gate. Frozen master pages render independently of live rows; missing legacy snapshots remain a limit. Bank publication requires published/completed stored state and closure. Runtime verification/arbitrary ORM writers remain outside these source claims.
+
 - Start locks fresh learner/exam/access relations and rechecks new-start/preview policy. Resolve existing attempts first: resume active normal/makeup without extending time; force-finish expired work. Completed attempts do not receive another attempt through makeup classification. Existing owned work remains accessible under its participation policy.
 - Answers require `session_id` and full `expected_slot`, including explicit null for no saved slot. Compare under attempt lock. Already-saved identical answer/confidence/error intent is idempotent; different baseline returns `ATTEMPT_PROGRESS_CHANGED` (409), preserving timestamp/state.
 - Goto requires `session_id` and nullable `expected_current_question_id`; fresh locked membership/completion/deadline checks and position comparison serialize navigation. Current-question GET does not persist fallback position. Expiry finish failures propagate rather than claiming completion.

@@ -18,9 +18,16 @@ from ..serializers import CategorySerializer
 from apps.core.permissions import HasCapability
 from apps.core.utils import api_success, api_error
 from apps.core.audit import log_privileged_action
+from ..hierarchy import lock_tag_hierarchy
+from apps.users.models import User
 
 
 _CATEGORY_ICON_RE = re.compile(r'^bi-[a-z0-9-]{1,47}$')
+
+
+def _lock_category_writer(request):
+    User.objects.select_for_update().only('id').get(pk=request.user.pk)
+    lock_tag_hierarchy()
 
 
 def _validate_color(raw, default='#667eea'):
@@ -76,7 +83,9 @@ class CategoryCreateView(APIView):
     permission_classes = [HasCapability]
     required_capability = 'categories.manage'
 
+    @transaction.atomic
     def post(self, request):
+        _lock_category_writer(request)
         data = request.data
 
         name = _coerce_name(data.get('name'))
@@ -132,6 +141,7 @@ class CategoryUpdateView(APIView):
 
     @transaction.atomic
     def put(self, request, category_id):
+        _lock_category_writer(request)
         category = get_object_or_404(Category.objects.select_for_update(), id=category_id)
         check_revision(category.version, expected_revision(request))
         data = request.data
@@ -183,6 +193,7 @@ class CategoryMergeView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        _lock_category_writer(request)
         source_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('source_id'))
         target_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('target_id'))
         source_version = expected_revision(request)
@@ -194,6 +205,10 @@ class CategoryMergeView(APIView):
             from apps.exams.models import Blueprint, BlueprintWeight
             from apps.planning.models import StudyPlanner
             from apps.planning.services import StudyPlannerService
+
+            # Same gate as planner API/admin and tag structural writers,
+            # acquired before questions/categories/planners in this merge.
+            lock_tag_hierarchy()
 
             # Assessed-parent/editor writes lock questions before their parent.
             # Include both categories so opposing merges share ordered locks.
@@ -250,10 +265,13 @@ class CategoryMergeView(APIView):
 
             source_name = source.name
             source.delete()
-            log_privileged_action(request, 'category.merge', target=target,
-                                  details={'source_id': source_id, 'source_name': source_name,
-                                           'questions_moved': moved, 'knowledge_objects_moved': knowledge,
-                                           'planners_migrated': len(planners), 'blueprints_migrated': len(blueprints)})
+            # The actor lock was acquired before the structural/content locks,
+            # so the audit FK cannot invert learner/question ordering here.
+            log_privileged_action(
+                request, 'category.merge', target=target,
+                details={'source_id': source_id, 'source_name': source_name,
+                         'questions_moved': moved, 'knowledge_objects_moved': knowledge,
+                         'planners_migrated': len(planners), 'blueprints_migrated': len(blueprints)})
             return target
 
         target = create_with_receipt(request, 'category.merge', Category, merge)
@@ -272,6 +290,7 @@ class CategoryDeleteView(APIView):
 
     @transaction.atomic
     def delete(self, request, category_id):
+        _lock_category_writer(request)
         category = get_object_or_404(Category.objects.select_for_update(), id=category_id)
         check_revision(category.version, expected_revision(request))
         category_name = category.name
@@ -279,6 +298,7 @@ class CategoryDeleteView(APIView):
             category.delete()
         except ProtectedError:
             return api_error('التصنيف مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409)
-        log_privileged_action(request, 'category.delete', target_repr=category_name,
-                              details={'category_id': category_id})
+        log_privileged_action(
+            request, 'category.delete', target_repr=category_name,
+            details={'category_id': category_id})
         return api_success(message='تم حذف التصنيف')

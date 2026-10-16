@@ -10,16 +10,21 @@ completed and published to the bank.
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.views import APIView
 
 from apps.core.utils import api_success, api_error
 from apps.core.permissions import HasCapability
+from apps.core.revisions import expected_revision, check_revision
+from apps.core.exceptions import RevisionConflict
+from apps.questions.hierarchy import lock_tag_hierarchy
 from apps.questions.models import Question
+from apps.users.models import User
 
 from ..models import MasterExam, MasterExamQuestion
 from ..serializers import (
     MasterExamDraftSerializer,
-    MasterExamDraftCreateSerializer,
+    MasterExamDraftUpdateSerializer,
 )
 
 
@@ -89,25 +94,10 @@ class MasterExamDraftDetailView(APIView):
     must be removed from the exam first, so the deletion cannot
     silently break a live exam.
 
-    DELETE BEHAVIOR (fixed)
-    -----------------------
-    `MasterExamQuestion.question` uses on_delete=PROTECT, so a
-    MasterExamQuestion row referencing the draft blocks a raw
-    `draft.delete()` even when the attached exam is cancelled or
-    published_to_bank. The previous implementation checked only the
-    non-terminal-status case and returned 409 for it; a draft
-    attached solely to a cancelled exam passed the check and then
-    raised ProtectedError → unhandled 500.
-
-    The delete now:
-      1. Blocks if the draft is attached to any live (non-cancelled,
-         non-published-to-bank) exam, as before.
-      2. Otherwise detaches the draft from every remaining through-
-         row inside the same transaction, then deletes it.
-
-    This preserves the original intent — "you cannot pull a draft
-    out from under a running exam, but a cancelled exam's drafts are
-    yours to clean up" — while making the cleanup path actually work.
+    Deletion checks the current draft owner, revision and attached exam
+    states under ordered locks. Newly discovered attachments require review.
+    Cancelled/archived links may be detached, while frozen attempt pages remain
+    readable even after the live question is removed.
 
     CASE_ORDER ON UPDATE (fixed)
     ----------------------------
@@ -136,20 +126,24 @@ class MasterExamDraftDetailView(APIView):
             return api_error('غير مصرح لك', 403)
         return api_success(data=MasterExamDraftSerializer(draft).data)
 
+    @transaction.atomic
     def put(self, request, draft_id):
+        User.objects.select_for_update().get(pk=request.user.pk)
+        lock_tag_hierarchy()
         draft = get_object_or_404(
-            Question.objects.select_related('case'),
+            Question.objects.select_for_update(),
             id=draft_id,
             is_draft=True,
         )
         if not self._can_edit(request.user, draft):
             return api_error('غير مصرح لك', 403)
 
-        serializer = MasterExamDraftCreateSerializer(data=request.data)
+        serializer = MasterExamDraftUpdateSerializer(data=request.data)
         if not serializer.is_valid():
             return api_error('بيانات غير صالحة', 400, details=serializer.errors)
 
         payload = dict(serializer.validated_data)
+        check_revision(draft.version, payload.pop('expected_version'))
         category_id = payload.pop('category', None)
         category = None
         if category_id:
@@ -164,12 +158,8 @@ class MasterExamDraftDetailView(APIView):
         # detach an existing case. Passing `case_key: null` or
         # `case_key: ""` explicitly detaches.
         #
-        # The stem is passed as a hint to _resolve_case, which only
-        # applies it when the target case has no stem yet. Editing
-        # the stem on a populated case goes through the dedicated
-        # /questions/case/<key>/stem/ endpoint so concurrent stem
-        # edits serialize on the case row rather than racing on
-        # individual questions.
+        # Stem hints initialize new cases only. Existing shared stems use
+        # the authorized revisioned case editor, including blank stems.
         case_key_present = 'case_key' in request.data
         case_key = payload.pop('case_key', None)
         case_stem = payload.pop('case_stem', None)
@@ -200,37 +190,50 @@ class MasterExamDraftDetailView(APIView):
         if case_order_present:
             draft.case_order = case_order
 
+        # Retained translations must still match a changed base choice list.
+        # Reject at the API boundary rather than allowing a model ValueError/500.
+        from apps.questions.translation_validation import normalize_translations
+        from rest_framework.exceptions import ValidationError
+        try:
+            normalize_translations(draft.translations, base_choice_count=len(draft.choices))
+        except ValueError as exc:
+            raise ValidationError({'choices': [str(exc)]}) from exc
+        draft.last_revised_at = timezone.localdate()
         draft.save()
         return api_success(data=MasterExamDraftSerializer(draft).data)
 
+    @transaction.atomic
     def delete(self, request, draft_id):
-        draft = get_object_or_404(Question, id=draft_id, is_draft=True)
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
+        # Exam writers acquire exam before structural gate/question. Discover
+        # participants first, then refuse a newly discovered exam rather than
+        # taking it in reverse order while holding the gate.
+        exam_ids = set(MasterExamQuestion.objects.filter(question_id=draft_id)
+                       .values_list('master_exam_id', flat=True))
+        exams = list(MasterExam.objects.select_for_update().filter(pk__in=exam_ids).order_by('pk'))
+        lock_tag_hierarchy()
+        draft = get_object_or_404(Question.objects.select_for_update(), id=draft_id, is_draft=True)
         if not self._can_edit(request.user, draft):
             return api_error('غير مصرح لك', 403)
+        check_revision(draft.version, expected_revision(request))
+        links = list(MasterExamQuestion.objects.select_for_update().filter(question_id=draft.pk))
+        if not {link.master_exam_id for link in links}.issubset({exam.pk for exam in exams}):
+            raise RevisionConflict()
 
         # A draft is "in use" if any through-row references it AND the
         # exam is in a state where the question is part of a live
         # experience. Cancelled and published_to_bank exams are
         # terminal — their through-rows are historical artefacts, not
         # active attachments, so the draft can be cleaned up.
-        blocking = (
-            MasterExam.objects
-            .exclude(stored_status__in=('cancelled', 'published_to_bank'))
-            .filter(exam_questions__question_id=draft.id)
-            .exists()
-        )
+        attached_ids = {link.master_exam_id for link in links}
+        blocking = any(exam.pk in attached_ids and exam.stored_status not in ('cancelled', 'published_to_bank') for exam in exams)
         if blocking:
             return api_error(
                 'الموضوع مرتبط بامتحان قائم — احذفه من الامتحان أولاً',
                 409,
             )
 
-        with transaction.atomic():
-            # Detach from any terminal-state exam before deleting the
-            # question. PROTECT on MasterExamQuestion.question would
-            # otherwise raise ProtectedError for the very rows the
-            # blocking check above intentionally allowed.
-            MasterExamQuestion.objects.filter(question_id=draft.id).delete()
-            draft.delete()
+        MasterExamQuestion.objects.filter(question_id=draft.id).delete()
+        draft.delete()
 
         return api_success(message='تم حذف المسودة')

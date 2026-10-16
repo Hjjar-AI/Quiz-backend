@@ -62,33 +62,29 @@ def _current_question_locked(attempt):
     if current_id is None:
         return None
 
-    try:
-        question = (
-            Question.objects
-            .select_related('case')
-            .get(id=current_id)
-        )
-    except Question.DoesNotExist:
-        return None
-
-    payload = exam_question_payload(question)
-    snapshot = (attempt.grading_snapshot or {}).get(str(question.id))
+    snapshot = (attempt.grading_snapshot or {}).get(str(current_id))
     if snapshot:
-        payload.update({
+        payload = {
+            'id': current_id,
             'text': snapshot['question'],
             'choices': snapshot['choices'],
             'translations': snapshot.get('translations') or {},
             'image_url': snapshot_image_url(snapshot),
             'case': case_block_from_snapshot(snapshot.get('case')),
-        })
+        }
+    else:
+        question = Question.objects.select_related('case').filter(pk=current_id).first()
+        if question is None:
+            return None
+        payload = exam_question_payload(question)
     payload['translations'] = without_translation_explanations(
         payload.get('translations'),
     )
     from apps.learning.exposure import record_presentation
-    record_presentation(attempt.user_id, f'master:{attempt.session_id}', question.pk, snapshot)
-    saved = attempt.answers.get(str(question.id)) or {}
+    record_presentation(attempt.user_id, f'master:{attempt.session_id}', current_id, snapshot)
+    saved = attempt.answers.get(str(current_id)) or {}
     return {
-        'index': attempt_qids.index(question.id),
+        'index': attempt_qids.index(current_id),
         'total': len(attempt_qids),
         'question': payload,
         'saved_slot': saved or None, 'session_id': attempt.session_id,'current_question_id':attempt.current_question_id,

@@ -27,7 +27,7 @@ from tests.factories import make_user
 class CSRFEnforcementTests(CacheClearingTestCase):
     def setUp(self):
         super().setUp()
-        self.user = make_user('alice')
+        self.user = make_user('alice', capabilities={'questions.create': True})
         self.client = APIClient(enforce_csrf_checks=True)
         self.client.force_login(self.user)
 

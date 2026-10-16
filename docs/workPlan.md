@@ -1,5 +1,16 @@
 # Django remaining work
 
+## 2026-10-17 logic/model correction verification
+
+- [C1–C7 plus translation validation](archive/reviews/2026-10-17-remainingLogicReview.md#extended-findings-and-source-corrections) are source-corrected. Deploy matching draft-client contracts; verify concept/sibling withholding, explanation-only searches/counts, permitted matches, concurrent draft edit/delete/attach/publication/admin, deleted-live-row snapshot navigation/answer/finish, revisions, translated-choice rejection and client unknown-write review. Check invalid bank transitions and normal publication.
+- Verify admin planner scalar/M2M scopes, current/delayed attribution, resets, revisions and read-only ledgers. Measure mixed actor/exam/gate/question locking; source checks do not establish runtime concurrency/capacity or total deadlock freedom. These records do not authorize suites/builds/migrations.
+
+## 2026-10-17 additional major-fix verification
+
+- [B1–B4 source corrections](archive/reviews/2026-10-17-backendMajorReview.md#source-corrections) are implemented. Verify ordinary finish/expiry with overlapping master work, exact result recovery after response loss, saved summary versus withheld/full review and failed explicit refresh on Vue/Android. Verify private/blank/shared case links, actual actor versus author, differing/equal stem hints, revisioned editor recovery, explicit detach and duplication of withheld questions.
+- Verify planner/category merge and case/learning concurrency on the deployed row-locking database, including API/admin/bulk deletion, flat/Telegram/state imports, new links during parent edits, changed relationships, audit/receipt rollback and lock duration under mixed workloads. Source coordination does not establish freedom from all deadlocks or server capacity.
+- Verify middleware/login/background renewal against concurrent admin disable, expiry shortening/clearing, renewal disable, bypass-capability changes and password reset. No source completion implies HTTP/database/browser/device concurrency verification. Builds/suites/migrations remain subject to explicit-request restrictions.
+
 ## 2026-10-17 learning-flow verification
 
 - [L1–L4 and coordinated Vue recovery](archive/reviews/2026-10-17-learningFlowReview.md#source-corrections) are source-complete. Deploy backend before matching Vue; verify overlapping ordinary/master/study/recall and old study/history/receipt reads, frozen/current knowledge links and answer searches, paused writes without preconditions, invalid/terminal navigation, and typed expiry versus progress/paused conflicts. Exercise web response loss, unchanged/changed saved slots, explicit retry/discard, missing/completed/paused sessions, failed recovery reads, account switches and expired timers during review. No runtime/HTTP/database/concurrency, suites or builds verified.

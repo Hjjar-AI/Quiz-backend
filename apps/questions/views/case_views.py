@@ -16,7 +16,9 @@ from ..serializers import (
 from ..services import QuestionService
 from apps.core.utils import api_success, api_error, paginate
 from apps.core.audit import log_privileged_action
-from ..case_policy import can_edit_case
+from ..case_policy import can_edit_case, visible_cases
+from ..hierarchy import lock_tag_hierarchy
+from apps.users.models import User
 
 
 # ── Read-path visibility helper ─────────────────────────────────────────
@@ -42,18 +44,7 @@ def _visible_cases_qs(user):
     The `.distinct()` is retained as a guard in case a future edit
     replaces the `id__in` subquery with a `questions__…` traversal.
     """
-    if user.has_capability('questions.edit_case_stem_any'):
-        return ClinicalCase.objects.all()
-
-    visible_case_ids = (
-        Question.objects
-        .visible_to(user)
-        .exclude(case_id__isnull=True)
-        .values_list('case_id', flat=True)
-    )
-    return ClinicalCase.objects.filter(
-        Q(authored_by=user) | Q(id__in=visible_case_ids)
-    ).distinct()
+    return visible_cases(user)
 
 
 def _visible_questions_in_case(user, case_id):
@@ -235,6 +226,8 @@ class CaseDetailView(APIView):
 
     @transaction.atomic
     def put(self, request, case_key):
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
+        lock_tag_hierarchy()
         visible = get_object_or_404(_visible_cases_qs(request.user), key=case_key)
         list(Question.objects.select_for_update().filter(case=visible).order_by('pk').values_list('pk', flat=True))
         case = ClinicalCase.objects.select_for_update().get(pk=visible.pk)
@@ -251,6 +244,8 @@ class CaseDetailView(APIView):
 
     @transaction.atomic
     def delete(self, request, case_key):
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
+        lock_tag_hierarchy()
         if not request.user.has_capability('questions.edit_case_stem_any'):
             return api_error('غير مصرح لك بحذف هذه الحالة', 403)
 

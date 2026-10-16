@@ -328,7 +328,17 @@ class KnowledgeObject(InvariantValidationMixin, TimeStampedModel):
             )
 
 
-class Question(InvariantValidationMixin, TimeStampedModel):
+class Question(RevisionedSaveMixin, InvariantValidationMixin, TimeStampedModel):
+    preserve_explicit_revision = True
+    # Ordinary API CAS/bulk writers advance revisions explicitly. Direct model
+    # saves (draft library/admin) must invalidate the same editor baselines.
+    revision_fields = (
+        'question', 'choices', 'correct_answer', 'explanation', 'source',
+        'source_document', 'source_page', 'translations', 'difficulty',
+        'category', 'knowledge_object', 'last_revised_at', 'case', 'case_order',
+        'is_draft', 'draft_owner', 'owned_by', 'authored_by',
+        'verified', 'verified_by', 'verified_at', 'verification_notes',
+    )
     stats_fingerprint = models.CharField(max_length=64, blank=True, default='')
     DIFFICULTY_CHOICES = [
         ('easy', 'Easy'),

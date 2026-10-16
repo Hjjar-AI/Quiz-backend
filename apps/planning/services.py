@@ -77,7 +77,10 @@ class StudyPlannerService:
         Both lists are treated as full replacements: whatever was
         there before is cleared and replaced with the incoming set.
         """
-        # Match tag merges: hierarchy first, then planner and its FK links.
+        # Match content writers: learner first, then the structural gate and
+        # planner links. This also protects a new planner's user FK ordering.
+        from apps.users.models import User
+        User.objects.select_for_update().only('id').get(pk=user.pk)
         from apps.questions.hierarchy import lock_tag_hierarchy
         lock_tag_hierarchy()
         planner, _ = StudyPlanner.objects.select_for_update().get_or_create(user=user)

@@ -57,10 +57,12 @@ class QuestionService:
         return qs.visible_to(user)
 
     @staticmethod
-    def get_questions(filters=None, limit=None, offset=None, user=None):
+    def get_questions(filters=None, limit=None, offset=None, user=None, *, answer_user=None):
         queryset = QuestionService._visible_qs(user)
 
-        queryset = filter_questions(queryset, filters)
+        from ..answer_visibility import closed_book_question_ids
+        hidden = closed_book_question_ids(answer_user if answer_user is not None else user) if filters and filters.get('search') else ()
+        queryset = filter_questions(queryset, filters, hidden_answer_ids=hidden)
 
         queryset = queryset.order_by('-created_at')
 
@@ -153,6 +155,10 @@ class QuestionService:
         serializer = QuestionCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
+            from apps.users.models import User
+            from apps.questions.hierarchy import lock_tag_hierarchy
+            User.objects.select_for_update().get(pk=user.pk)
+            lock_tag_hierarchy()
             # Both FKs start pointing at the creator. They diverge only
             # when ownership is explicitly reassigned later (an admin
             # action not exposed on this path).
@@ -178,15 +184,15 @@ class QuestionService:
     def update_question(question_id, data, user):
         from apps.users.models import User
         from ..serializers import QuestionUpdateSerializer, _resolve_case
-        from apps.learning.evidence import with_locked_learning_content
 
         with transaction.atomic():
             User.objects.select_for_update().get(pk=user.pk)
             from apps.questions.hierarchy import lock_tag_hierarchy
             lock_tag_hierarchy()
-            instance = with_locked_learning_content(
-                Question.objects.select_for_update().filter(id=question_id),
-            ).first()
+            # Parent content writers/deleters acquire this question first.
+            # Its lock therefore stabilizes the old assessed content without
+            # taking old-parent locks ahead of a newly selected case parent.
+            instance = Question.objects.select_for_update().filter(id=question_id).first()
             if instance is None:
                 raise Question.DoesNotExist(
                     f'Question {question_id} does not exist'
@@ -582,23 +588,21 @@ class QuestionService:
         capability check and for fetching `original` through a
         visibility-scoped queryset — see `QuestionDuplicateView.post`.
         """
-        # Draft-state inheritance. See the docstring.
-        is_draft = bool(original.is_draft)
-        draft_owner = user if is_draft else None
-            # Case-order assignment: one past the current maximum
-            # within the case. This does NOT guarantee monotonicity
-            # under concurrent duplicates of the same case — the
-            # `Question` model has no unique constraint on
-            # `(case_id, case_order)`, so two racing transactions can
-            # each compute the same "one past max" and both insert
-            # with that value. The read is inside the atomic block
-            # only because the whole copy operation is, not because
-            # it defends against that race. A monotonic guarantee
-            # would require either a `SELECT ... FOR UPDATE` on the
-            # case row or a unique constraint on
-            # `(case_id, case_order)`; both are out of scope for the
-            # atomicity fix this method exists to deliver.
         with transaction.atomic():
+            from apps.users.models import User
+            from apps.questions.hierarchy import lock_tag_hierarchy
+            from apps.questions.answer_visibility import require_answers_available
+            from django.shortcuts import get_object_or_404
+            User.objects.select_for_update().get(pk=user.pk)
+            lock_tag_hierarchy()
+            original = get_object_or_404(Question.objects.visible_to(user).select_for_update(), pk=original.pk)
+            # A copied row has a new ID; do not let it turn withheld source
+            # answers into an unrestricted question-create response.
+            require_answers_available(user, [original.pk])
+            is_draft = bool(original.is_draft)
+            draft_owner = user if is_draft else None
+            # App writers share the gate; case_order still has no schema-level
+            # uniqueness guarantee for unrelated direct ORM writers.
             new_case_order = None
             if original.case_id is not None:
                 from django.db.models import Max
@@ -695,6 +699,10 @@ class QuestionService:
         change to `visible_to`. The scoped form below follows the
         queryset's rule verbatim.
         """
+        from apps.users.models import User
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        User.objects.select_for_update().only('id').get(pk=user.pk)
+        lock_tag_hierarchy()
         if not case_key:
             return 0
 

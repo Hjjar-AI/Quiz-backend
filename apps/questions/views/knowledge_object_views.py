@@ -110,6 +110,10 @@ class KnowledgeObjectDetailView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk):
+        from apps.users.models import User
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
+        lock_tag_hierarchy()
         # Match linked-content lock ordering before taking the parent row.
         list(Question.objects.select_for_update().filter(knowledge_object_id=pk).order_by('pk').values_list('pk', flat=True))
         instance = get_object_or_404(KnowledgeObject.objects.select_for_update(), pk=pk)

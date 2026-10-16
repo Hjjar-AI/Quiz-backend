@@ -161,17 +161,18 @@ class AutoRenewMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.user.is_authenticated and request.user.renew_if_eligible():
-            request.user.save(update_fields=['expires_at'])
-        if request.user.is_authenticated and request.user.is_expired:
+        if request.user.is_authenticated:
+            request.user.renew_if_eligible()
+        if request.user.is_authenticated and (not request.user.is_active or request.user.is_expired):
+            inactive = not request.user.is_active
             # Expiry applies to existing sessions too, including accounts
             # whose expiry was shortened by an administrator after login.
             logout(request)
             if request.path_info.startswith('/api/'):
                 return JsonResponse({
                     'code': 401,
-                    'message': 'انتهت صلاحية الحساب.',
-                    'details': {'reason': 'ACCOUNT_EXPIRED'},
+                    'message': 'الحساب غير نشط.' if inactive else 'انتهت صلاحية الحساب.',
+                    'details': {'reason': 'ACCOUNT_INACTIVE' if inactive else 'ACCOUNT_EXPIRED'},
                 }, status=401)
             if request.path_info.startswith('/admin/'):
                 return HttpResponseRedirect('/admin/login/')

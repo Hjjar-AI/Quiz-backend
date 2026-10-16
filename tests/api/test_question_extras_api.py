@@ -59,7 +59,7 @@ class QuestionDuplicateAPITests(CacheClearingTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
-        self.u = make_user('alice')
+        self.u = make_user('alice', capabilities={'questions.duplicate': True})
         self.client.force_login(self.u)
 
     def test_duplicate_public_question_creates_public_copy(self):

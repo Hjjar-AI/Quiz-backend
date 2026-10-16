@@ -109,10 +109,22 @@ class RevisionedSaveMixin:
             lock_assessed_dependents(self, using)
             previous = type(self).objects.using(using).select_for_update().filter(pk=self.pk).first() if self.pk else None
             fields = set(update_fields) if update_fields is not None else None
-            changed = previous is not None and any(
-                (fields is None or field in fields) and getattr(previous, field) != getattr(self, field)
-                for field in self.revision_fields)
+            changed = False
+            if previous is not None:
+                for name in self.revision_fields:
+                    field = self._meta.get_field(name)
+                    if fields is not None and not {name, field.attname}.intersection(fields):
+                        continue
+                    if getattr(previous, field.attname) != getattr(self, field.attname):
+                        changed = True
+                        break
+            requested_version = self.version
             self.version = (previous.version + int(changed)) if previous else 1
+            if getattr(self, 'preserve_explicit_revision', False) and (fields is None or 'version' in fields):
+                # Import/bootstrap may supply a historical revision. Preserve
+                # higher tokens, while stale model instances can never lower
+                # a revision already committed by another writer.
+                self.version = max(self.version, requested_version)
             if fields is not None:
                 fields.add('version')
             return super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=fields)

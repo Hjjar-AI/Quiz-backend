@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-17",
+  "browser_tests_run": false,
+  "backend_sqlite": {
+    "total": 1008,
+    "passed": 972,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 36,
+    "duration_seconds": 59.235
+  },
+  "frontend_node": {
+    "total": 951,
+    "passed": 944,
+    "failed": 7,
+    "skipped": 0,
+    "files": 73,
+    "duration_seconds": 76.7,
+    "failures": [
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "stone keeps semantic and chart series colors distinguishable",
+        "assertion": "AssertionError: expected 4.498934455011039 to be greater than or equal to 5"
+      },
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "lagoon keeps text, controls, and semantic states legible",
+        "assertion": "AssertionError: expected 4.33924913358357 to be greater than or equal to 4.5"
+      },
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "slate keeps text, controls, and semantic states legible",
+        "assertion": "AssertionError: expected 4.244421120326136 to be greater than or equal to 4.5"
+      },
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "ink keeps text, controls, and semantic states legible",
+        "assertion": "AssertionError: expected 4.393565324571418 to be greater than or equal to 4.5"
+      },
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "amber keeps semantic and chart series colors distinguishable",
+        "assertion": "AssertionError: expected 3.804619572364704 to be greater than or equal to 5"
+      },
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "ruby keeps text, controls, and semantic states legible",
+        "assertion": "AssertionError: expected 4.229791909927309 to be greater than or equal to 4.5"
+      },
+      {
+        "file": "tests/unit/themeTokens.test.js",
+        "name": "ruby keeps semantic and chart series colors distinguishable",
+        "assertion": "AssertionError: expected 2.2713229902730663 to be greater than or equal to 5"
+      }
+    ]
+  },
+  "backend_postgresql": {
+    "total": 1008,
+    "passed": 1008,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "duration_seconds": 101.145,
+    "database": "test_quiz_codex_20261010"
+  },
+  "frontend_theme_followup": {
+    "total": 951,
+    "passed": 951,
+    "failed": 0,
+    "skipped": 0,
+    "files": 73,
+    "duration_seconds": 47.92,
+    "focused_token_export_passed": 28,
+    "pdf_theme_passed": 7,
+    "pdf_theme_duration_seconds": 1.364,
+    "web_pdf_palettes_matched": 12,
+    "browser_tests_run": false
+  }
+}

@@ -35,7 +35,8 @@ class StartSessionTests(CacheClearingTestCase):
         u = make_user()
         q = make_question(owner=u)
         exam_s = ExamService.start_session(u, 'exam', [q.id])
-        ExamService.start_session(u, 'study', [q.id])
+        study_q = make_question(owner=u)
+        ExamService.start_session(u, 'study', [study_q.id])
         self.assertTrue(
             ExamSession.objects.filter(pk=exam_s.pk).exists()
         )
@@ -95,6 +96,7 @@ class SessionLabelAPITests(CacheClearingTestCase):
                 self.assertEqual(data['tag'], label[:99] + '…')
                 self.assertCountEqual(data['question_ids'], [q.id for q in questions])
                 self.assertNotIn(excluded.id, data['question_ids'])
+                ExamService.finish_session(ExamSession.objects.get(session_id=data['session_id']), self.user)
 
     def test_nontext_label_returns_400_and_preserves_existing_session(self):
         question = make_question(owner=self.user)

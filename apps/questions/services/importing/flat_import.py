@@ -508,6 +508,12 @@ def _persist_records(records, username, author=None, owner=None, *, first_row=No
         for text in Question.objects.values_list('question', flat=True)
     }
     with transaction.atomic():
+        from apps.users.models import User
+        from apps.questions.hierarchy import lock_tag_hierarchy
+        list(User.objects.select_for_update().filter(
+            pk__in={person.pk for person in (author, owner) if person is not None},
+        ).order_by('pk').values_list('pk', flat=True))
+        lock_tag_hierarchy()
         for index, row in enumerate(records):
             try:
                 question, tags = _build_question(

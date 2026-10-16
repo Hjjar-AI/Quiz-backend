@@ -30,7 +30,7 @@ def _integer_ids(raw, *, positive_only=False):
     return ids
 
 
-def filter_questions(queryset, filters=None, *, export=False, verified_only=False):
+def filter_questions(queryset, filters=None, *, export=False, verified_only=False, hidden_answer_ids=()):
     if verified_only:
         queryset = queryset.filter(verified=True)
     if not filters:
@@ -41,7 +41,7 @@ def filter_questions(queryset, filters=None, *, export=False, verified_only=Fals
     if len(search) >= 2:
         search_query = (
             Q(question__icontains=search)
-            | Q(explanation__icontains=search)
+            | (Q(explanation__icontains=search) & ~Q(pk__in=hidden_answer_ids))
             | Q(source__icontains=search)
             | Q(source_document__icontains=search)
         )

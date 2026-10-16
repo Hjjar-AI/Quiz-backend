@@ -203,6 +203,7 @@ class DraftsLibraryAPITests(CacheClearingTestCase):
             f'/api/v1/exam/master/drafts/{draft.id}/',
             {
                 'question': 'Updated?',
+                'expected_version': draft.version,
                 'choices': ['A', 'B'],
                 'correct_answer': 1,
             },
@@ -214,13 +215,13 @@ class DraftsLibraryAPITests(CacheClearingTestCase):
 
     def test_draft_delete_removes_unattached(self):
         draft = self._make_draft(self.mod, 'Delete me?')
-        resp = self.client.delete(f'/api/v1/exam/master/drafts/{draft.id}/')
+        resp = self.client.delete(f'/api/v1/exam/master/drafts/{draft.id}/?expected_version={draft.version}')
         self.assertEqual(resp.status_code, 200)
 
     def test_draft_delete_blocked_when_attached_to_live_exam(self):
         draft = self._make_draft(self.mod, 'Attached?')
         exam = _draft_exam(self.mod, questions=[draft])
-        resp = self.client.delete(f'/api/v1/exam/master/drafts/{draft.id}/')
+        resp = self.client.delete(f'/api/v1/exam/master/drafts/{draft.id}/?expected_version={draft.version}')
         self.assertEqual(resp.status_code, 409)
 
     def test_draft_delete_from_cancelled_exam_succeeds(self):
@@ -229,7 +230,7 @@ class DraftsLibraryAPITests(CacheClearingTestCase):
         exam.stored_status = 'cancelled'
         exam.save()
 
-        resp = self.client.delete(f'/api/v1/exam/master/drafts/{draft.id}/')
+        resp = self.client.delete(f'/api/v1/exam/master/drafts/{draft.id}/?expected_version={draft.version}')
         self.assertEqual(resp.status_code, 200)
 
 

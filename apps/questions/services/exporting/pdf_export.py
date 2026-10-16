@@ -145,7 +145,7 @@ _PDF_THEME_ALIASES = {
 _PDF_THEME_TOKENS = {
     'stone': {
         'primary': '#6f4a32', 'success': '#106140',
-        'danger': '#ab2117', 'warning': '#754d00', 'info': '#145c74',
+        'danger': '#ab2117', 'warning': '#7c5900', 'info': '#145c74',
         'bg_body': '#d8cebc', 'bg_card': '#eee5d5', 'bg_alt': '#e3d7c1',
         'text_primary': '#2d241b', 'text_secondary': '#4c3d30',
         'text_muted': '#62503e', 'on_accent': '#ffffff',
@@ -180,7 +180,7 @@ _PDF_THEME_TOKENS = {
         'danger': '#9e252f', 'warning': '#6e4b08', 'info': '#2d5299',
         'bg_body': '#98d4ce', 'bg_card': '#d1ece5', 'bg_alt': '#b8e0d6',
         'text_primary': '#092f2b', 'text_secondary': '#214f46',
-        'text_muted': '#305a51', 'on_accent': '#ffffff',
+        'text_muted': '#2c524a', 'on_accent': '#ffffff',
         'strong_weight': 0.70,
     },
     'contrast': {
@@ -196,7 +196,7 @@ _PDF_THEME_TOKENS = {
         'danger': '#962121', 'warning': '#6e4907', 'info': '#355267',
         'bg_body': '#c4c4bc', 'bg_card': '#e1e2d9', 'bg_alt': '#d3d5ca',
         'text_primary': '#181c17', 'text_secondary': '#363d31',
-        'text_muted': '#485142', 'on_accent': '#ffffff',
+        'text_muted': '#424b3d', 'on_accent': '#ffffff',
         'strong_weight': 0.70,
     },
     'slate': {
@@ -204,12 +204,12 @@ _PDF_THEME_TOKENS = {
         'danger': '#952731', 'warning': '#6e4a00', 'info': '#5a3e90',
         'bg_body': '#b2c5db', 'bg_card': '#d9e3ee', 'bg_alt': '#c6d4e4',
         'text_primary': '#18283b', 'text_secondary': '#35495f',
-        'text_muted': '#3f5266', 'on_accent': '#ffffff',
+        'text_muted': '#38495b', 'on_accent': '#ffffff',
         'strong_weight': 0.70,
     },
     'amber': {
         'primary': '#6b4300', 'success': '#3f5c19',
-        'danger': '#9d204d', 'warning': '#734f00', 'info': '#205b76',
+        'danger': '#9d204d', 'warning': '#815c00', 'info': '#205b76',
         'bg_body': '#e8c77d', 'bg_card': '#f5e4b6', 'bg_alt': '#eed497',
         'text_primary': '#30200a', 'text_secondary': '#51390f',
         'text_muted': '#66491d', 'on_accent': '#ffffff',
@@ -217,10 +217,10 @@ _PDF_THEME_TOKENS = {
     },
     'ruby': {
         'primary': '#750a38', 'success': '#114a32',
-        'danger': '#7a193c', 'warning': '#593c00', 'info': '#1a4262',
+        'danger': '#871b24', 'warning': '#593c00', 'info': '#1a4262',
         'bg_body': '#d5a0b2', 'bg_card': '#efcbd8', 'bg_alt': '#e2b5c8',
         'text_primary': '#330e21', 'text_secondary': '#56263e',
-        'text_muted': '#64324c', 'on_accent': '#ffffff',
+        'text_muted': '#572c42', 'on_accent': '#ffffff',
         'strong_weight': 0.70,
     },
     'iris': {

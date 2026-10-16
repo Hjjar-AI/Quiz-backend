@@ -32,22 +32,10 @@ only then writes. This is the same serialization pattern used by
 `_acquire_admin_lock_set` in `apps/users/views/admin_user_views.py`
 for the equivalent admin-user transitions.
 
-WHY `version` IS NOT BUMPED HERE
---------------------------------
-`MasterExam.CONTENT_FIELDS` deliberately excludes the four lifecycle
-fields (`stored_status`, `published_at`, `completed_at`,
-`published_to_bank_at`). The original design rationale is documented
-on the model: an optimistic lock guards CONTENT edits, and a status
-transition does not change the content an editor is looking at.
-Bumping `version` on a status transition would make a legitimate
-in-flight content edit fail with `MODIFIED_BY_ANOTHER_USER` even
-though nothing the editor cares about changed.
-
-The row lock below is the correct fix for the concurrency concern.
-Composition callers holding a stale version are already blocked by
-`can_edit_now` (which refuses edits on terminal states) — see
-`MasterExam.can_edit_now` and the `EXAM_WINDOW_STARTED` guard in
-`composition.py`.
+LIFECYCLE REVISIONS
+-------------------
+Lifecycle fields belong to MasterExam.CONTENT_FIELDS. Their model saves
+advance the exam revision; stale composition baselines must conflict.
 
 RETURN CONTRACT
 ---------------
@@ -91,6 +79,7 @@ itself.
 import logging
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from apps.questions.models import Question, Tag, clean_tag_name
@@ -199,6 +188,8 @@ def _tag_and_publish_questions_to_bank(exam, qids):
     author ids AFTER its transaction commits — see the section note
     at the top of this module.
     """
+    from apps.questions.hierarchy import lock_tag_hierarchy
+    lock_tag_hierarchy()
     tag_name = _build_bank_tag_name(exam)
     tag, _ = Tag.objects.get_or_create(name=tag_name)
 
@@ -220,6 +211,7 @@ def _tag_and_publish_questions_to_bank(exam, qids):
     Question.objects.filter(id__in=qids).update(
         is_draft=False,
         draft_owner=None,
+        version=F('version') + 1,
     )
 
     existing_pairs = set(
@@ -356,6 +348,8 @@ def publish_to_bank(exam, request=None):
 
         if locked.stored_status == 'published_to_bank':
             raise ValueError('ALREADY_PUBLISHED_TO_BANK')
+        if locked.stored_status not in ('published', 'completed'):
+            raise ValueError('EXAM_TERMINAL')
         if timezone.now() < locked.closes_at:
             raise ValueError('WINDOW_NOT_CLOSED')
 
