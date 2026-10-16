@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 
 from apps.core.permissions import HasCapability
 from apps.core.fingerprints import json_fingerprint
-from apps.questions.answer_visibility import closed_book_question_ids
+from apps.questions.answer_visibility import closed_book_question_ids, require_answers_available
 from .offline_observability import OfflineOperationLoggingMixin
 from apps.core.utils import api_error, api_success
 from apps.learning.evidence import question_learning_fingerprint, with_locked_learning_content
@@ -275,6 +275,7 @@ class OfflineCompletionView(OfflineOperationLoggingMixin, APIView):
                 if prior:
                     if prior.user_id != user.pk or prior.request_fingerprint != fingerprint:
                         return _error(request, 'تعارض معرّف المزامنة', 409, 'RECEIPT_CONFLICT')
+                    require_answers_available(user, ids)
                     request._offline_reason = 'RECEIPT_REPLAY'
                     return api_success(data=prior.response)
                 received_now = timezone.now()
@@ -318,6 +319,7 @@ class OfflineCompletionView(OfflineOperationLoggingMixin, APIView):
             prior = OfflineCompletion.objects.filter(completion_id=identity).first()
             if prior is not None:
                 if prior.user_id == request.user.pk and prior.request_fingerprint == fingerprint:
+                    require_answers_available(request.user, ids)
                     request._offline_reason = 'RECEIPT_REPLAY'
                     return api_success(data=prior.response)
                 return _error(request, 'تعارض معرّف المزامنة', 409, 'RECEIPT_CONFLICT')

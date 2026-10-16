@@ -68,10 +68,10 @@ class AnswerSlotBaselineSerializer(serializers.Serializer):
 class SubmitAnswerSerializer(serializers.Serializer):
     session_id = serializers.CharField()
     answer = serializers.IntegerField(required=False, allow_null=True, default=None)
-    action = serializers.CharField(required=False, default='next')
+    action = serializers.ChoiceField(choices=['same', 'next', 'previous', 'goto'], required=False, default='next')
     expected_index = serializers.IntegerField(required=False, allow_null=True, min_value=0, default=None)
     expected_slot = AnswerSlotBaselineSerializer(required=False, allow_null=True)
-    target_index = serializers.IntegerField(required=False, allow_null=True, default=None)
+    target_index = serializers.IntegerField(required=False, allow_null=True, min_value=0, default=None)
     confidence = serializers.JSONField(required=False, allow_null=True, default=None)
     pre_answer = serializers.CharField(
         required=False, allow_blank=True, allow_null=True,
@@ -93,6 +93,13 @@ class SubmitAnswerSerializer(serializers.Serializer):
             return normalize_confidence(value)
         except ValueError as exc:
             raise serializers.ValidationError(str(exc)) from exc
+
+    def validate(self, attrs):
+        if attrs['action'] == 'goto' and attrs.get('target_index') is None:
+            raise serializers.ValidationError({'target_index': 'This field is required for goto.'})
+        if attrs['action'] != 'goto' and attrs.get('target_index') is not None:
+            raise serializers.ValidationError({'target_index': 'Only goto accepts a target index.'})
+        return attrs
 
 
 class BlueprintSerializer(serializers.ModelSerializer):

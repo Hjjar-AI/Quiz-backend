@@ -11,6 +11,7 @@ from django.db.models import Q, F
 
 from apps.users.models import User
 from apps.questions.models import Question
+from apps.questions.answer_visibility import require_answers_available
 from apps.questions.payloads import (
     build_grading_snapshot,
     case_block_from_live,
@@ -84,6 +85,10 @@ class ExamTimeExpired(ValueError):
 
 class SessionProgressConflict(ValueError):
     """The submitted question index no longer matches the locked session."""
+
+    def __init__(self, message, reason='SESSION_PROGRESS_CHANGED'):
+        super().__init__(message)
+        self.reason = reason
 
 
 class ExamService:
@@ -182,6 +187,23 @@ class ExamService:
         return raw.get('pre_answer') or None
 
     @staticmethod
+    def answer_baseline(session, index):
+        if not 0 <= index < len(session.question_ids):
+            return {'answer': None, 'confidence': None, 'pre_answer': None, 'error_reason': None}
+        answer = ExamService._saved_answer(session, index)
+        _, _, reason = ExamService._read_answer_slot(session.answers.get(str(index)))
+        if session.mode not in ('study', 'recall') or answer is None:
+            reason = None
+        elif ExamService.study_feedback(session, session.question_ids[index], answer)[1] is not False:
+            reason = None
+        return {
+            'answer': answer,
+            'confidence': ExamService._saved_confidence(session, index),
+            'pre_answer': ExamService._saved_pre_answer(session, index),
+            'error_reason': reason,
+        }
+
+    @staticmethod
     def start_session(
         user, mode, question_ids, tag=None, blueprint=None,
         duration_minutes=None,
@@ -194,6 +216,8 @@ class ExamService:
             # requests could both delete the old row and then each create a
             # new "current" session for the same mode.
             User.objects.select_for_update().get(pk=user.pk)
+            if mode in ('study', 'recall'):
+                require_answers_available(user, question_ids)
             previous = list(
                 ExamSession.objects
                 .select_for_update()
@@ -245,9 +269,12 @@ class ExamService:
 
     @staticmethod
     def get_question(session, index, *, record_exposure=True, live_questions=None,
-                     include_study_feedback=False):
-        if index >= len(session.question_ids):
+                     include_study_feedback=False, hidden_question_ids=None):
+        if index < 0 or index >= len(session.question_ids):
             return None
+
+        if session.mode in ('study', 'recall'):
+            require_answers_available(session.user, session.question_ids, hidden=hidden_question_ids)
 
         qid = session.question_ids[index]
         snapshot = ExamService._snapshot_entry(session, qid)
@@ -412,33 +439,43 @@ class ExamService:
             )
             if locked is None:
                 raise ValueError('الجلسة غير موجودة أو تم إنهاؤها مسبقاً')
+            if not locked.is_active:
+                raise SessionProgressConflict(
+                    'الجلسة متوقفة. استأنفها قبل المتابعة / Resume the paused session before continuing.',
+                    'SESSION_PAUSED',
+                )
             if ExamService.is_time_expired(locked):
                 raise ExamTimeExpired('انتهى وقت الامتحان. سيتم إنهاء الجلسة الآن')
 
             idx = locked.current_index
-            if expected_index is not None and (expected_index != idx or not locked.is_active):
+            if expected_index is not None and expected_index != idx:
                 raise SessionProgressConflict('تغير تقدم الجلسة. حدّث الحالة قبل المحاولة مجدداً')
+            if action not in ('same', 'next', 'previous', 'goto'):
+                raise ValueError('إجراء تنقل غير صالح / Invalid navigation action.')
+            if action == 'goto':
+                if isinstance(target_index, bool) or not isinstance(target_index, int) or not 0 <= target_index < len(locked.question_ids):
+                    raise ValueError('السؤال المطلوب غير صالح / Invalid target question.')
+            elif target_index is not None:
+                raise ValueError('موضع السؤال متاح فقط للانتقال المباشر / Target index requires goto.')
+            # A terminal/legacy invalid position can only navigate back to a
+            # real question, never acquire an answer without a question.
+            terminal_navigation = (
+                (action == 'goto' or (action == 'previous' and idx >= len(locked.question_ids) and bool(locked.question_ids)))
+                and answer is None and pre_answer is None
+            )
+            if not 0 <= idx < len(locked.question_ids) and not terminal_navigation:
+                raise SessionProgressConflict('انتهت قائمة الأسئلة. حدّث تقدم الجلسة / Refresh session progress.', 'SESSION_POSITION_INVALID')
+            if locked.mode in ('study', 'recall'):
+                require_answers_available(locked.user, locked.question_ids)
             answered_qid = None
             question = None
 
-            if idx < len(locked.question_ids):
+            if 0 <= idx < len(locked.question_ids):
                 answered_qid = locked.question_ids[idx]
                 question = Question.objects.filter(id=answered_qid).first()
 
             if expected_slot is not None:
-                _, _, saved_reason = ExamService._read_answer_slot(locked.answers.get(str(idx)))
-                if locked.mode not in ('study', 'recall'):
-                    saved_reason = None
-                elif ExamService._saved_answer(locked, idx) is not None:
-                    _, correct, _ = ExamService.study_feedback(locked, answered_qid, ExamService._saved_answer(locked, idx))
-                    if correct is not False:
-                        saved_reason = None
-                actual_slot = {
-                    'answer': ExamService._saved_answer(locked, idx),
-                    'confidence': ExamService._saved_confidence(locked, idx),
-                    'pre_answer': ExamService._saved_pre_answer(locked, idx),
-                    'error_reason': saved_reason,
-                }
+                actual_slot = ExamService.answer_baseline(locked, idx)
                 if actual_slot != expected_slot:
                     raise SessionProgressConflict('تغيرت الإجابة المحفوظة. حدّث الحالة قبل المحاولة مجدداً')
 
@@ -542,7 +579,7 @@ class ExamService:
             if action == 'next':
                 locked.current_index += 1
             elif action == 'previous' and idx > 0:
-                locked.current_index -= 1
+                locked.current_index = min(idx - 1, len(locked.question_ids) - 1)
             elif action == 'goto' and target_index is not None:
                 if 0 <= target_index < len(locked.question_ids):
                     locked.current_index = target_index
@@ -879,6 +916,8 @@ class ExamService:
                 raise ValueError('الجلسة غير موجودة أو تم إنهاؤها مسبقاً')
             if not locked.is_active:
                 raise ValueError('الجلسة غير نشطة ولا يمكن إنهاؤها مرة أخرى')
+
+            require_answers_available(user, locked.question_ids, exclude_session_id=locked.session_id)
 
             started_at = locked.started_at or timezone.now()
             total_time = ExamService.elapsed_seconds(locked)

@@ -33,6 +33,7 @@ from django.shortcuts import get_object_or_404
 from ..models import TestHistory
 from ..serializers import TestHistorySerializer, TestHistoryDetailSerializer
 from apps.core.utils import api_success, api_error, paginate
+from apps.questions.answer_visibility import require_answers_available
 
 
 class TestHistoryView(APIView):
@@ -87,4 +88,5 @@ class TestHistoryDetailView(APIView):
             queryset = queryset.filter(user=request.user)
 
         history = get_object_or_404(queryset, id=history_id)
+        require_answers_available(request.user, [row['question_id'] for row in history.results or [] if row.get('question_id')])
         return api_success(data=TestHistoryDetailSerializer(history).data)

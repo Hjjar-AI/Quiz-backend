@@ -48,6 +48,7 @@ from apps.core.utils import (
     safe_int,
 )
 from apps.questions.models import Question
+from apps.questions.answer_visibility import closed_book_question_ids, require_answers_available
 from apps.questions.services import QuestionService
 from apps.learning.srs_service import SRSService
 from ..services.question_selection import select_varied_question_ids
@@ -247,7 +248,9 @@ class StartSessionView(APIView):
 class GetQuestionView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def get(self, request):
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
         session_id = request.query_params.get('session_id')
         if not session_id:
             return api_error('معرف الجلسة مطلوب', 400)
@@ -267,7 +270,9 @@ class GetSessionQuestionsView(APIView):
     """Prefetch owned frozen pages without advancing the session or marking unseen exposure."""
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def get(self, request):
+        User.objects.select_for_update().only('id').get(pk=request.user.pk)
         session_id = request.query_params.get('session_id')
         if not session_id:
             return api_error('معرف الجلسة مطلوب', 400)
@@ -276,8 +281,10 @@ class GetSessionQuestionsView(APIView):
             question.id: question
             for question in Question.objects.filter(id__in=session.question_ids).select_related('case')
         }
+        hidden = closed_book_question_ids(request.user)
         pages = [ExamService.get_question(session, index, record_exposure=False,
                                          live_questions=live_questions,
+                                         hidden_question_ids=hidden,
                                          include_study_feedback=True)
                  for index in range(len(session.question_ids))]
         if any(page is None for page in pages):
@@ -319,10 +326,11 @@ class SubmitAnswerView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         body = SubmitAnswerSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('معرف الجلسة مطلوب', 400, details=body.errors)
+            return api_error('بيانات الإجابة أو التنقل غير صالحة / Invalid answer or navigation data.', 400, details=body.errors)
 
         session = get_object_or_404(
             ExamSession,
@@ -342,8 +350,10 @@ class SubmitAnswerView(APIView):
                 expected_index=body.validated_data.get('expected_index'),
                 expected_slot=body.validated_data.get('expected_slot'),
             )
-        except (ExamTimeExpired, SessionProgressConflict) as e:
-            return api_error(str(e), 409)
+        except ExamTimeExpired as e:
+            return api_error(str(e), 409, details={'code': 'TIME_EXPIRED'})
+        except SessionProgressConflict as e:
+            return api_error(str(e), 409, details={'code': e.reason})
         except ValueError as e:
             return api_error(str(e), 400)
 
@@ -375,6 +385,7 @@ class SubmitAnswerView(APIView):
 
         return api_success(data={
             'new_index': session.current_index,
+            'saved_slot': ExamService.answer_baseline(session, session.question_ids.index(submission.answered_qid)) if submission.answered_qid is not None else None,
             'explanation': explanation,
             'is_correct': is_correct,
             'feedback_translations': feedback_translations,
@@ -397,6 +408,7 @@ class FinishSessionView(APIView):
         history = get_object_or_404(
             TestHistory, user=request.user, source_session_id=session_id, mode=mode,
         )
+        require_answers_available(request.user, [row['question_id'] for row in history.results or [] if row.get('question_id')])
         return api_success(data=ExamService.completed_result(history))
 
     def post(self, request):

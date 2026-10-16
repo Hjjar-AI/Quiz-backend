@@ -1,5 +1,9 @@
 # Django remaining work
 
+## 2026-10-17 learning-flow verification
+
+- [L1–L4 and coordinated Vue recovery](archive/reviews/2026-10-17-learningFlowReview.md#source-corrections) are source-complete. Deploy backend before matching Vue; verify overlapping ordinary/master/study/recall and old study/history/receipt reads, frozen/current knowledge links and answer searches, paused writes without preconditions, invalid/terminal navigation, and typed expiry versus progress/paused conflicts. Exercise web response loss, unchanged/changed saved slots, explicit retry/discard, missing/completed/paused sessions, failed recovery reads, account switches and expired timers during review. No runtime/HTTP/database/concurrency, suites or builds verified.
+
 ## Backend strengthening verification
 
 - Reload/deploy matching source, then verify two-stage pack capture/preparation/finalization under concurrent content/category/tag/case/knowledge/image-name changes, closed-exam start, account/capability changes and selected-download quota races. Confirm failed preparation/revalidation consumes no grants, text-only/default byte ceilings persist, and image IO/encoding is outside transactions on the deployed database.

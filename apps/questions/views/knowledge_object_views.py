@@ -9,12 +9,14 @@ from apps.core.write_receipts import create_with_receipt
 from apps.core.utils import api_error, api_success, paginate
 
 from ..models import KnowledgeObject, Question
+from ..answer_visibility import AnswersWithheld, closed_book_knowledge_object_ids
 from ..serializers import KnowledgeObjectSerializer, QuestionSerializer
 
 
 def _knowledge_queryset(user):
     return (
         KnowledgeObject.objects
+        .exclude(pk__in=closed_book_knowledge_object_ids(user))
         .select_related('category', 'created_by')
         .prefetch_related('tags')
         .annotate(question_count=Count(
@@ -84,6 +86,8 @@ class KnowledgeObjectDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
+        if pk in closed_book_knowledge_object_ids(self.request.user):
+            raise AnswersWithheld()
         return get_object_or_404(_knowledge_queryset(self.request.user), pk=pk)
 
     def get(self, request, pk):
