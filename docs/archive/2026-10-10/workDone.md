@@ -15,7 +15,7 @@ Earlier AST/source/isolated SQLite checks are preserved in the archive and do no
 
 ## 2026-10-09 cross-client source comparison
 
-Compared current production routes and analytics/content/result/export contracts with Vue actions and Android services/screens/DTOs. Confirmed backend supports the remaining native analytics gate/period, export order and author-rank payload; recorded UI gaps in [Android review](../../../../Android/docs/reference/functionalityReview.md). Compacted work records and corrected stale unconditional migration-readiness wording. Documentation only; no production fixes, deployment, database writes, build, suites, migrations or version changes.
+Compared current production routes and analytics/content/result/export contracts with Vue actions and Android services/screens/DTOs. Confirmed backend supports the remaining native analytics gate/period, export order and author-rank payload; recorded UI gaps in [Android review](../../../../Android/README.md#features). Compacted work records and corrected stale unconditional migration-readiness wording. Documentation only; no production fixes, deployment, database writes, build, suites, migrations or version changes.
 
 ## 2026-10-09 agent guidance maintenance
 
@@ -25,13 +25,13 @@ Compacted shared working rules without relaxing explicit build/suite/migration/v
 
 Added read-only `GET exam/offline/catalog/` with independent `tests.start` permission and `Question.objects.visible_to(request.user)`, ascending-ID keyset pagination bounded by the initial maximum visible ID. IDs protected by the existing unfinished ordinary/master closed-book policy are excluded per page; existing pack generation remains the independent visibility/protection/readiness authority. Response returns candidate IDs, upper bound, nullable next cursor, current bounded visible count and excluded page count. No user/admin data or model/schema changes. Android uses this route for explicit full-bank download/pause/resume with encrypted per-pack storage; Vue contracts are unchanged.
 
-Three changed production files passed Python AST and whitespace checks; Android DTO/request/UI/storage paths were traced. No live HTTP/database checks, suites, migrations/setup, builds, deployment or versions. Keyset bounding is not an atomic snapshot: edits/deletions/access changes still require pack rechecks. Reload the matching backend for this endpoint; completion synchronization retains its existing deployed-schema requirement. See [native contract](../../../../Android/docs/contracts/offlineQuestionBank.md).
+Three changed production files passed Python AST and whitespace checks; Android DTO/request/UI/storage paths were traced. No live HTTP/database checks, suites, migrations/setup, builds, deployment or versions. Keyset bounding is not an atomic snapshot: edits/deletions/access changes still require pack rechecks. Reload the matching backend for this endpoint; completion synchronization retains its existing deployed-schema requirement. See [native contract](../../../../Android/README.md#offline-and-recovery).
 
 ## 2026-10-09 full-bank capability
 
 Registered `tests.download_full_bank` in the canonical capability/group catalogue without member/moderator default grants. Existing admin.permissions role and per-user JSON overrides recognize it, including explicit denial overriding a role grant; admins keep their established all-capabilities policy. OfflineCatalogue requires the new capability and independently checks tests.start. PackRequest accepts optional full_bank (default false), and marked bulk snapshot requests require the new capability as well as their existing tests.start gate. Completion and selected-download gates are unchanged. Capabilities are resolved from the current request user, so revocation applies to subsequent catalogue/bulk requests.
 
-Registry/default/group structure, production Python AST and whitespace checks passed; Android request/permission refresh/handler/button guards and web/native permission-editor lookup paths traced. No schema/model changes, migration inspection/work, seeding/setup, suites/builds, database updates, deployment or versions. Real role/override/revocation HTTP validation remains pending. See [native contract](../../../../Android/docs/contracts/offlineQuestionBank.md).
+Registry/default/group structure, production Python AST and whitespace checks passed; Android request/permission refresh/handler/button guards and web/native permission-editor lookup paths traced. No schema/model changes, migration inspection/work, seeding/setup, suites/builds, database updates, deployment or versions. Real role/override/revocation HTTP validation remains pending. See [native contract](../../../../Android/README.md#offline-and-recovery).
 
 ## 2026-10-09 moderator full-bank default
 
@@ -75,7 +75,7 @@ Verification: two affected Python production ASTs, native lexical/resource/XML/b
 
 ## 2026-10-09 project rescan
 
-Inventoried production source and traced recovery/pagination/account/CRUD/ownership/conflict paths across Django, Android and Vue. Recorded seven prioritized findings in [project rescan](../../../../Android/docs/archive/reviews/2026-10-09-projectRescan.md). Review/documentation only; production unchanged, no builds/suites/migrations/database/runtime work. Existing completed source features remain completed; newly evidenced gaps are in the plan.
+Inventoried production source and traced recovery/pagination/account/CRUD/ownership/conflict paths across Django, Android and Vue. Recorded seven prioritized findings in project rescan. Review/documentation only; production unchanged, no builds/suites/migrations/database/runtime work. Existing completed source features remain completed; newly evidenced gaps are in the plan.
 
 ## 2026-10-09 seven rescan findings fixed in source
 
@@ -90,7 +90,7 @@ Validation: production Python AST (242 files), JavaScript/extracted Vue script s
 
 ## 2026-10-09 deeper source review
 
-Traced master/ordinary session transactions and callers, offline completion, learning evidence, import updates, planner configuration and web polling. Recorded eight source-evidenced follow-up areas in [deep review](../../../../Android/docs/archive/reviews/2026-10-09-deepTransactionReview.md). Review/documentation only: production unchanged, no builds/suites/migrations/database/runtime actions. Existing learning/offline protections were distinguished from new gaps; concurrency impact remains unexercised.
+Traced master/ordinary session transactions and callers, offline completion, learning evidence, import updates, planner configuration and web polling. Recorded eight source-evidenced follow-up areas in deep review. Review/documentation only: production unchanged, no builds/suites/migrations/database/runtime actions. Existing learning/offline protections were distinguished from new gaps; concurrency impact remains unexercised.
 
 ## 2026-10-10 eight deeper findings fixed in source
 

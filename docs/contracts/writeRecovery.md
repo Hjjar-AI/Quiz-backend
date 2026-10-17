@@ -1,6 +1,6 @@
 # Writes, recovery and concurrency
 
-Current source contracts 2026-10-10. [Learning](learningConsistency.md) · [Schema/rollout](schemaReadiness.md) · [Pending scenarios](../../../Android/docs/verification/manualVerification.md).
+Current source contracts 2026-10-10. [Learning](learningConsistency.md) · [Schema/rollout](schemaReadiness.md) · [Android verification checklist](../../../Android/README.md#verification).
 
 ## Shared rules
 

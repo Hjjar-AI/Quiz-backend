@@ -1,6 +1,6 @@
 # Optional clinical-case translations
 
-Updated 2026-10-10. [Schema readiness](schemaReadiness.md) · [Android status](../../../Android/docs/workDone.md).
+Updated 2026-10-10. [Schema readiness](schemaReadiness.md) · [Android status](../../../Android/README.md#verification).
 
 Clinical cases now carry an optional `translations` JSON object keyed by locale. Each locale can supply `title`, `stem`, or both. Example:
 

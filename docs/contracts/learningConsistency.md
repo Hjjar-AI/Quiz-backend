@@ -1,6 +1,6 @@
 # Learning and planner contracts
 
-Current source policy 2026-10-10. [Write/recovery contracts](writeRecovery.md) · [Schema readiness](schemaReadiness.md) · [Verification](../../../Android/docs/verification/manualVerification.md).
+Current source policy 2026-10-10. [Write/recovery contracts](writeRecovery.md) · [Schema readiness](schemaReadiness.md) · [Verification](../../../Android/README.md#verification).
 
 ## Durable evidence
 

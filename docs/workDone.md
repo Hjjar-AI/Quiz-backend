@@ -1,5 +1,35 @@
 # Current Django source status
 
+## 2026-10-18 DSM explanation completion / Kaplan through chapter 24
+
+Added authored Arabic to 180 previously unedited source explanations (44 DSM, 136 Kaplan); reviewed all 26 DSM glossary terms/definitions and derived explanations. Directly reviewed prompts/cases/choices/explanations for 40 Kaplan questions in chapters 17–20. Revised 288 exact-source entries and 96 question-specific fields; removed 249 superseded cache entries without creating old delivery copies. Corrected drug mechanisms, lithium toxicity, serotonin toxicity, valproate pregnancy-safety claims, lamotrigine restart wording, ECT qualifications, gender-development terminology and parenting concepts. Preserved source keys with explicit warnings where contradictory or unsupported.
+
+All 475 nonempty DSM source explanations are now authored; exercise 23.1 has no standalone source explanation and produces 26 reviewed glossary explanations. Kaplan has 431/602 authored explanations, with 171 remaining in chapters 25–34. Other question/case/choice fields still need review. All 1147 regenerated rows pass artifact and isolated production validators; stable metadata, English, contextual export and glossary mappings checked. No app suites/builds/migrations/database/browser/live import work. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-18 chapters 11–16 Arabic continuation
+
+Reviewed 194 original explanations across chapters 11–16 of both books; 158 previously unedited explanations now have authored Arabic. Reviewed displayed prompts/cases/choices in chapters 11–14 (104 original questions, eight CSVs with matching JSON). Revised 295 exact-source entries and 202 question-specific fields. Corrected fecal versus urinary overflow, hypopnea versus hypoventilation, sleep-stage claims, eating/sleep-eating confusion, endocrine and drug-mechanism descriptions, and hyponatremic seizure wording. Flagged unsupported developmental-age assumptions and source diagnoses/keys rather than inventing missing evidence. Removed 254 newly superseded cache entries; no old delivery copies added.
+
+All 1147 regenerated rows pass artifact and isolated current production choice/question/case translation validators. UUIDs, answer mappings, case/knowledge relationships and English match the pre-pass snapshot; contextual wording reaches exports and prior warnings remain isolated. No app suites/builds/migrations/database/browser/live HTTP import work. 352 explanations and other unreviewed fields remain. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-18 larger Arabic correction batch
+
+Reviewed all displayed fields in chapters 5–8 of both books (116 original questions; eight CSVs with matching JSON), and reviewed explanations through chapter 10 (169 original questions across twelve chapter files). Revised 310 exact-source entries and 212 question-specific fields; 143 explanations newly have authored Arabic. Corrected medical terminology and source errors involving adult separation anxiety, acute-stress symptom count, mania/hypomania duration, delusional disorder, clozapine liver risk, functional neurological diagnosis, antidepressant withdrawal and electrolyte effects. Retained source answer indices with explicit qualifications where evidence is incomplete. Removed 280 newly superseded cache entries.
+
+Regenerated all 1147 rows. Both artifact verifiers and isolated current production choice/question/case translation validators passed. Metadata and English match the pre-batch snapshot; rendered question-specific prompts/choices and isolated legacy warning placement checked. No app suites/builds/migrations/database/browser or live HTTP import. 510 explanations and other unreviewed fields remain. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-18 chapter 4 Arabic corrections
+
+Directly reviewed prompts, cases, choices and explanations for all 70 original chapter 4 questions (DSM 31, Kaplan 39). Revised 251 exact-source Arabic entries plus question-specific overrides; 60 additional explanations now have authored Arabic. Corrected clinical terminology, source thiamine/niacin confusion, DMDD age/co-diagnosis details and unsafe blanket PCP charcoal wording; flagged unresolved source questions. Scoped source warnings by question ID after finding earlier shared-prompt warnings in unrelated cases. Pruned 219 newly superseded cache entries; no old delivery copies created.
+
+Regenerated 545 DSM/602 Kaplan rows. Artifact verifiers, isolated production choice/translation validators and whole-book warning-placement checks passed. UUIDs, answer indices, English translations and all metadata outside Arabic text match the pre-pass snapshot. 653 explanations and other unreviewed fields remain. No app suites, builds, migrations/database or browser/live import verification. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-17 direct Arabic book corrections and schema review
+
+Continued direct Arabic editing without translation engines/services: 337 further exact-source entries revised; current changes total 1010 entries against the initial session baseline (379 DSM, 631 Kaplan), plus 13 contextual Kaplan entries. All 224 explanations in chapters 1–3 now have authored Arabic; full remaining field review is incomplete. Corrected missing vignette detail, clinical terminology, genetics and neurocognitive explanations; explicitly flagged contradictory source ages/durations and the invalid metronidazole answer without inventing replacements. Removed obsolete ZIPs, duplicate before/after files and 4029 superseded cache entries as requested. Kept required current source/provenance.
+
+Regenerated all 545 DSM/602 Kaplan rows in 58 JSON/58 CSV files. Both artifact verifiers and isolated current production choice/question/case translation validators pass; stable UUIDs/answer indices/source/relationships match the pre-continuation snapshot. Source/document checks passed. No app suites/builds/packaging/migrations/setup/database/browser/HTTP work; re-upload does not update existing questions. [Current evidence, remaining source issues and coverage](archive/reviews/2026-10-17-importDataReview.md).
+
 ## 2026-10-17 PDF palette parity correction
 
 Matched the seven corrected web theme values in PDF palettes: Stone/Amber warning, Ruby danger and Lagoon/Slate/Ink/Ruby muted text. All 12 PDF palettes match web semantic/surface/text seeds; seven PDF-theme tests pass on isolated SQLite. The frontend full suite now passes 951/951. Existing aliases/surfaces and unrelated backend logic are retained. [Evidence](archive/reviews/2026-10-17-testRun.md#theme-token-follow-up). No browser/production build, migration, dependency/version change or actual visual/print verification.
@@ -54,7 +84,7 @@ Updated ten PDF core palettes to match richer Android/web backgrounds, reading s
 
 Extended the development-server request-line guard only to the observed ENETUNREACH socket-read path. Added a scoped WSGI response handler for the observed ETIMEDOUT sendall path: it logs one transport event, marks the connection closed and resets response state without draining unread input or sending an error response over the failed socket. The WSGI-closed response iterable is not closed twice. Exact adjacent traceback frames and errno checks preserve other application/dependency failures. A local request-handler subclass preserves installed Django parsing/environ/414/static-serving behavior while selecting the response handler; no global Django patch, TLS or route changes. Existing keepalive and socket/database cleanup remain. This improves failure cleanup/classification; it does not repair an unreachable route.
 
-Matching Android sync now reduces repeated full-session downloads while retaining fresh slot acknowledgements, expected-index/slot guards and encrypted queued changes. [Contract](../../Android/docs/contracts/downloadedSessions.md). Production Python AST and normalized request-handler AST comparison against installed Django passed, plus Kotlin source/whitespace checks. No suites, builds/compilation, migrations/setup, database writes, server restart, deployment or live network verification. Verify dead-path cleanup, normal HTTP/HEAD/static/414, preserved application tracebacks and client lost-response/conflict/deadline recovery before claiming runtime stability.
+Matching Android sync now reduces repeated full-session downloads while retaining fresh slot acknowledgements, expected-index/slot guards and encrypted queued changes. [Contract](../../Android/README.md#offline-and-recovery). Production Python AST and normalized request-handler AST comparison against installed Django passed, plus Kotlin source/whitespace checks. No suites, builds/compilation, migrations/setup, database writes, server restart, deployment or live network verification. Verify dead-path cleanup, normal HTTP/HEAD/static/414, preserved application tracebacks and client lost-response/conflict/deadline recovery before claiming runtime stability.
 
 ## 2026-10-13 supplied transport-log inspection
 
@@ -64,7 +94,7 @@ No API/application exception is shown in this sample. The user confirms Android 
 
 ## 2026-10-13 downloaded study feedback
 
-Owned ordinary-session prefetch now opts into frozen correct-answer indices, explanations and full explanation translations for study sessions. Exam downloads continue withholding feedback and recall retains its existing reveal gates. Single-question study/recall reads include the correct index only when saved-answer feedback is already permitted. Snapshot data remains authoritative, including edited/deleted questions; legacy sessions fall back to the existing live row. Owner checks and unseen-exposure behavior are unchanged. Matching Android uses the download for immediate post-answer feedback and highlights, retaining encrypted local changes until explicit synchronization. [Contract and rollout](../../Android/docs/contracts/downloadedSessions.md).
+Owned ordinary-session prefetch now opts into frozen correct-answer indices, explanations and full explanation translations for study sessions. Exam downloads continue withholding feedback and recall retains its existing reveal gates. Single-question study/recall reads include the correct index only when saved-answer feedback is already permitted. Snapshot data remains authoritative, including edited/deleted questions; legacy sessions fall back to the existing live row. Owner checks and unseen-exposure behavior are unchanged. Matching Android uses the download for immediate post-answer feedback and highlights, retaining encrypted local changes until explicit synchronization. [Contract and rollout](../../Android/README.md#offline-and-recovery).
 
 Two production Python ASTs and cross-client source/resource/whitespace checks passed. No suites, builds/compilation, migrations/setup, database writes, deployment or version changes. Deploy backend before the matching Android app; live HTTP, deadline, concurrency and device verification remain pending.
 
@@ -83,7 +113,7 @@ Verification: 49 focused SQLite capability, permission-gate, permission-admin AP
 
 - Learning evidence/fingerprints, occurrence chronology/SRS replay, activity/mastery/variety and planner scope history: [learning contracts](contracts/learningConsistency.md).
 - Locked ownership, monotonic import revisions, edit/delete preconditions, receipts/bookmarks, master start/resume/access/answer/navigation and archive results: [write contracts](contracts/writeRecovery.md).
-- Full-bank capability/catalogue, marked pack gates, cumulative selected-ID budget and durable completion processing: [offline policy](../../Android/docs/contracts/offlineQuestionBank.md).
+- Full-bank capability/catalogue, marked pack gates, cumulative selected-ID budget and durable completion processing: [offline policy](../../Android/README.md#offline-and-recovery).
 - Stable complete case/knowledge management and learner case pagination, preserving bounded legacy autocomplete; permission-only user lookup and linked-knowledge question contracts.
 - Startup/database selection, ordered exports/PDF links/themes and operator dependencies are represented. Isolated SQLite/PostgreSQL suites ran; production cache/PDF/deployed workflow checks remain pending.
 
@@ -121,7 +151,7 @@ On 2026-10-10 documentation was grouped by function, active records compacted, h
 
 ## 2026-10-10 parity contract fixes
 
-The dedicated admin/users/<id>/active/ route requires boolean is_active and sets desired state under existing reauth/canonical locks/self/stub/last-admin rules and returns id/is_active/changed; the old toggle route stays compatible. Both clients use explicit states and retained partial/unknown outcomes with read/review, never automatic resend. Vue initial master clock correction is account/attempt-scoped with independent status; planner week uses server today. Native workflow closure is [archived evidence](../../Android/docs/archive/reviews/2026-10-10-androidParityReview.md).
+The dedicated admin/users/<id>/active/ route requires boolean is_active and sets desired state under existing reauth/canonical locks/self/stub/last-admin rules and returns id/is_active/changed; the old toggle route stays compatible. Both clients use explicit states and retained partial/unknown outcomes with read/review, never automatic resend. Vue initial master clock correction is account/attempt-scoped with independent status; planner week uses server today. Native workflow closure is archived evidence.
 
 Matching backend-first rollout required; this batch adds no schema. Source AST/JS/native lexical/XML/locale/whitespace checks only; builds/suites/migrations/setup/database/runtime/deployment/version work unperformed.
 
@@ -156,7 +186,7 @@ Verification: 12 focused SQLite backend tests passed (eight new grant tests plus
 
 ## 2026-10-11 ordinary session prefetch
 
-Added authenticated owner-scoped GET `/exam/questions/` returning all frozen ordinary session pages. Reuses the current question payload/reveal/feedback rules, batches live-row lookup and skips exposure recording for unseen prefetched pages. Existing single-question reads still record presentation. Android downloads pages/images and buffers ordered encrypted answer changes, using existing expected-index/slot answer contracts for explicit reconciliation/sync. No new write endpoint, idempotency claim, model or deadline exception. [Client contract and limits](../../Android/docs/contracts/downloadedSessions.md).
+Added authenticated owner-scoped GET `/exam/questions/` returning all frozen ordinary session pages. Reuses the current question payload/reveal/feedback rules, batches live-row lookup and skips exposure recording for unseen prefetched pages. Existing single-question reads still record presentation. Android downloads pages/images and buffers ordered encrypted answer changes, using existing expected-index/slot answer contracts for explicit reconciliation/sync. No new write endpoint, idempotency claim, model or deadline exception. [Client contract and limits](../../Android/README.md#offline-and-recovery).
 
 Four production Python ASTs and cross-client source/resource/whitespace checks passed; no suites, builds, migrations/setup, database writes or deployment. Deploy this read contract before the matching Android app. Runtime HTTP, deadline, response-loss, concurrency and device verification remain pending.
 

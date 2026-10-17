@@ -2,7 +2,7 @@
 
 # Backend remaining work
 
-Updated 2026-10-09. Detailed integration scenarios: [archive](../2026-10-09-workPlan.md). Current [Android comparison](../../../../Android/docs/reference/functionalityReview.md) separates missing native controls from existing backend capabilities.
+Updated 2026-10-09. Detailed integration scenarios: [archive](../2026-10-09-workPlan.md). Current [Android comparison](../../../../Android/README.md#features) separates missing native controls from existing backend capabilities.
 
 - [Learning/model review findings](../reviews/2026-10-09-backendLearningReview.md) are implemented in source; see [contracts and fresh-schema requirements](../../contracts/learningConsistency.md). Verify event ordering/replay, content/translation statistics, relearning, occurrence-day activity, concept diversity/coverage, selected-download budgets, archived master results, write receipts and mandatory revisions over live HTTP/server-database concurrency. No database/setup/migration action has been run; deleting a DB alone with old migration files present is insufficient.
 - Verify per-user automatic question variety across repeated category/tag/bookmark/blueprint starts, sparse/legacy history, private visibility, paused/master allocations, quota shortages and large histories. Exact manual IDs, SRS and fixed master sets must retain their contracts; see [selection policy](../../contracts/questionSelection.md).
@@ -24,10 +24,10 @@ Full Android case/knowledge management pagination is implemented in source. Veri
 
 ## 2026-10-09 project rescan follow-up
 
-The [new source review](../../../../Android/docs/archive/reviews/2026-10-09-projectRescan.md) identifies seven additional bounded gaps: web account-generation guards; orphan pending-create/form association; transactional question ownership checks; knowledge-delete revisions; terminal/deleted receipt recovery; web conflict resolution; learner case pagination/read retention. All seven are now addressed in source; remaining checks are runtime release gates.
+The new source review identifies seven additional bounded gaps: web account-generation guards; orphan pending-create/form association; transactional question ownership checks; knowledge-delete revisions; terminal/deleted receipt recovery; web conflict resolution; learner case pagination/read retention. All seven are now addressed in source; remaining checks are runtime release gates.
 
 The seven rescan findings are source-complete. Validate coordinated DELETE/receipt contracts, account-switch cancellation, conflict review, orphan-save recovery and learner paging; see the latest [work log](../../workDone.md).
 
 ## 2026-10-09 deeper transaction/lifecycle findings
 
-The [deeper source review](../../../../Android/docs/archive/reviews/2026-10-09-deepTransactionReview.md) records eight new follow-up areas: knowledge/learning lock order, import revision reuse, master attempt resume/makeup and fresh access gates, master answer/navigation concurrency and web uncertainty handling, polling disposal/attempt scope, and planner revision/scope epochs. All eight findings are now source-complete; verify coordinated contracts, fresh planner schema and live interleavings. See the latest work log.
+The deeper source review records eight new follow-up areas: knowledge/learning lock order, import revision reuse, master attempt resume/makeup and fresh access gates, master answer/navigation concurrency and web uncertainty handling, polling disposal/attempt scope, and planner revision/scope epochs. All eight findings are now source-complete; verify coordinated contracts, fresh planner schema and live interleavings. See the latest work log.

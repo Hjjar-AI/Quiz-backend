@@ -4,12 +4,12 @@ Start with [current status](workDone.md), [remaining work](workPlan.md), and [ag
 
 | Topic | Canonical location |
 | --- | --- |
-| Whole project navigation and maintenance rules | [Project documentation map](../../Android/docs/README.md) |
+| Whole project navigation and maintenance rules | [Project documentation map](../../Android/README.md) |
 | This repository's functional guides | [Startup](guides/START_HERE.md) · [PostgreSQL setup](guides/POSTGRESQL_SETUP.md) · [Deployment](guides/DEPLOYMENT.md) |
 | Learning, selection and planner chronology | [Learning contracts](contracts/learningConsistency.md) |
 | Revisions, receipts, master writes and recovery | [Write/recovery contracts](contracts/writeRecovery.md) |
 | Schema/setup and coordinated deployment | [Schema readiness](contracts/schemaReadiness.md) |
-| Shared HTTP/device/concurrency scenarios | [Manual matrix](../../Android/docs/verification/manualVerification.md) |
+| Shared HTTP/device/concurrency scenarios | [Android verification checklist](../../Android/README.md#verification) |
 | Python suite results, reruns and coverage limits | [Python verification](verification/pythonTests.md) |
 | PostgreSQL concurrency scenarios, measurements and capacity limits | [Concurrency verification](verification/concurrencyLimits.md) |
 | Previous reviews/change details | [Dated archive](archive/README.md) |

@@ -77,7 +77,7 @@ The **earlier, pre-repair** SQLite suite used standard-library `sys.setprofile`:
 | config | 0 / 4 |
 | scripts | 0 / 44 |
 
-This is not verification of every backend function. MariaDB, production cache/hashing, real backup/restore, full PDF rendering/native dependencies, deployed HTTP/device workflows and concurrent workloads beyond the [bounded PostgreSQL matrix](concurrencyLimits.md) remain unverified. Mocked operator tests do not establish real database administration support. See the [manual matrix](../../../Android/docs/verification/manualVerification.md).
+This is not verification of every backend function. MariaDB, production cache/hashing, real backup/restore, full PDF rendering/native dependencies, deployed HTTP/device workflows and concurrent workloads beyond the [bounded PostgreSQL matrix](concurrencyLimits.md) remain unverified. Mocked operator tests do not establish real database administration support. See the [Android verification checklist](../../../Android/README.md#verification).
 
 ## Reproduce
 

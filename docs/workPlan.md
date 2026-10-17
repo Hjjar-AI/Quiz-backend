@@ -1,5 +1,9 @@
 # Django remaining work
 
+## 2026-10-18 book Arabic review
+
+- Continue Kaplan explanations in chapters 25–34: **171 remain across ten CSVs with matching JSON**. All 475 nonempty DSM source explanations and its 26 glossary-derived explanations are reviewed; Kaplan has authored explanations through chapter 24 (431/602). Displayed fields were reviewed in chapters 4–8 and 11–14 of both books, Kaplan 17–20 and the DSM glossary. Other prompts/cases/choices still need review, including chapters 1–3, 9–10, DSM 15–22 and Kaplan 15–16/21 onward. Resolve flagged source/key ambiguities and visually confirm Kaplan `16.12` operators. Verify actual import and bilingual rendering. Existing imported UUIDs are skipped, not updated. [Coverage and limits](archive/reviews/2026-10-17-importDataReview.md).
+
 ## 2026-10-17 logic/model correction verification
 
 - [C1–C7 plus translation validation](archive/reviews/2026-10-17-remainingLogicReview.md#extended-findings-and-source-corrections) are source-corrected. Deploy matching draft-client contracts; verify concept/sibling withholding, explanation-only searches/counts, permitted matches, concurrent draft edit/delete/attach/publication/admin, deleted-live-row snapshot navigation/answer/finish, revisions, translated-choice rejection and client unknown-write review. Check invalid bank transitions and normal publication.
@@ -20,7 +24,7 @@
 - Reload/deploy matching source, then verify two-stage pack capture/preparation/finalization under concurrent content/category/tag/case/knowledge/image-name changes, closed-exam start, account/capability changes and selected-download quota races. Confirm failed preparation/revalidation consumes no grants, text-only/default byte ceilings persist, and image IO/encoding is outside transactions on the deployed database.
 - Verify offline receipt replay/conflict after response loss, concurrent UUID/source-session collisions and unrelated integrity failures retaining normal 500 diagnostics/rollback. Verify old receipt/revision hashes and caller payload compatibility, unchanged learning chronology and fresh answer withholding. Capture `django.server.offline` success/failure records and `X-Offline-Operation-ID` with permission, validation, changed-content, receipt and server failures; no token/body/user/image/answer data in these records. Server dispatch timing does not measure client delivery. No suite/database/HTTP runtime verification has been performed for these changes.
 
-Updated 2026-10-10. [Current source status](workDone.md) · [Project map](../../Android/docs/README.md).
+Updated 2026-10-10. [Current source status](workDone.md) · [Project map](../../Android/README.md).
 
 The seven rescan and eight deeper-review findings are source-complete. Do not reopen historical unchecked items without tracing current production source. Add new defects with reproduction, affected clients/contracts and priority.
 
@@ -55,13 +59,13 @@ The seven rescan and eight deeper-review findings are source-complete. Do not re
 - Verify deployed PostgreSQL/cache/workflows against `mpsql` / `quiz_fresh`. The user reported successful bootstrap; the older `quiz` database remains separate recovery work. Follow the [PostgreSQL guide](guides/POSTGRESQL_SETUP.md).
 
 - Prepare/verify matching [schema and coordinated clients](contracts/schemaReadiness.md); no readiness is inferred from source or database deletion.
-- Execute the [shared functional matrix](../../Android/docs/verification/manualVerification.md), especially lost responses, account/attempt switches, receipts, permissions, revisions, imports/parent locking and planner late/midnight evidence.
+- Execute the [shared functional matrix](../../Android/README.md#verification), especially lost responses, account/attempt switches, receipts, permissions, revisions, imports/parent locking and planner late/midnight evidence.
 - Extend the passing [35-scenario PostgreSQL concurrency matrix](verification/concurrencyLimits.md) to deployed HTTP/multiple processes/production cache, sustained load and large mixed imports before claiming user capacity. Verify startup/session integration, exports/PDFs and deliberately isolated backup/restore/clear. PostgreSQL administration remains unsupported.
 
 Builds, suites, migrations/setup, destructive operator actions and versions follow [explicit-request policies](../Agents.md). The user's Python-test authorization covered these isolated suites and test database initialization; their results do not establish complete deployed readiness.
 
 ## 2026-10-10 parity-review follow-up
 
-All seven native gaps, smaller workflow differences and shared web defects from the [latest parity review](../../Android/docs/archive/reviews/2026-10-10-androidParityReview.md) are source-complete. Verify the dedicated account set-state route, partial/unknown batch outcomes, clock-read ownership and the shared manual matrix after matching rollout. Old servers reject the new route without changing account state. Earlier completed fixes remain complete.
+All seven native gaps, smaller workflow differences and shared web defects from the latest parity review are source-complete. Verify the dedicated account set-state route, partial/unknown batch outcomes, clock-read ownership and the shared manual matrix after matching rollout. Old servers reject the new route without changing account state. Earlier completed fixes remain complete.
 
 Optional clinical-case translations are source-complete; verify matching `ClinicalCase.translations` schema and Android rollout, snapshots, editor recovery and legacy import/export behavior. See the [contract](contracts/caseTranslations.md). No schema setup has been performed for this extension.

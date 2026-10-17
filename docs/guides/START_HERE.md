@@ -132,7 +132,7 @@ Replace `192.168.1.10` with the computer's reachable LAN IP (`hostname -I`). Bot
 | Phone browser + SQLite/MariaDB | Same origin option, matching mode/port | `http://192.168.1.10:5173` |
 | Android emulator on this PC | Backend accepts host connections | `http://10.0.2.2:5004` or `:5005` |
 
-For phone browsers run Vue with `pnpm dev --host 0.0.0.0`. Its proxy remains `127.0.0.1:BACKEND_PORT` when both servers run on this computer. `0.0.0.0` is a bind address, not a client URL; phone `localhost` means the phone. Android accepts an origin or full `/api/v1/` URL through **Change server**, without rebuilding. [Native address/TLS rules](../../../Android/docs/contracts/serverConfiguration.md).
+For phone browsers run Vue with `pnpm dev --host 0.0.0.0`. Its proxy remains `127.0.0.1:BACKEND_PORT` when both servers run on this computer. `0.0.0.0` is a bind address, not a client URL; phone `localhost` means the phone. Android accepts an origin or full `/api/v1/` URL through **Change server**, without rebuilding. [Native address/TLS rules](../../../Android/README.md#setup).
 
 For two instances, choose distinct backend ports and SQLite roots where relevant. Example backend terminals: SQLite 5004 and PostgreSQL 5005. Choose either proxy target, or use separate Vue terminals:
 
@@ -166,4 +166,4 @@ Use your actual venv path; explicit `--venv` does not silently fall back. Diagno
 
 The read-only desktop tutorial is `python scripts/startup_tutorial.py` (Tkinter/display needed); it provides copyable plans without launching/installing/setup. Root Python entry points remain `start.py` and `manage.py`; direct SQLite compatibility entry is `scripts/start_sqlite.py`.
 
-Source-aligned instructions do not prove runtime correctness. Record actual setup/device results; keep [schema/rollout gates](../contracts/schemaReadiness.md) and the [manual matrix](../../../Android/docs/verification/manualVerification.md) separate.
+Source-aligned instructions do not prove runtime correctness. Record actual setup/device results; keep [schema/rollout gates](../contracts/schemaReadiness.md) and the [Android verification checklist](../../../Android/README.md#verification) separate.
