@@ -1,5 +1,33 @@
 # Current Django source status
 
+## 2026-10-18 Kaplan 16.12 table confirmed
+
+Applied the user’s transcription of all six age-table rows and answer D. Corrected E from patient >16 to ≥16 in source/extraction override and both import formats; C/E retain explicit N/A. Updated Arabic prompt/explanation, keeping the source’s <14 cutoff separate from the clinical prepubertal-child criterion. The transcription resolves the pending table check without claiming direct scan inspection. Regenerated Kaplan; artifact and isolated production validators pass, with unrelated rows/identities/answer mappings unchanged. No engine/services, database import, suites or builds.
+
+## 2026-10-18 remaining book translations completed
+
+Completed direct review of all 570 remaining original questions: 314 DSM across 14 chapter CSV/JSON pairs and 256 Kaplan across 11 pairs. Reviewed pending prompts, cases and every choice, retaining sound existing Arabic and prior authored explanations. Revised 319 exact-source entries and 351 question-specific fields; removed 304 superseded cache entries. Corrected reversed clinical meanings, missing vignette details, symptom/drug terminology, units, chronology and misleading abbreviations. Added explicit source qualifications where duration, criteria or options do not establish a unique answer. No translation engine or external service used.
+
+Cumulative review now covers all 1078 original exercises, including all nonempty explanations and the DSM glossary. Regenerated all 58 CSV/JSON chapter pairs; both artifact verifiers and isolated production validators pass for all 1147 import rows. All UUIDs, answer mappings, English, explanations and other metadata match the pre-pass snapshot; contextual prompts/choices reach exports. JSON/AST/cache/ZIP and document checks passed. Source/key conflicts remain recorded. Kaplan `16.12` visual operator confirmation is blocked by the missing original scan; actual import/rendering remain unverified. No application suites, builds, migrations or database writes. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-18 Kaplan displayed fields 33–34
+
+Directly reviewed prompts, clinical cases and all choices for 68 questions in Kaplan chapters 33–34 (two CSVs with matching JSON), retaining existing explanations and source qualifications. Revised 98 exact-source entries and 388 question-specific fields; removed 96 superseded cache entries without old delivery copies. Corrected brain ventricular/anatomical terms, brief impaired responsiveness, RNA actor/target, medial temporal localization, conditioning, ethology, family relationships and low mood versus panic. Table choices explicitly name their columns and retain source combinations. Flagged source medication contradiction and nonstandard adult BMI percentile without inventing replacements.
+
+All 1147 rows pass both artifact verifiers and isolated production validators. Kaplan UUIDs, answers, English, relationships, metadata and authored explanations match the pre-pass snapshot; contextual wording reaches exports. JSON/AST/cache/ZIP and document checks passed. Full-field review now includes Kaplan 25–34; remaining groups and source conflicts are in the plan. No suites/builds/migrations/database/browser/live import work. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-18 Kaplan displayed fields 27–32
+
+Directly reviewed prompts, clinical cases and every choice for all 78 questions in Kaplan chapters 27–32 (six CSVs with matching JSON), retaining authored explanations and source caveats. Revised 92 exact-source entries and 460 question-specific fields; removed 91 superseded cache entries without creating old delivery copies. Corrected clinical/legal terminology, grade and gender errors, medication formulation language, consent rights, grief versus execution wording, prospective-study meaning, community care and developmental concepts. Historical law/statistics and conflicting keys remain explicitly qualified.
+
+Both artifact verifiers and isolated production validators pass for all 1147 rows. All 602 Kaplan UUIDs, answer mappings, English and non-Arabic metadata match the pre-pass snapshot; contextual prompts/choices reach exports. JSON/AST/cache/obsolete-ZIP and document checks passed. All source explanations remain authored; other displayed fields and flagged source issues remain. No suites/builds/migrations/database/browser/live import work. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
+## 2026-10-18 Kaplan explanation completion
+
+Reviewed 177 explanations across Kaplan chapters 25–34 and authored the remaining 171; all 602 now have authored Arabic. Together with the prior DSM pass, all 1077 nonempty original explanations and 26 DSM glossary-derived explanations are covered. Directly reviewed displayed prompts/cases/choices/explanations for 31 Kaplan questions in chapters 25–26. Revised 227 exact-source entries and 194 question-specific fields; removed 221 superseded cache entries without adding old delivery copies.
+
+Corrected unsafe lithium/flumazenil generalizations, older-adult drug clearance, tardive-dyskinesia treatment claims, ECG versus echocardiography, grief/depression distinctions, relative-risk interpretation and developmental concepts. Flagged contradictory keys and historical legal/statistical claims; corrected the 2001 event date in Arabic while preserving source English. Other prompts/cases/choices and source conflicts remain. Regenerated all 34 Kaplan CSV/JSON pairs; artifact verification and isolated current production validators pass for all 1147 rows. Stable metadata/English, contextual export, source warnings, JSON/AST/cache and document checks passed. No suites/builds/migrations/database/browser/live import work. [Current evidence](archive/reviews/2026-10-17-importDataReview.md).
+
 ## 2026-10-18 DSM explanation completion / Kaplan through chapter 24
 
 Added authored Arabic to 180 previously unedited source explanations (44 DSM, 136 Kaplan); reviewed all 26 DSM glossary terms/definitions and derived explanations. Directly reviewed prompts/cases/choices/explanations for 40 Kaplan questions in chapters 17–20. Revised 288 exact-source entries and 96 question-specific fields; removed 249 superseded cache entries without creating old delivery copies. Corrected drug mechanisms, lithium toxicity, serotonin toxicity, valproate pregnancy-safety claims, lamotrigine restart wording, ECT qualifications, gender-development terminology and parenting concepts. Preserved source keys with explicit warnings where contradictory or unsupported.

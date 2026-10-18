@@ -2,7 +2,7 @@
 
 ## 2026-10-18 book Arabic review
 
-- Continue Kaplan explanations in chapters 25–34: **171 remain across ten CSVs with matching JSON**. All 475 nonempty DSM source explanations and its 26 glossary-derived explanations are reviewed; Kaplan has authored explanations through chapter 24 (431/602). Displayed fields were reviewed in chapters 4–8 and 11–14 of both books, Kaplan 17–20 and the DSM glossary. Other prompts/cases/choices still need review, including chapters 1–3, 9–10, DSM 15–22 and Kaplan 15–16/21 onward. Resolve flagged source/key ambiguities and visually confirm Kaplan `16.12` operators. Verify actual import and bilingual rendering. Existing imported UUIDs are skipped, not updated. [Coverage and limits](archive/reviews/2026-10-17-importDataReview.md).
+- No unreviewed original prompts/cases/choices or nonempty explanations remain: cumulative direct review covers all 476 DSM exercises and 602 Kaplan questions, with 475 DSM standalone explanations, 26 glossary-derived explanations and 602 Kaplan explanations. Resolve flagged source/key ambiguities without inventing replacements. Verify actual import and bilingual rendering in the running app; existing imported UUIDs are skipped, not updated. [Coverage and limits](archive/reviews/2026-10-17-importDataReview.md).
 
 ## 2026-10-17 logic/model correction verification
 
