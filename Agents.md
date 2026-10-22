@@ -7,11 +7,12 @@
   edits and existing authorization; do not commit unless requested.
 - Trace affected contracts and callers before making focused corrections. Do not
   invent endpoints, permissions, idempotency or verification evidence.
-- No migration inspection/changes/setup, automated-suite inspection/work, or
-  Gradle/build/compilation/packaging without an explicit request. Supplied logs and
-  user-run builds authorize source troubleshooting, not agent-run builds. No version
-  changes unless requested. Production study/exam modules are application source;
-  exclude actual suites and migration directories from content searches.
+- Ask the user and receive explicit confirmation before running any build, compilation or packaging command, or extensive tests (including full suites, broad integration/end-to-end runs, or other long-running/resource-heavy checks). State the proposed command and scope before asking; a general implementation/fix request is not confirmation. Reuse confirmation already granted for that scope.
+- No migration inspection/changes/setup or automated-suite inspection/work without
+  an explicit request. Supplied logs and user-run builds authorize source
+  troubleshooting; they do not confirm agent-run builds or extensive tests. No
+  version changes unless requested. Production study/exam modules are application
+  source; exclude actual suites and migration directories from content searches.
 - Lightweight production-source/XML/AST/whitespace checks are allowed. State their
   scope; source completion does not establish compilation, HTTP/device behavior,
   accessibility, deployed schema or database concurrency.
