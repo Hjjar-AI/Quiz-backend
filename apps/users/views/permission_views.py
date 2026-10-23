@@ -110,7 +110,7 @@ class RoleCapabilitiesListView(_PermissionsAdminView):
     def put(self, request):
         serializer = RoleCapabilitiesSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         role = serializer.validated_data['role']
         caps = serializer.validated_data['capabilities']
@@ -119,6 +119,7 @@ class RoleCapabilitiesListView(_PermissionsAdminView):
             return api_error(
                 'لا يمكن تعديل صلاحيات المدير — المدير يمتلك كل الصلاحيات دائماً',
                 400,
+                reason='ADMIN_PERMISSIONS_FIXED',
             )
 
         # See the class docstring for the full rationale on why this
@@ -187,7 +188,7 @@ class UserCapabilitiesView(_PermissionsAdminView):
 
         raw = request.data.get('capabilities')
         if not isinstance(raw, dict):
-            return api_error('capabilities must be an object', 400)
+            return api_error('capabilities must be an object', 400, reason='CAPABILITIES_INVALID')
 
         unknown = set(raw) - CAPABILITIES
         if unknown:

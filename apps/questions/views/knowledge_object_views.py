@@ -70,7 +70,7 @@ class KnowledgeObjectListCreateView(APIView):
 
     def post(self, request):
         if not _may_manage(request.user):
-            return api_error('غير مصرح لك بإنشاء أهداف معرفية', 403)
+            return api_error('غير مصرح لك بإنشاء أهداف معرفية', 403, reason='KNOWLEDGE_CREATE_FORBIDDEN')
         serializer = KnowledgeObjectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = create_with_receipt(request, 'knowledge.create', KnowledgeObject, lambda: serializer.save(created_by=request.user))
@@ -101,7 +101,7 @@ class KnowledgeObjectDetailView(APIView):
         lock_tag_hierarchy()
         instance = self.get_object(pk)
         if not _may_manage(request.user, instance):
-            return api_error('غير مصرح لك بتعديل هذا الهدف المعرفي', 403)
+            return api_error('غير مصرح لك بتعديل هذا الهدف المعرفي', 403, reason='KNOWLEDGE_EDIT_FORBIDDEN')
         serializer = KnowledgeObjectSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
@@ -118,7 +118,7 @@ class KnowledgeObjectDetailView(APIView):
         list(Question.objects.select_for_update().filter(knowledge_object_id=pk).order_by('pk').values_list('pk', flat=True))
         instance = get_object_or_404(KnowledgeObject.objects.select_for_update(), pk=pk)
         if not _may_manage(request.user, instance):
-            return api_error('غير مصرح لك بحذف هذا الهدف المعرفي', 403)
+            return api_error('غير مصرح لك بحذف هذا الهدف المعرفي', 403, reason='KNOWLEDGE_DELETE_FORBIDDEN')
         check_revision(instance.version, expected_revision(request))
         instance.delete()
         return api_success(message='تم حذف الهدف المعرفي')

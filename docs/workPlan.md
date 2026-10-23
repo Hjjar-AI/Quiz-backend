@@ -1,5 +1,17 @@
 # Django remaining work
 
+## 2026-10-23 next focused test milestone
+
+- Obtain approval and run `tests.api.test_android_persistence_contracts` plus the two existing Android contract modules using `tests.test_settings` and an isolated in-memory test schema; do not touch application databases or inspect/change migration files. New database-backed cases are currently unrun. [Prepared scope](workDone.md#2026-10-23-additional-persistence-coverage-prepared).
+- Run the 39 selected Android error/transport/cookie cases after approval, using cached dependencies, preserved versions and one worker. Test storage shadows exclude device encryption; SQLite tests exclude server-database concurrency. No full-suite or fresh total-coverage claim is implied.
+
+## 2026-10-23 Android API rollout verification
+
+Focused database-free contracts now pass 32/32; their mocked ORM/service boundaries do not establish database or deployed HTTP behavior. [Evidence](workDone.md#2026-10-23-focused-androidbackend-regression-run).
+
+- Deploy matching backend before Android. Verify English/Arabic errors and field fallbacks, app versus device language, CSRF token rotation/one rejected-request retry on login/writes/exports, and no retry of permission failures or unknown mutation outcomes. Verify query-based discard/master deletion and password-authorized POST user deletion (permissions/self/last-admin protections, response loss); body-based requests still used by the current Vue frontend must work.
+- Verify JSON-array filters on availability, start, offline catalog and all export formats, especially tag names containing commas, empty selections and comma input still used by current Vue callers. Exercise actual HTTPS/proxy Host-with-port, forwarded scheme and trusted origins; source configuration does not establish deployment behavior. Compilation/device/live HTTP remain unverified; no build or broad-suite authorization is inferred.
+
 ## 2026-10-18 book Arabic review
 
 - No unreviewed original prompts/cases/choices or nonempty explanations remain: cumulative direct review covers all 476 DSM exercises and 602 Kaplan questions, with 475 DSM standalone explanations, 26 glossary-derived explanations and 602 Kaplan explanations. Resolve flagged source/key ambiguities without inventing replacements. Verify actual import and bilingual rendering in the running app; existing imported UUIDs are skipped, not updated. [Coverage and limits](archive/reviews/2026-10-17-importDataReview.md).

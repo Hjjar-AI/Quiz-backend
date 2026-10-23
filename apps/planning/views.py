@@ -67,12 +67,12 @@ class UpdatePlannerView(APIView):
                 request.user.id,
                 type(e).__name__,
             )
-            return api_error('خطأ في بيانات الإدخال', 400)
+            return api_error('خطأ في بيانات الإدخال', 400, reason='INVALID_INPUT')
 
         if not (1 <= target <= 1000):
-            return api_error('الهدف اليومي يجب أن يكون بين 1 و 1000 سؤال', 400)
+            return api_error('الهدف اليومي يجب أن يكون بين 1 و 1000 سؤال', 400, reason='DAILY_GOAL_INVALID')
         if end_date is not None and end_date < start_date:
-            return api_error('تاريخ النهاية يجب ألا يسبق تاريخ البداية', 400)
+            return api_error('تاريخ النهاية يجب ألا يسبق تاريخ البداية', 400, reason='DATE_RANGE_INVALID')
 
         category_ids = []
         if isinstance(raw_categories, list):

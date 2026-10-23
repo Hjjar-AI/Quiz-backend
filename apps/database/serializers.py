@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import serializers
 from apps.questions.export_options import manual_export_limit
 
@@ -63,7 +65,12 @@ class QuestionExportRequestSerializer(serializers.Serializer):
         cleaned = {}
         for key, raw in value.items():
             if isinstance(raw, list):
-                raw = ','.join(str(item) for item in raw)
+                if any(isinstance(item, bool) or not isinstance(item, (str, int)) for item in raw):
+                    raise serializers.ValidationError(f"Filter '{key}' must contain text or numbers.")
+                # JSON preserves commas inside tag names across body/query exports.
+                raw = json.dumps(raw, ensure_ascii=False)
+                if len(raw) > 500:
+                    raise serializers.ValidationError(f"Filter '{key}' exceeds the length limit.")
             if isinstance(raw, bool) or not isinstance(raw, (str, int)):
                 raise serializers.ValidationError(
                     f"Filter '{key}' must be text, a number, or a list."

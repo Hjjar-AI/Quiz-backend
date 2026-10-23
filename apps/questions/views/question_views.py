@@ -150,7 +150,7 @@ class QuestionListView(APIView):
     def get(self, request):
         if 'operation_id' in request.query_params:
             if not request.user.has_capability('questions.create'):
-                return api_error('غير مصرح لك', 403)
+                return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
             return read_receipt(request, 'create')
         filters = {}
         for key in ['tag', 'category', 'difficulty', 'verified', 'search']:
@@ -190,7 +190,7 @@ class QuestionListView(APIView):
 
     def post(self, request):
         if not request.user.has_capability('questions.create'):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
         return write_question(request, 'create')
 
 
@@ -228,7 +228,7 @@ class QuestionDetailView(APIView):
     def get(self, request, question_id):
         question = QuestionService.get_question(question_id, user=request.user)
         if question is None:
-            return api_error('السؤال غير موجود', 404)
+            return api_error('السؤال غير موجود', 404, reason='QUESTION_NOT_FOUND')
         serializer = QuestionSerializer(question, context={'request': request})
         return api_success(data=serializer.data)
 
@@ -246,7 +246,7 @@ class QuestionDetailView(APIView):
             any_cap='questions.edit_any',
             own_cap='questions.edit_own',
         ):
-            return api_error('غير مصرح لك بتعديل هذا السؤال', 403)
+            return api_error('غير مصرح لك بتعديل هذا السؤال', 403, reason='QUESTION_EDIT_FORBIDDEN')
 
         try:
             updated = QuestionService.update_question(
@@ -275,7 +275,7 @@ class QuestionDetailView(APIView):
             any_cap='questions.delete_any',
             own_cap='questions.delete_own',
         ):
-            return api_error('غير مصرح لك بحذف هذا السؤال', 403)
+            return api_error('غير مصرح لك بحذف هذا السؤال', 403, reason='QUESTION_DELETE_FORBIDDEN')
 
         # A question referenced by a master exam cannot be deleted.
         # The FK on MasterExamQuestion uses PROTECT, so a raw
@@ -291,6 +291,7 @@ class QuestionDetailView(APIView):
             return api_error(
                 'هذا السؤال مستخدم في امتحان رئيسي — احذفه من الامتحان أولاً',
                 409,
+                reason='QUESTION_IN_MASTER_EXAM',
             )
 
         return api_success(message='تم حذف السؤال')
@@ -339,13 +340,13 @@ class QuestionDuplicateView(APIView):
 
     def post(self, request, question_id):
         if not request.user.has_capability('questions.duplicate'):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         return write_question(request, 'duplicate', question_id)
 
     def get(self, request, question_id):
         if not request.user.has_capability('questions.duplicate'):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
         return read_receipt(request, 'duplicate', question_id)
 
 
@@ -360,10 +361,10 @@ class QuestionBatchView(APIView):
     def post(self, request):
         body = QuestionBatchSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('معرفات غير صالحة', 400, details=body.errors)
+            return api_error('معرفات غير صالحة', 400, details=body.errors, reason='INVALID_IDS')
         ids = dedupe_ordered(body.validated_data['ids'])
         if len(ids) > 500:
-            return api_error('الحد الأقصى 500 سؤال', 400)
+            return api_error('الحد الأقصى 500 سؤال', 400, reason='QUESTION_LIMIT_500')
         questions = list(
             Question.objects
             .visible_to(request.user)
@@ -478,12 +479,12 @@ class BulkVerifyView(APIView):
     def post(self, request):
         body = BulkVerifySerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
         question_ids = body.validated_data['question_ids']
         if not question_ids:
-            return api_error('لم يتم اختيار أي أسئلة', 400)
+            return api_error('لم يتم اختيار أي أسئلة', 400, reason='QUESTIONS_REQUIRED')
         if len(question_ids) > 500:
-            return api_error('الحد الأقصى 500 سؤال في العملية الواحدة', 400)
+            return api_error('الحد الأقصى 500 سؤال في العملية الواحدة', 400, reason='OPERATION_QUESTION_LIMIT_500')
 
         # Scope to visible questions (public + own drafts). The
         # resulting list is what actually reaches the service, so the
@@ -496,7 +497,7 @@ class BulkVerifyView(APIView):
             .values_list('id', flat=True)
         )
         if not visible_ids:
-            return api_error('لم يتم العثور على أسئلة صالحة', 400)
+            return api_error('لم يتم العثور على أسئلة صالحة', 400, reason='NO_VALID_QUESTIONS')
 
         if body.validated_data['action'] == 'verify':
             count = QuestionService.bulk_verify(
@@ -532,12 +533,12 @@ class BulkTagUpdateView(APIView):
     def post(self, request):
         body = BulkTagUpdateSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
         question_ids = body.validated_data['question_ids']
         if not question_ids:
-            return api_error('لم يتم اختيار أي أسئلة', 400)
+            return api_error('لم يتم اختيار أي أسئلة', 400, reason='QUESTIONS_REQUIRED')
         if len(question_ids) > 500:
-            return api_error('الحد الأقصى 500 سؤال في العملية الواحدة', 400)
+            return api_error('الحد الأقصى 500 سؤال في العملية الواحدة', 400, reason='OPERATION_QUESTION_LIMIT_500')
 
         # Match bulk verification: the capability does not grant visibility
         # into another author's private drafts. Drop inaccessible IDs before
@@ -548,7 +549,7 @@ class BulkTagUpdateView(APIView):
             .values_list('id', flat=True)
         )
         if not visible_ids:
-            return api_error('لم يتم العثور على أسئلة صالحة', 400)
+            return api_error('لم يتم العثور على أسئلة صالحة', 400, reason='NO_VALID_QUESTIONS')
 
         count = QuestionService.bulk_update_tags(
             visible_ids,
@@ -610,7 +611,7 @@ class SourceBookFiltersView(APIView):
         from django.db.models import Count
         name = request.query_params.get('source_document')
         if name is None or not name.strip() or len(name) > 500:
-            return api_error('الكتاب المصدر غير صالح / Invalid source book', 400)
+            return api_error('الكتاب المصدر غير صالح / Invalid source book', 400, reason='SOURCE_BOOK_INVALID')
         questions = Question.objects.public().filter(source_document=name)
         categories = questions.filter(category_id__isnull=False).order_by(
             'category__name', 'category_id',
@@ -646,7 +647,7 @@ class AvailableCountView(APIView):
         source_document = request.query_params.get('source_document')
         if source_document is not None:
             if not source_document.strip() or len(source_document) > 500:
-                return api_error('الكتاب المصدر غير صالح / Invalid source book', 400)
+                return api_error('الكتاب المصدر غير صالح / Invalid source book', 400, reason='SOURCE_BOOK_INVALID')
             filters['source_document'] = source_document
 
         category_ids_raw = request.query_params.get('category_ids')
@@ -683,7 +684,7 @@ class AvailableCountView(APIView):
                     is_active=True,
                 )
             except (Blueprint.DoesNotExist, TypeError, ValueError):
-                return api_error('نموذج الامتحان غير موجود', 404)
+                return api_error('نموذج الامتحان غير موجود', 404, reason='BLUEPRINT_NOT_FOUND')
             # The selector's weighted quotas redistribute shortages across
             # the filtered public bank; inventory is independent of session size.
             count = QuestionService.get_questions(filters, user=None, answer_user=request.user).count()
@@ -730,7 +731,7 @@ class QuestionImageUploadView(APIView):
             any_cap='questions.edit_any',
             own_cap='questions.upload_image',
         ):
-            return api_error('غير مصرح لك بتعديل هذا السؤال', 403)
+            return api_error('غير مصرح لك بتعديل هذا السؤال', 403, reason='QUESTION_EDIT_FORBIDDEN')
 
         wants_delete = (
             request.data.get('delete') in ('true', 'True', True)
@@ -747,7 +748,7 @@ class QuestionImageUploadView(APIView):
 
         serializer = QuestionImageUploadSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('الصورة غير صالحة', 400, details=serializer.errors)
+            return api_error('الصورة غير صالحة', 400, details=serializer.errors, reason='IMAGE_INVALID')
 
         question.image = serializer.validated_data['image']
         question.save(update_fields=['image'])

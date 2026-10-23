@@ -18,7 +18,7 @@ block becomes three lines:
         msg, status, details = exam_error_response(str(e))
         return api_error(msg, status, details=details)
 
-The raw code is forwarded in `details['code']` when it is a
+The raw code is forwarded in `details['code']` and `details['reason']` when it is a
 recognised sentinel, so the frontend can branch on it without
 parsing the localized message. When the string is not a recognised
 code (an unexpected bare ValueError from somewhere deeper), the
@@ -102,9 +102,8 @@ _MASTER_EXAM_ERROR_MESSAGES = {
 # runtime data (e.g. the list of inaccessible question ids) that
 # the client should NOT see in the response body.
 #
-# The details.code is deliberately None for prefix matches — the
-# original code did not forward it either (the interpolated id list
-# would have made the "code" value unstable and un-greppable).
+# Prefix matches expose only the stable prefix in details.reason; runtime
+# payloads such as inaccessible IDs are never included in the token.
 _PREFIX_ERROR_MESSAGES = (
     ('QUESTIONS_NOT_ACCESSIBLE', 'بعض الأسئلة غير متاحة', 400),
 )
@@ -117,9 +116,9 @@ def exam_error_response(code, default_status=400):
     Lookup order:
 
       1. Exact match in `_MASTER_EXAM_ERROR_MESSAGES` → localized
-         message, mapped status, `details={'code': code}`.
+         message, mapped status, `details={'code': code, 'reason': code}`.
       2. Prefix match in `_PREFIX_ERROR_MESSAGES` → localized
-         message, mapped status, `details=None`.
+         message, mapped status, `details={'reason': prefix}`.
       3. No match → the raw string is passed through verbatim with
          `default_status` (400 by default) and `details=None`,
          matching the previous behaviour of the inline ladders.
@@ -127,10 +126,10 @@ def exam_error_response(code, default_status=400):
     entry = _MASTER_EXAM_ERROR_MESSAGES.get(code)
     if entry is not None:
         message, status = entry
-        return message, status, {'code': code}
+        return message, status, {'code': code, 'reason': code}
 
     for prefix, message, status in _PREFIX_ERROR_MESSAGES:
         if code.startswith(prefix):
-            return message, status, None
+            return message, status, {'reason': prefix}
 
     return code, default_status, None

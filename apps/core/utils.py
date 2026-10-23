@@ -1,9 +1,11 @@
 # backend/apps/core/utils.py
 import os
+import json
 import time
 from django.conf import settings
 from django.middleware.csrf import get_token
 from rest_framework.response import Response
+from .api_errors import error_details
 
 
 def safe_int(raw, default, minimum=None, maximum=None):
@@ -23,7 +25,7 @@ def safe_int(raw, default, minimum=None, maximum=None):
 
 def parse_csv_param(raw, *, coerce=None):
     """
-    Parse a comma-separated query-string value into a list.
+    Parse a JSON array (preferred) or legacy comma-separated query value.
 
     Used by the multi-select filter shapes that appear on both the
     question list endpoint and the available-count endpoint. Before
@@ -52,7 +54,18 @@ def parse_csv_param(raw, *, coerce=None):
         return []
 
     if isinstance(raw, str):
-        pieces = raw.split(',')
+        if raw.lstrip().startswith('['):
+            from rest_framework.exceptions import ValidationError
+            try:
+                pieces = json.loads(raw)
+            except (TypeError, ValueError):
+                # Preserve legacy tag names such as [Mood]. New clients send
+                # JSON arrays so commas and brackets in names stay unambiguous.
+                pieces = raw.split(',')
+            if not isinstance(pieces, list) or any(isinstance(item, (dict, list, bool)) or item is None for item in pieces):
+                raise ValidationError('Invalid filter array.')
+        else:
+            pieces = raw.split(',')
     else:
         try:
             pieces = list(raw)
@@ -104,12 +117,12 @@ def api_success(data=None, message="Success", code=200):
     )
 
 
-def api_error(message="Error", code=400, details=None):
+def api_error(message="Error", code=400, details=None, *, reason=None):
     return Response(
         {
             'code': code,
             'message': message,
-            'details': details,
+            'details': error_details(details, code, reason),
         },
         status=code,
     )

@@ -2,6 +2,8 @@
 
 from rest_framework.exceptions import NotAuthenticated, APIException
 from rest_framework.views import exception_handler
+from .api_errors import error_details
+from .authentication import CsrfFailed
 
 
 class RevisionConflict(APIException):
@@ -74,5 +76,10 @@ def custom_exception_handler(exc, context):
                 'message': str(response.data),
                 'details': None,
             }
+
+        reason = ('CSRF_FAILED' if isinstance(exc, CsrfFailed) else
+                  'REVISION_CONFLICT' if isinstance(exc, RevisionConflict) else None)
+        response.data['details'] = error_details(
+            response.data.get('details'), response.status_code, reason)
 
     return response

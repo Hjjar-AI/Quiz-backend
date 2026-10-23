@@ -1,6 +1,7 @@
 """Common question query filters for lists and exports."""
 
 from django.db.models import Q
+from apps.core.utils import parse_csv_param
 
 from .models import Question
 
@@ -11,7 +12,7 @@ def _values(raw, split_string=True):
     if raw is None or raw == '':
         return []
     if isinstance(raw, str):
-        return raw.split(',') if split_string else [raw]
+        return parse_csv_param(raw) if split_string else [raw]
     try:
         return list(raw)
     except TypeError:

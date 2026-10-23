@@ -1,5 +1,33 @@
 # Current Django source status
 
+## 2026-10-23 additional persistence coverage prepared
+
+Created 13 real-database API regressions in `tests/api/test_android_persistence_contracts.py`: CSRF-cookie rotation/logout and account-switch session invalidation; owner/foreign/body-based discard; successful/password/self/last-admin/question-owner POST deletion; and exact category/comma-tag consistency across question list, availability, offline catalog, study start and streamed JSON export. Reused existing factories and `tests.test_settings` for isolated in-memory SQLite/cache/artifact storage. Android adds 16 lifecycle/cookie cases. No production or frontend application changes.
+
+AST/lexical/whitespace source checks passed. New tests are unrun; isolated test-schema creation and focused test commands await milestone approval. No application database, migration files, build, package/version, runtime coverage measurement or device check was performed. The previous 32/32 backend and 23/23 Android runs remain the latest executed evidence; this source addition does not establish persistence or concurrency results.
+
+## 2026-10-23 focused Android/backend regression run
+
+Added 29 database-free behavioral contracts for typed CSRF (including anonymous login and origin rejection), permission/error reasons, JSON/empty/exact-tag export filters, caller-scoped discard, master deletion and password/capability/self/last-admin user-deletion guards. Tests exposed and corrected two defects: the POST deletion subclass now applies the existing AdminPasswordRateThrottle, and omitted optional offline tags now validate as an empty selection.
+
+Ran `/home/mhmmd/Envs/quiz/bin/python manage.py test tests.contracts.test_android_api_behaviour tests.contracts.test_android_endpoints_resolve --settings=config.settings_sqlite --verbosity=1`: **32/32 passed**, 0.413s, system checks clean. Initial run: two failures, both corrected before the focused rerun. Log: `/tmp/mukhtabir-api-contract-tests.log`. DRF authentication/dispatch and serializers execute; ORM/destructive-service boundaries are mocked. No test database/schema setup, migrations, application-data writes, broad suite or frontend application changes. Source AST/whitespace checks passed; deployed proxy, persistence/locks and actual device behavior remain separate gates. Android then passed 23/23 selected helper/transport tests on installed JDK 21 (cached rerun 37s), after fixing the session-revocation builder parameter type and adding test-only storage shadows for the unavailable JVM AndroidKeyStore service. Production encryption is unchanged. [Android command, results and limits](../../Android/docs/verification/checklist.md#2026-10-23-compatibility-and-test-milestone).
+
+## 2026-10-23 compatibility and milestone test policy
+
+Updated both agent instruction files: support matching post-fix clients only (also when revisiting earlier fixes), inspect current Vue dependencies without unauthorized frontend application changes, and request scoped internal Android/Python/Vue test-file/run approval after implementation at each milestone. Specific existing approval remains valid within its scope. Prohibit recurring/watch-mode verification; check active runners/memory before approved heavy work and retain concise results. Migration/version/build restrictions remain explicit.
+
+Documentation/link/whitespace checks only for this policy update; no frontend application changes, builds or test runs. The current Android test-file creation was explicitly authorized separately.
+
+## 2026-10-23 Android API findings
+
+Added stable `details.reason` defaults to API/DRF errors, explicit reasons for fixed view messages, preserved ordinary/master recovery codes, and exposed offline operation reasons. Android maps 159 new bilingual reasons, retains bounded tokens and localizes transport summaries for both Compose and direct exception consumers; unmapped/dynamic Arabic validation text uses a localized fallback for English users. Session authentication and anonymous login now emit typed `CSRF_FAILED` before dispatch; Android retries that typed rejection once for ordinary requests and exports.
+
+Centralized Android paths, including managed groups/blueprints, offline, transfer, operator, recovery and draft routes. Added POST administrator deletion reusing the existing permission/password/lock rules; ordinary discard and master deletion accept query identifiers/options while retaining legacy bodies. Android sends bodyless DELETEs and keeps the administrator password in POST data. Multi-value filters prefer JSON arrays in bodies and encoded arrays in queries; legacy comma input remains supported. Export serialization preserves commas inside tag names.
+
+Current source disproves the proposed language, activity and managed-content gaps: AppPreferences applies the selected locale to API headers; streak history/heatmap share local-time LearningEvents; group membership/blueprint writes are reachable behind capabilities; admin user views add both latest-exam fields. Supplied nginx preserves Host including port and forwards scheme; deployed behavior is unverified.
+
+Approved focused command: `/home/mhmmd/Envs/quiz/bin/python manage.py test tests.contracts.test_android_endpoints_resolve --settings=config.settings_sqlite --verbosity=1`: **3/3 passed**, no database setup; final run 0.376s, system checks clean. Covers registry route resolution, inline-path prohibition and directly identifiable HTTP methods; dynamic builder verbs, DTOs/authentication behavior and deployed HTTP are not established. Python AST checks passed for 36 changed/new files; Android lexical/resource/XML checks passed for 17 Kotlin files and 159 new bilingual keys. No builds/compilation, full suites, migrations, versions, deployment or device/proxy verification. Deploy matching backend before Android; remaining scenarios are in workPlan.
+
 ## 2026-10-18 Kaplan 16.12 table confirmed
 
 Applied the user’s transcription of all six age-table rows and answer D. Corrected E from patient >16 to ≥16 in source/extraction override and both import formats; C/E retain explicit N/A. Updated Arabic prompt/explanation, keeping the source’s <14 cutoff separate from the clinical prepubertal-child criterion. The transcription resolves the pending table check without claiming direct scan inspection. Regenerated Kaplan; artifact and isolated production validators pass, with unrelated rows/identities/answer mappings unchanged. No engine/services, database import, suites or builds.

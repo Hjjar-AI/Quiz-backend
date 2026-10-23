@@ -27,7 +27,7 @@ class MasterExamPublishView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         try:
             exam = MasterExamService.publish(exam, request=request)
@@ -51,7 +51,7 @@ class MasterExamCancelView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         try:
             exam = MasterExamService.cancel(exam, request=request)
@@ -85,9 +85,9 @@ class MasterExamPublishToBankView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
         if not request.user.has_capability('master_exams.publish_to_bank'):
-            return api_error('غير مصرح لك بنشر الامتحان في البنك', 403)
+            return api_error('غير مصرح لك بنشر الامتحان في البنك', 403, reason='EXAM_PUBLISH_FORBIDDEN')
 
         try:
             exam = MasterExamService.publish_to_bank(exam, request=request)

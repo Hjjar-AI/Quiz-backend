@@ -312,7 +312,7 @@ class ExportDatabaseViewTests(CacheClearingTestCase):
         self.assertEqual(resp.status_code, 200)
         kwargs = export_questions.call_args.kwargs
         self.assertEqual(kwargs['locale'], 'en')
-        self.assertEqual(kwargs['filters']['difficulty'], 'easy,hard')
+        self.assertEqual(json.loads(kwargs['filters']['difficulty']), ['easy', 'hard'])
         self.assertTrue(kwargs['front_matter']['enabled'])
         self.assertEqual(kwargs['front_matter']['fields'][0]['label'], 'Edition')
         b''.join(resp.streaming_content)

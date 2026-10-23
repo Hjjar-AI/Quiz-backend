@@ -90,7 +90,7 @@ class CategoryCreateView(APIView):
 
         name = _coerce_name(data.get('name'))
         if not name:
-            return api_error('اسم التصنيف مطلوب', 400)
+            return api_error('اسم التصنيف مطلوب', 400, reason='CATEGORY_NAME_REQUIRED')
 
         if len(name) > CATEGORY_NAME_MAX_LENGTH:
             return api_error(
@@ -103,6 +103,7 @@ class CategoryCreateView(APIView):
             return api_error(
                 'اللون غير صالح. استخدم صيغة HEX مثل #667eea أو #fff أو #667eea80',
                 400,
+                reason='CATEGORY_COLOR_INVALID',
             )
 
         icon = _validate_icon(data.get('icon'), default='bi-folder')
@@ -110,6 +111,7 @@ class CategoryCreateView(APIView):
             return api_error(
                 'الأيقونة غير صالحة. استخدم اسماً من Bootstrap Icons مثل bi-folder',
                 400,
+                reason='CATEGORY_ICON_INVALID',
             )
 
         def create():
@@ -148,7 +150,7 @@ class CategoryUpdateView(APIView):
 
         new_name = _coerce_name(data.get('name'), fallback=category.name)
         if not new_name:
-            return api_error('اسم التصنيف مطلوب', 400)
+            return api_error('اسم التصنيف مطلوب', 400, reason='CATEGORY_NAME_REQUIRED')
 
         if len(new_name) > CATEGORY_NAME_MAX_LENGTH:
             return api_error(
@@ -156,7 +158,7 @@ class CategoryUpdateView(APIView):
                 400,
             )
         if new_name != category.name and Category.objects.filter(name=new_name).exists():
-            return api_error('التصنيف موجود مسبقاً', 400)
+            return api_error('التصنيف موجود مسبقاً', 400, reason='CATEGORY_EXISTS')
 
         new_color = _validate_color(
             data.get('color', category.color), default=category.color,
@@ -165,6 +167,7 @@ class CategoryUpdateView(APIView):
             return api_error(
                 'اللون غير صالح. استخدم صيغة HEX مثل #667eea أو #fff أو #667eea80',
                 400,
+                reason='CATEGORY_COLOR_INVALID',
             )
 
         new_icon = _validate_icon(
@@ -174,6 +177,7 @@ class CategoryUpdateView(APIView):
             return api_error(
                 'الأيقونة غير صالحة. استخدم اسماً من Bootstrap Icons مثل bi-folder',
                 400,
+                reason='CATEGORY_ICON_INVALID',
             )
 
         category.name = new_name
@@ -199,7 +203,7 @@ class CategoryMergeView(APIView):
         source_version = expected_revision(request)
         target_version = serializers.IntegerField(min_value=1).run_validation(request.data.get('target_version'))
         if source_id == target_id:
-            return api_error('اختر تصنيفاً آخر / Choose another category', 400)
+            return api_error('اختر تصنيفاً آخر / Choose another category', 400, reason='CATEGORY_MERGE_TARGET_INVALID')
 
         def merge():
             from apps.exams.models import Blueprint, BlueprintWeight
@@ -297,7 +301,7 @@ class CategoryDeleteView(APIView):
         try:
             category.delete()
         except ProtectedError:
-            return api_error('التصنيف مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409)
+            return api_error('التصنيف مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409, reason='CATEGORY_IN_PLANNER')
         log_privileged_action(
             request, 'category.delete', target_repr=category_name,
             details={'category_id': category_id})

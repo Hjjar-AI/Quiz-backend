@@ -64,11 +64,11 @@ class MasterExamAddQuestionsView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         serializer = MasterExamAddQuestionsSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         try:
             exam = MasterExamService.add_questions(
@@ -96,11 +96,11 @@ class MasterExamRemoveQuestionView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         serializer = MasterExamRemoveQuestionSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         try:
             exam = MasterExamService.remove_question(
@@ -129,11 +129,11 @@ class MasterExamReorderView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         serializer = MasterExamReorderSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         try:
             exam = MasterExamService.reorder_questions(
@@ -178,11 +178,11 @@ class MasterExamAddDraftView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         serializer = MasterExamDraftCreateSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         payload = dict(serializer.validated_data)
         category_id = payload.pop('category', None)

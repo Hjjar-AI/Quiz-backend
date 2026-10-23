@@ -97,11 +97,11 @@ class MasterExamListCreateView(APIView):
 
     def post(self, request):
         if not request.user.has_capability('master_exams.create'):
-            return api_error('غير مصرح لك بإنشاء امتحان رئيسي', 403)
+            return api_error('غير مصرح لك بإنشاء امتحان رئيسي', 403, reason='EXAM_CREATE_FORBIDDEN')
 
         serializer = MasterExamCreateSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         try:
             exam = MasterExamService.create(
@@ -142,7 +142,7 @@ class MasterExamDetailView(APIView):
             pk=pk,
         )
         if not MasterExamService.user_can_access(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         attempt = MasterExamAttempt.objects.filter(
             master_exam=exam, user=request.user,
@@ -159,14 +159,14 @@ class MasterExamDetailView(APIView):
     def put(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك بتعديل هذا الامتحان', 403)
+            return api_error('غير مصرح لك بتعديل هذا الامتحان', 403, reason='EXAM_EDIT_FORBIDDEN')
 
         serializer = MasterExamUpdateSerializer(
             data=request.data,
             context={'exam': exam},
         )
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         data = dict(serializer.validated_data)
         expected_version = data.pop('expected_version')
@@ -187,13 +187,15 @@ class MasterExamDetailView(APIView):
     def delete(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_manage_exam(request.user, exam):
-            return api_error('غير مصرح لك بحذف هذا الامتحان', 403)
+            return api_error('غير مصرح لك بحذف هذا الامتحان', 403, reason='EXAM_DELETE_FORBIDDEN')
 
-        serializer = MasterExamDeleteSerializer(data=request.data)
+        serializer = MasterExamDeleteSerializer(data=(request.query_params
+            if 'delete_mode' in request.query_params else request.data))
         if not serializer.is_valid():
             return api_error(
                 'يجب تحديد طريقة التعامل مع المسودات', 400,
                 details=serializer.errors,
+                reason='DRAFT_DELETE_MODE_REQUIRED',
             )
 
         try:
@@ -215,7 +217,7 @@ class MasterExamAcknowledgeView(APIView):
     def post(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not MasterExamService.user_can_access(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
         MasterExamService.acknowledge(exam, request.user)
         return api_success(message='تم')
 

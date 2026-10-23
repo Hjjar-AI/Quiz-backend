@@ -137,7 +137,7 @@ class AdminTagRenameView(APIView):
         check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
         body = TagRenameSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         new_name, err = _validate_tag_name(
             body.validated_data['new_name'],
@@ -148,7 +148,7 @@ class AdminTagRenameView(APIView):
 
         tag = get_object_or_404(Tag, name=old_name)
         if Tag.objects.filter(name=new_name).exists():
-            return api_error('الوسم الجديد موجود مسبقاً', 400)
+            return api_error('الوسم الجديد موجود مسبقاً', 400, reason='TAG_EXISTS')
 
         tag.name = new_name
         tag.save(update_fields=['name'])
@@ -178,7 +178,7 @@ class AdminTagDeleteView(APIView):
         try:
             tag.delete()
         except ProtectedError:
-            return api_error('الوسم مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409)
+            return api_error('الوسم مستخدم في خطة دراسة؛ أزل الهدف أو استبدله أولاً', 409, reason='TAG_IN_PLANNER')
         log_privileged_action(request, 'tag.delete', target_repr=name,
                               details={'tag_id': tag_id})
         return api_success(message='تم حذف الوسم')
@@ -218,7 +218,7 @@ class AdminTagMergeView(APIView):
         check_revision(lock_revision('_tag_hierarchy_lock'), expected_revision(request))
         body = TagMergeSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         source_tags = body.validated_data['source_tags']
 
@@ -226,7 +226,7 @@ class AdminTagMergeView(APIView):
         # caller sends neither sources nor a target, the error they
         # see is the source one, matching the pre-refactor behaviour.
         if not source_tags:
-            return api_error('يجب اختيار وسم واحد على الأقل للدمج', 400)
+            return api_error('يجب اختيار وسم واحد على الأقل للدمج', 400, reason='MERGE_TAG_REQUIRED')
 
         target_name, err = _validate_tag_name(
             body.validated_data['target_tag'],
@@ -266,6 +266,7 @@ class AdminTagMergeView(APIView):
             return api_error(
                 'لا يمكن دمج وسم أب ضمن أحد الوسوم التابعة له',
                 400,
+                reason='TAG_MERGE_CYCLE',
             )
 
         moved = 0

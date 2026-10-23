@@ -95,19 +95,19 @@ class MasterExamStartAttemptView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
 
         if not MasterExamService.user_can_access(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         serializer = MasterExamAttemptStartSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         is_preview = serializer.validated_data['preview']
 
         if is_preview:
             if not request.user.has_capability('master_exams.preview'):
-                return api_error('المعاينة متاحة للمشرفين فقط', 403)
+                return api_error('المعاينة متاحة للمشرفين فقط', 403, reason='PREVIEW_FORBIDDEN')
             if not _can_manage_exam(request.user, exam):
-                return api_error('غير مصرح لك', 403)
+                return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         try:
             attempt = MasterExamAttemptService.start(
@@ -150,7 +150,7 @@ class MasterExamAttemptStatusView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
         attempt = _latest_attempt_for(exam, request.user)
         if not attempt:
-            return api_error('لا توجد محاولة', 404)
+            return api_error('لا توجد محاولة', 404, reason='ATTEMPT_NOT_FOUND')
 
         # Single-attempt sweep. If the deadline plus grace has passed,
         # this force-finishes the attempt before we read its state.
@@ -172,9 +172,9 @@ class MasterExamCurrentQuestionView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
         attempt = _latest_attempt_for(exam, request.user)
         if not attempt:
-            return api_error('لا توجد محاولة', 404)
+            return api_error('لا توجد محاولة', 404, reason='ATTEMPT_NOT_FOUND')
         if attempt.is_complete:
-            return api_error('المحاولة منتهية', 400)
+            return api_error('المحاولة منتهية', 400, reason='ATTEMPT_FINISHED')
 
         try:
             payload = MasterExamAttemptService.current_question(attempt)
@@ -182,7 +182,7 @@ class MasterExamCurrentQuestionView(APIView):
             msg, status, details = exam_error_response(str(e))
             return api_error(msg,status,details=details)
         if payload is None:
-            return api_error('لا يوجد سؤال', 404)
+            return api_error('لا يوجد سؤال', 404, reason='NO_QUESTION')
         return api_success(data=payload)
 
 
@@ -204,13 +204,13 @@ class MasterExamSubmitAnswerView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
         attempt = _latest_attempt_for(exam, request.user)
         if not attempt:
-            return api_error('لا توجد محاولة', 404)
+            return api_error('لا توجد محاولة', 404, reason='ATTEMPT_NOT_FOUND')
         if attempt.is_complete:
-            return api_error('المحاولة منتهية', 400)
+            return api_error('المحاولة منتهية', 400, reason='ATTEMPT_FINISHED')
 
         serializer = MasterExamSubmitAnswerSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         try:
             attempt = MasterExamAttemptService.submit_answer(
@@ -242,11 +242,11 @@ class MasterExamGotoView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
         attempt = _latest_attempt_for(exam, request.user)
         if not attempt or attempt.is_complete:
-            return api_error('لا توجد محاولة نشطة', 404)
+            return api_error('لا توجد محاولة نشطة', 404, reason='ACTIVE_ATTEMPT_REQUIRED')
 
         serializer = MasterExamGotoSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         try:
             attempt = MasterExamAttemptService.goto_question(
@@ -273,7 +273,7 @@ class MasterExamFinishAttemptView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
         attempt = _latest_attempt_for(exam, request.user)
         if not attempt:
-            return api_error('لا توجد محاولة', 404)
+            return api_error('لا توجد محاولة', 404, reason='ATTEMPT_NOT_FOUND')
 
         try:
             attempt = MasterExamAttemptService.finish(attempt, forced=False)
@@ -281,7 +281,7 @@ class MasterExamFinishAttemptView(APIView):
             logger.exception(
                 'Failed to finish master exam attempt %s', attempt.id,
             )
-            return api_error('فشل إنهاء الامتحان', 500)
+            return api_error('فشل إنهاء الامتحان', 500, reason='EXAM_FINISH_FAILED')
 
         return api_success(
             data=MasterExamAttemptSerializer(attempt).data,
@@ -301,16 +301,16 @@ class MasterExamFlagView(APIView):
         exam = get_object_or_404(MasterExam, pk=pk)
         attempt = _latest_attempt_for(exam, request.user)
         if not attempt:
-            return api_error('لا توجد محاولة', 404)
+            return api_error('لا توجد محاولة', 404, reason='ATTEMPT_NOT_FOUND')
 
         serializer = MasterExamFlagSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         question_id = serializer.validated_data['question_id']
         in_exam = question_id in (attempt.question_ids or [])
         if not in_exam:
-            return api_error('السؤال ليس جزءاً من هذا الامتحان', 400)
+            return api_error('السؤال ليس جزءاً من هذا الامتحان', 400, reason='QUESTION_NOT_IN_EXAM')
 
         success = FeedbackService.flag_question(
             request.user.id,
@@ -319,6 +319,6 @@ class MasterExamFlagView(APIView):
             master_exam_attempt=attempt,
         )
         if not success:
-            return api_error('لقد قمت بالإبلاغ عن هذا السؤال بالفعل', 400)
+            return api_error('لقد قمت بالإبلاغ عن هذا السؤال بالفعل', 400, reason='QUESTION_ALREADY_REPORTED')
 
         return api_success(message='تم الإبلاغ — سيصل إلى المشرف فوراً')

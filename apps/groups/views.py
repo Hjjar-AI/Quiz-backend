@@ -56,7 +56,7 @@ class GroupLeaderboardView(APIView):
         if not is_member and not request.user.has_capability('groups.admin'):
             # Same 404 as a nonexistent group so membership cannot be
             # probed by observing 403 vs 404.
-            return api_error('المجموعة غير موجودة', 404)
+            return api_error('المجموعة غير موجودة', 404, reason='GROUP_NOT_FOUND')
 
         try:
             days = int(request.query_params.get('days', 7))
@@ -86,7 +86,7 @@ class GroupVisibilityView(APIView):
         group = get_object_or_404(Group, id=group_id)
         body = GroupVisibilitySerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         ok = GroupService.set_visibility(
             group,
@@ -94,7 +94,7 @@ class GroupVisibilityView(APIView):
             body.validated_data['show_in_leaderboard'],
         )
         if not ok:
-            return api_error('أنت لست عضواً في هذه المجموعة', 404)
+            return api_error('أنت لست عضواً في هذه المجموعة', 404, reason='GROUP_MEMBERSHIP_REQUIRED')
         return api_success(message='تم تحديث إعداد الظهور')
 
 
@@ -119,7 +119,7 @@ class AdminGroupListView(APIView):
     def post(self, request):
         body = GroupCreateSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
         group = GroupService.create_group(
             body.validated_data['name'],
             body.validated_data.get('description', ''),
@@ -144,11 +144,11 @@ class AdminGroupDetailView(APIView):
         group = get_object_or_404(Group, id=group_id)
         body = GroupUpdateSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         new_name = body.validated_data.get('name')
         if new_name and Group.objects.filter(name=new_name).exclude(id=group.id).exists():
-            return api_error('يوجد مجموعة بنفس الاسم', 400)
+            return api_error('يوجد مجموعة بنفس الاسم', 400, reason='GROUP_NAME_EXISTS')
 
         group = GroupService.update_group(
             group,
@@ -184,7 +184,7 @@ class AdminGroupMembersView(APIView):
         group = get_object_or_404(Group, id=group_id)
         body = GroupAddMembersSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         valid_ids = set(
             User.objects
@@ -192,7 +192,7 @@ class AdminGroupMembersView(APIView):
             .values_list('id', flat=True)
         )
         if not valid_ids:
-            return api_error('لم يتم العثور على مستخدمين صالحين', 400)
+            return api_error('لم يتم العثور على مستخدمين صالحين', 400, reason='NO_VALID_USERS')
 
         added = GroupService.add_members(group, list(valid_ids))
         if added:
@@ -218,7 +218,7 @@ class AdminGroupMemberView(APIView):
         group = get_object_or_404(Group, id=group_id)
         ok = GroupService.remove_member(group, user_id)
         if not ok:
-            return api_error('العضو غير موجود في المجموعة', 404)
+            return api_error('العضو غير موجود في المجموعة', 404, reason='GROUP_MEMBER_NOT_FOUND')
         log_privileged_action(request, 'group.member_remove', target=group,
                               details={'user_id': user_id})
         return api_success(message='تمت إزالة العضو')

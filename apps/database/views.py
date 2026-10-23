@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 def _import_file_or_error(request, *, max_size=None):
     file = request.FILES.get('file')
     if not file:
-        return None, api_error('لم يتم اختيار ملف', 400)
+        return None, api_error('لم يتم اختيار ملف', 400, reason='FILE_REQUIRED')
     size_limit = settings.MAX_UPLOAD_SIZE if max_size is None else max_size
     if file.size > size_limit:
         return None, api_error(
@@ -176,6 +176,7 @@ def _post_question_export(request, fmt, *, verified_only):
             'خيارات التصدير غير صالحة',
             400,
             details=serializer.errors,
+            reason='EXPORT_OPTIONS_INVALID',
         )
 
     data = serializer.validated_data
@@ -272,10 +273,10 @@ class RestoreBackupView(APIView):
     def post(self, request):
         serializer = RestoreBackupSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات الطلب غير مكتملة', 400, details=serializer.errors)
+            return api_error('بيانات الطلب غير مكتملة', 400, details=serializer.errors, reason='REQUEST_INCOMPLETE')
 
         if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
-            return api_error('كلمة مرور المدير غير صحيحة', 403)
+            return api_error('كلمة مرور المدير غير صحيحة', 403, reason='ADMIN_PASSWORD_INCORRECT')
 
         backup_name = serializer.validated_data['backup_name']
         result = BackupService.restore_backup(backup_name)
@@ -304,10 +305,11 @@ class ClearDatabaseView(APIView):
             return api_error(
                 'كلمة مرور المدير الحالية مطلوبة', 400,
                 details=serializer.errors,
+                reason='ADMIN_PASSWORD_REQUIRED',
             )
 
         if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
-            return api_error('كلمة مرور المدير غير صحيحة', 403)
+            return api_error('كلمة مرور المدير غير صحيحة', 403, reason='ADMIN_PASSWORD_INCORRECT')
 
         result = BackupService.clear_database()
         if 'error' in result:
@@ -337,9 +339,9 @@ class ImportLimitUnlockView(APIView):
     def post(self, request):
         serializer = ImportUnlockSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('كلمة مرور المدير الحالية مطلوبة', 400, details=serializer.errors)
+            return api_error('كلمة مرور المدير الحالية مطلوبة', 400, details=serializer.errors, reason='ADMIN_PASSWORD_REQUIRED')
         if not admin_password_matches(request.user, serializer.validated_data['admin_password']):
-            return api_error('كلمة مرور المدير غير صحيحة', 403)
+            return api_error('كلمة مرور المدير غير صحيحة', 403, reason='ADMIN_PASSWORD_INCORRECT')
         status = unlock_import_limit(request)
         log_privileged_action(request, action='db.import_limit_unlock',
                               target_repr='database:imports', details={'duration_seconds': IMPORT_UNLOCK_SECONDS})
@@ -548,9 +550,9 @@ class ImportStateView(APIView):
             try:
                 parsed = json.loads(mapping_raw)
             except (TypeError, ValueError):
-                return api_error('صيغة mapping غير صالحة', 400)
+                return api_error('صيغة mapping غير صالحة', 400, reason='MAPPING_FORMAT_INVALID')
             if not isinstance(parsed, dict):
-                return api_error('mapping يجب أن يكون كائناً', 400)
+                return api_error('mapping يجب أن يكون كائناً', 400, reason='MAPPING_INVALID')
             mapping = parsed
 
         conflict_strategy = request.data.get('conflict_strategy') or None
@@ -560,15 +562,15 @@ class ImportStateView(APIView):
             try:
                 conflict_resolutions = json.loads(resolutions_raw)
             except (TypeError, ValueError):
-                return api_error('صيغة conflict_resolutions غير صالحة', 400)
+                return api_error('صيغة conflict_resolutions غير صالحة', 400, reason='CONFLICT_RESOLUTIONS_FORMAT_INVALID')
             if not isinstance(conflict_resolutions, dict):
-                return api_error('conflict_resolutions يجب أن يكون كائناً', 400)
+                return api_error('conflict_resolutions يجب أن يكون كائناً', 400, reason='CONFLICT_RESOLUTIONS_INVALID')
 
         is_write = not dry_run and not analyze
         if mode == 'replace' and is_write:
             admin_password = request.data.get('admin_password') or ''
             if not admin_password_matches(request.user, admin_password):
-                return api_error('كلمة مرور المدير غير صحيحة', 403)
+                return api_error('كلمة مرور المدير غير صحيحة', 403, reason='ADMIN_PASSWORD_INCORRECT')
 
         result = ImportService.import_state(
             file,

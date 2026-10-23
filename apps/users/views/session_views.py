@@ -49,7 +49,7 @@ class OwnSessionsView(APIView):
     def get(self, request):
         store = _store()
         if store is None:
-            return api_error('إدارة الجلسات غير مدعومة مع إعداد الجلسة الحالي', 501)
+            return api_error('إدارة الجلسات غير مدعومة مع إعداد الجلسة الحالي', 501, reason='SESSION_MANAGEMENT_UNSUPPORTED')
         rows = ActiveSession.objects.filter(user=request.user).order_by('-last_seen')
         items = [{
             'id': _handle(request.user.pk, row.session_id),
@@ -76,16 +76,16 @@ class RevokeOwnSessionView(APIView):
 
     def post(self, request, handle):
         if not re.fullmatch(r'[0-9a-f]{64}', handle):
-            return api_error('الجلسة غير موجودة', 404)
+            return api_error('الجلسة غير موجودة', 404, reason='SESSION_NOT_FOUND')
         store = _store()
         if store is None:
-            return api_error('إدارة الجلسات غير مدعومة مع إعداد الجلسة الحالي', 501)
+            return api_error('إدارة الجلسات غير مدعومة مع إعداد الجلسة الحالي', 501, reason='SESSION_MANAGEMENT_UNSUPPORTED')
         body = RevokeSessionSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
             if not user.check_password(body.validated_data['current_password']):
-                return api_error('كلمة المرور الحالية غير صحيحة', 400)
+                return api_error('كلمة المرور الحالية غير صحيحة', 400, reason='CURRENT_PASSWORD_INCORRECT')
             current = request.session.session_key
             is_current = bool(current and constant_time_compare(_handle(user.pk, current), handle))
             target = current if is_current else None
@@ -95,7 +95,7 @@ class RevokeOwnSessionView(APIView):
                     target = row.session_id
                     break
             if not target:
-                return api_error('الجلسة غير موجودة', 404)
+                return api_error('الجلسة غير موجودة', 404, reason='SESSION_NOT_FOUND')
             # SessionStore honours the configured database/cache/file backend.
             store(session_key=target).delete()
             ActiveSession.objects.filter(user=user, session_id=target).delete()

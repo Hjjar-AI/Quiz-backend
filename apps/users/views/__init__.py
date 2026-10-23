@@ -17,6 +17,7 @@ from .auth_views import (
 from .admin_user_views import (
     AdminUserListView,
     AdminUserDetailView,
+    AdminUserDeleteView,
     AdminToggleUserView,
     AdminSetUserActiveView,
     AdminResetPasswordView,
@@ -40,6 +41,7 @@ __all__ = [
     # Admin user management
     'AdminUserListView',
     'AdminUserDetailView',
+    'AdminUserDeleteView',
     'AdminToggleUserView',
     'AdminSetUserActiveView',
     'AdminResetPasswordView',

@@ -123,7 +123,7 @@ class MasterExamDraftDetailView(APIView):
             is_draft=True,
         )
         if not self._can_edit(request.user, draft):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
         return api_success(data=MasterExamDraftSerializer(draft).data)
 
     @transaction.atomic
@@ -136,11 +136,11 @@ class MasterExamDraftDetailView(APIView):
             is_draft=True,
         )
         if not self._can_edit(request.user, draft):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         serializer = MasterExamDraftUpdateSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         payload = dict(serializer.validated_data)
         check_revision(draft.version, payload.pop('expected_version'))
@@ -214,7 +214,7 @@ class MasterExamDraftDetailView(APIView):
         lock_tag_hierarchy()
         draft = get_object_or_404(Question.objects.select_for_update(), id=draft_id, is_draft=True)
         if not self._can_edit(request.user, draft):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
         check_revision(draft.version, expected_revision(request))
         links = list(MasterExamQuestion.objects.select_for_update().filter(question_id=draft.pk))
         if not {link.master_exam_id for link in links}.issubset({exam.pk for exam in exams}):
@@ -231,6 +231,7 @@ class MasterExamDraftDetailView(APIView):
             return api_error(
                 'الموضوع مرتبط بامتحان قائم — احذفه من الامتحان أولاً',
                 409,
+                reason='TOPIC_IN_EXAM',
             )
 
         MasterExamQuestion.objects.filter(question_id=draft.id).delete()

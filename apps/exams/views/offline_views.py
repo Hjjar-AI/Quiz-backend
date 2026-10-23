@@ -19,7 +19,7 @@ from apps.core.permissions import HasCapability
 from apps.core.fingerprints import json_fingerprint
 from apps.questions.answer_visibility import closed_book_question_ids, require_answers_available
 from .offline_observability import OfflineOperationLoggingMixin
-from apps.core.utils import api_error, api_success
+from apps.core.utils import api_error, api_success, parse_csv_param
 from apps.learning.evidence import question_learning_fingerprint, with_locked_learning_content
 from apps.questions.models import Question
 from apps.questions.filters import filter_questions
@@ -67,7 +67,7 @@ class CompletionRequest(serializers.Serializer):
 
 def _error(request, message, status, reason, *, details=None):
     request._offline_reason = reason
-    return api_error(message, status, details=details)
+    return api_error(message, status, details=details, reason=reason)
 
 
 def _closed(request, rows, *, user=None, fresh=False):
@@ -108,7 +108,7 @@ class OfflineCatalogQuery(serializers.Serializer):
 
     def validate_category_ids(self, value):
         try:
-            ids = [int(part) for part in value.split(',') if part]
+            ids = [int(part) for part in parse_csv_param(value)]
         except ValueError:
             raise serializers.ValidationError('تصنيفات غير صالحة')
         if len(ids) > 200 or len(ids) != len(set(ids)) or any(item <= 0 or item > 2**63 - 1 for item in ids):
@@ -116,6 +116,8 @@ class OfflineCatalogQuery(serializers.Serializer):
         return ids
 
     def validate_tags_filter(self, value):
+        if value == []:
+            return []  # The optional field's parsed default; no tag restriction.
         try:
             tags = json.loads(value)
         except (TypeError, ValueError):

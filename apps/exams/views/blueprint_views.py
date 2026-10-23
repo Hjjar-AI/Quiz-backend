@@ -60,7 +60,7 @@ class BlueprintListView(APIView):
     def post(self, request):
         serializer = BlueprintSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         blueprint = serializer.save(created_by=request.user.username)
         blueprint = _reload_with_weights(blueprint.pk)
@@ -92,7 +92,7 @@ class BlueprintDetailView(APIView):
             blueprint, data=request.data, partial=True,
         )
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
         blueprint = serializer.save()
         blueprint = _reload_with_weights(blueprint.pk)
         log_privileged_action(request, 'blueprint.update', target=blueprint)

@@ -46,6 +46,7 @@ from apps.core.utils import (
     api_error,
     dedupe_ordered,
     safe_int,
+    parse_csv_param,
 )
 from apps.questions.models import Question
 from apps.questions.answer_visibility import closed_book_question_ids
@@ -78,13 +79,13 @@ class StartSessionView(APIView):
     def post(self, request, mode):
         valid_modes = {value for value, _ in ExamSession.MODE_CHOICES}
         if mode not in valid_modes:
-            return api_error('وضع غير صالح', 400)
+            return api_error('وضع غير صالح', 400, reason='MODE_INVALID')
 
         User.objects.select_for_update().only('id').get(pk=request.user.pk)
         data = request.data
         strategy = data.get('selection_strategy', 'coverage')
         if strategy not in ('coverage', 'balanced', 'review'):
-            return api_error('طريقة اختيار الأسئلة غير صالحة', 400)
+            return api_error('طريقة اختيار الأسئلة غير صالحة', 400, reason='SELECTION_STRATEGY_INVALID')
         question_ids = data.get('question_ids')
         blueprint = None
         blueprint_id = data.get('blueprint_id')
@@ -96,14 +97,14 @@ class StartSessionView(APIView):
         source_document = data.get('source_document')
         if source_document is not None:
             if not isinstance(source_document, str) or not source_document.strip() or len(source_document) > 500:
-                return api_error('الكتاب المصدر غير صالح / Invalid source book', 400)
+                return api_error('الكتاب المصدر غير صالح / Invalid source book', 400, reason='SOURCE_BOOK_INVALID')
             filters['source_document'] = source_document
 
         category = data.get('category')
         category_ids = data.get('category_ids')
         if category_ids:
             if not isinstance(category_ids, list):
-                return api_error('معرفات التصنيفات غير صالحة', 400)
+                return api_error('معرفات التصنيفات غير صالحة', 400, reason='CATEGORY_IDS_INVALID')
             filters['category_ids'] = category_ids
         elif category:
             filters['category_ids'] = [category]
@@ -116,25 +117,25 @@ class StartSessionView(APIView):
         tags_filter = data.get('tags_filter', '')
         if tags_filter:
             filters['tags_filter'] = (
-                [t.strip() for t in tags_filter.split(',') if t.strip()]
+                parse_csv_param(tags_filter)
                 if isinstance(tags_filter, str)
                 else tags_filter
             )
 
         if blueprint_id is not None:
             if not request.user.has_capability('tests.use_blueprint'):
-                return api_error('غير مصرح لك باستخدام نماذج الامتحان', 403)
+                return api_error('غير مصرح لك باستخدام نماذج الامتحان', 403, reason='BLUEPRINT_FORBIDDEN')
             try:
                 blueprint = Blueprint.objects.get(id=int(blueprint_id), is_active=True)
             except (Blueprint.DoesNotExist, TypeError, ValueError):
-                return api_error('نموذج الامتحان غير موجود', 404)
+                return api_error('نموذج الامتحان غير موجود', 404, reason='BLUEPRINT_NOT_FOUND')
             max_quiz = getattr(settings, 'MAX_QUIZ_QUESTIONS', 200)
             count = safe_int(data.get('limit'), 50, minimum=1, maximum=max_quiz)
             assembled = BlueprintService.select_question_ids(
                 blueprint, count, filters=filters, user=request.user, strategy=strategy,
             )
             if not assembled:
-                return api_error('لا توجد أسئلة كافية مطابقة للنموذج', 404)
+                return api_error('لا توجد أسئلة كافية مطابقة للنموذج', 404, reason='BLUEPRINT_QUESTIONS_INSUFFICIENT')
             question_ids = assembled
 
         elif data.get('use_srs'):
@@ -148,20 +149,20 @@ class StartSessionView(APIView):
             )
             due_ids = [qid for qid in due_ids if qid in eligible][:limit]
             if not due_ids:
-                return api_error('لا توجد أسئلة مستحقة للمراجعة حالياً', 404)
+                return api_error('لا توجد أسئلة مستحقة للمراجعة حالياً', 404, reason='NO_DUE_REVIEWS')
             question_ids = due_ids
 
         elif question_ids is not None:
             max_quiz = getattr(settings, 'MAX_QUIZ_QUESTIONS', 200)
             if not isinstance(question_ids, list):
-                return api_error('معرفات الأسئلة غير صالحة', 400)
+                return api_error('معرفات الأسئلة غير صالحة', 400, reason='QUESTION_IDS_INVALID')
             if len(question_ids) == 0:
-                return api_error('قائمة معرفات الأسئلة لا يمكن أن تكون فارغة', 400)
+                return api_error('قائمة معرفات الأسئلة لا يمكن أن تكون فارغة', 400, reason='QUESTION_IDS_REQUIRED')
             if not all(
                 isinstance(qid, int) and not isinstance(qid, bool) and qid > 0
                 for qid in question_ids
             ):
-                return api_error('معرفات الأسئلة غير صالحة', 400)
+                return api_error('معرفات الأسئلة غير صالحة', 400, reason='QUESTION_IDS_INVALID')
             if len(question_ids) > max_quiz:
                 return api_error(f'الحد الأقصى {max_quiz} سؤال', 400)
             # Order-preserving dedupe — shared with the rating-batch
@@ -172,7 +173,7 @@ class StartSessionView(APIView):
                 eligible_questions = eligible_questions.filter(source_document=source_document)
             existing_ids = set(eligible_questions.values_list('id', flat=True))
             if len(existing_ids) != len(unique_ids):
-                return api_error('بعض معرفات الأسئلة غير موجودة', 400)
+                return api_error('بعض معرفات الأسئلة غير موجودة', 400, reason='QUESTION_IDS_NOT_FOUND')
             question_ids = unique_ids
 
         else:
@@ -204,7 +205,7 @@ class StartSessionView(APIView):
             question_ids = select_varied_question_ids(questions, limit, user=request.user, strategy=strategy)
 
             if not question_ids:
-                return api_error('لا توجد أسئلة متاحة', 404)
+                return api_error('لا توجد أسئلة متاحة', 404, reason='NO_AVAILABLE_QUESTIONS')
 
         # ── Session label ──────────────────────────────────────────────
         #
@@ -229,7 +230,7 @@ class StartSessionView(APIView):
         # split.
         session_label = data.get('session_label') or data.get('tag') or None
         if session_label is not None and not isinstance(session_label, str):
-            return api_error('اسم الجلسة يجب أن يكون نصًا', 400)
+            return api_error('اسم الجلسة يجب أن يكون نصًا', 400, reason='SESSION_NAME_INVALID')
 
         duration_minutes = _exam_duration_minutes()
         session = ExamService.start_session(
@@ -253,7 +254,7 @@ class GetQuestionView(APIView):
         User.objects.select_for_update().only('id').get(pk=request.user.pk)
         session_id = request.query_params.get('session_id')
         if not session_id:
-            return api_error('معرف الجلسة مطلوب', 400)
+            return api_error('معرف الجلسة مطلوب', 400, reason='SESSION_ID_REQUIRED')
 
         session = get_object_or_404(
             ExamSession, session_id=session_id, user=request.user,
@@ -261,7 +262,7 @@ class GetQuestionView(APIView):
         result = ExamService.get_question(session, session.current_index)
 
         if result is None:
-            return api_error('السؤال غير موجود', 404)
+            return api_error('السؤال غير موجود', 404, reason='QUESTION_NOT_FOUND')
 
         return api_success(data=result, code=200)
 
@@ -275,7 +276,7 @@ class GetSessionQuestionsView(APIView):
         User.objects.select_for_update().only('id').get(pk=request.user.pk)
         session_id = request.query_params.get('session_id')
         if not session_id:
-            return api_error('معرف الجلسة مطلوب', 400)
+            return api_error('معرف الجلسة مطلوب', 400, reason='SESSION_ID_REQUIRED')
         session = get_object_or_404(ExamSession, session_id=session_id, user=request.user)
         live_questions = {
             question.id: question
@@ -288,7 +289,7 @@ class GetSessionQuestionsView(APIView):
                                          include_study_feedback=True)
                  for index in range(len(session.question_ids))]
         if any(page is None for page in pages):
-            return api_error('السؤال غير موجود', 404)
+            return api_error('السؤال غير موجود', 404, reason='QUESTION_NOT_FOUND')
         return api_success(data={'session_id': session.session_id, 'questions': pages}, code=200)
 
 
@@ -330,7 +331,7 @@ class SubmitAnswerView(APIView):
     def post(self, request):
         body = SubmitAnswerSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات الإجابة أو التنقل غير صالحة / Invalid answer or navigation data.', 400, details=body.errors)
+            return api_error('بيانات الإجابة أو التنقل غير صالحة / Invalid answer or navigation data.', 400, details=body.errors, reason='ANSWER_NAVIGATION_INVALID')
 
         session = get_object_or_404(
             ExamSession,
@@ -351,9 +352,9 @@ class SubmitAnswerView(APIView):
                 expected_slot=body.validated_data.get('expected_slot'),
             )
         except ExamTimeExpired as e:
-            return api_error(str(e), 409, details={'code': 'TIME_EXPIRED'})
+            return api_error(str(e), 409, details={'code': 'TIME_EXPIRED'}, reason='TIME_EXPIRED')
         except SessionProgressConflict as e:
-            return api_error(str(e), 409, details={'code': e.reason})
+            return api_error(str(e), 409, details={'code': e.reason}, reason=e.reason)
         except ValueError as e:
             return api_error(str(e), 400)
 
@@ -402,9 +403,9 @@ class FinishSessionView(APIView):
         session_id = request.query_params.get('session_id', '').strip()
         mode = request.query_params.get('mode', '').strip()
         if not session_id or len(session_id) > 36:
-            return api_error('معرف الجلسة غير صالح', 400)
+            return api_error('معرف الجلسة غير صالح', 400, reason='SESSION_ID_INVALID')
         if mode not in dict(ExamSession.MODE_CHOICES):
-            return api_error('وضع غير صالح', 400)
+            return api_error('وضع غير صالح', 400, reason='MODE_INVALID')
         # Even administrators can recover only their own result through this path.
         # Not found also covers older rows whose session identity was never recorded.
         history = get_object_or_404(
@@ -415,7 +416,7 @@ class FinishSessionView(APIView):
     def post(self, request):
         body = SessionIdSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('معرف الجلسة مطلوب', 400, details=body.errors)
+            return api_error('معرف الجلسة مطلوب', 400, details=body.errors, reason='SESSION_ID_REQUIRED')
 
         session = get_object_or_404(
             ExamSession,
@@ -437,7 +438,7 @@ class PauseSessionView(APIView):
     def post(self, request):
         body = SessionIdSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('معرف الجلسة مطلوب', 400, details=body.errors)
+            return api_error('معرف الجلسة مطلوب', 400, details=body.errors, reason='SESSION_ID_REQUIRED')
 
         session = get_object_or_404(
             ExamSession,
@@ -457,7 +458,7 @@ class ResumeSessionView(APIView):
     def post(self, request):
         body = SessionIdOrModeSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         session_id = body.validated_data.get('session_id')
         mode = body.validated_data.get('mode')
@@ -477,7 +478,7 @@ class ResumeSessionView(APIView):
             )
 
         if not session:
-            return api_error('لا توجد جلسة محفوظة', 404)
+            return api_error('لا توجد جلسة محفوظة', 404, reason='SAVED_SESSION_NOT_FOUND')
 
         try:
             session = ExamService.resume_session(session)
@@ -494,9 +495,12 @@ class DiscardProgressView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request):
-        body = SessionIdOrModeSerializer(data=request.data)
+        # Query identifiers survive proxies that discard DELETE request bodies.
+        # Keep body support for existing web/native clients.
+        body = SessionIdOrModeSerializer(data=(request.query_params
+            if 'session_id' in request.query_params or 'mode' in request.query_params else request.data))
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
 
         session_id = body.validated_data.get('session_id')
         mode = body.validated_data.get('mode')
@@ -508,7 +512,7 @@ class DiscardProgressView(APIView):
         elif mode:
             sessions = ExamSession.objects.filter(user=request.user, mode=mode)
         else:
-            return api_error('معرف الجلسة أو الوضع مطلوب', 400)
+            return api_error('معرف الجلسة أو الوضع مطلوب', 400, reason='SESSION_ID_OR_MODE_REQUIRED')
 
         count = ExamService.discard_sessions(sessions)
         return api_success(data={

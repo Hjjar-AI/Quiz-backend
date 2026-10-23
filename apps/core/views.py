@@ -169,7 +169,7 @@ class AdminSettingsView(APIView):
     def post(self, request):
         data = request.data
         if not isinstance(data, dict):
-            return api_error('بيانات غير صالحة', 400)
+            return api_error('بيانات غير صالحة', 400, reason='INVALID_DATA')
 
         cleaned = {}
         for key in self.KNOWN_KEYS:
@@ -248,6 +248,7 @@ class SeedSampleQuestionsView(APIView):
                     'stdout': stdout.getvalue(),
                     'stderr': f'{type(exc).__name__}: {exc}',
                 },
+                reason='COMMAND_FAILED',
             )
 
         return api_success(data={

@@ -17,7 +17,7 @@ def _identity(value):
 def _result(request, receipt):
     question = Question.objects.visible_to(request.user).filter(pk=receipt.question_id).first()
     if question is None:
-        return api_error('تم تنفيذ العملية لكن السؤال لم يعد متاحًا.', 410)
+        return api_error('تم تنفيذ العملية لكن السؤال لم يعد متاحًا.', 410, reason='OPERATION_QUESTION_UNAVAILABLE')
     return api_success(data=QuestionSerializer(question, context={'request': request}).data)
 
 
@@ -26,7 +26,7 @@ def read_receipt(request, action, source_id=None):
     receipt = QuestionWriteReceipt.objects.filter(
         user=request.user, operation_id=identity, action=action, source_question_id=source_id).first()
     if receipt is None:
-        return api_error('لا يوجد سجل لهذه العملية.', 404)
+        return api_error('لا يوجد سجل لهذه العملية.', 404, reason='OPERATION_NOT_FOUND')
     return _result(request, receipt)
 
 
@@ -45,7 +45,7 @@ def write_question(request, action, source_id=None):
         prior = QuestionWriteReceipt.objects.filter(user=request.user, operation_id=identity).first()
         if prior:
             if prior.request_fingerprint != fingerprint:
-                return api_error('تعارض معرّف العملية.', 409)
+                return api_error('تعارض معرّف العملية.', 409, reason='OPERATION_ID_CONFLICT')
             return _result(request, prior)
     if action == 'create':
         question = QuestionService.create_question(data, request.user)

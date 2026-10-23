@@ -48,7 +48,7 @@ class BookmarkToggleView(APIView):
         _visible_question_or_404(request.user, question_id)
         added = request.data.get('added')
         if not isinstance(added, bool):
-            return api_error('حالة المفضلة غير صالحة', 400)
+            return api_error('حالة المفضلة غير صالحة', 400, reason='BOOKMARK_STATE_INVALID')
         return api_success(data={'added': FeedbackService.set_bookmark(request.user.id, question_id, added)})
 
     def post(self, request, question_id):
@@ -159,13 +159,13 @@ class FlagQuestionView(APIView):
     def post(self, request, question_id):
         body = FlagQuestionSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=body.errors)
+            return api_error('بيانات غير صالحة', 400, details=body.errors, reason='INVALID_DATA')
         _visible_question_or_404(request.user, question_id)
         success = FeedbackService.flag_question(
             request.user.id, question_id, body.validated_data['reason'],
         )
         if not success:
-            return api_error('لقد قمت بالإبلاغ عن هذا السؤال بالفعل', 400)
+            return api_error('لقد قمت بالإبلاغ عن هذا السؤال بالفعل', 400, reason='QUESTION_ALREADY_REPORTED')
         return api_success(message='تم الإبلاغ عن السؤال للمراجعة', code=201)
 
 
@@ -180,7 +180,7 @@ class RateQuestionView(APIView):
     def post(self, request, question_id):
         body = RateQuestionSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('التقييم يجب أن يكون بين 1 و 5', 400, details=body.errors)
+            return api_error('التقييم يجب أن يكون بين 1 و 5', 400, details=body.errors, reason='RATING_INVALID')
         _visible_question_or_404(request.user, question_id)
         rating_obj, created = QuestionRating.objects.update_or_create(
             question_id=question_id,

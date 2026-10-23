@@ -50,21 +50,21 @@ class TestHistoryView(APIView):
             try:
                 user_id = int(user_id_raw)
             except (TypeError, ValueError):
-                return api_error('معرف المستخدم غير صالح', 400)
+                return api_error('معرف المستخدم غير صالح', 400, reason='USER_ID_INVALID')
 
             if not can_see_all:
                 # Viewing someone else's history requires view_all.
                 if request.user.id != user_id:
-                    return api_error('غير مصرح لك', 403)
+                    return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
                 # Viewing own history requires view_own.
                 if not can_see_own:
-                    return api_error('غير مصرح لك', 403)
+                    return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
             queryset = queryset.filter(user_id=user_id)
         else:
             if not can_see_all:
                 if not can_see_own:
-                    return api_error('غير مصرح لك', 403)
+                    return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
                 queryset = queryset.filter(user=request.user)
 
         page, meta = paginate(queryset, request)
@@ -81,7 +81,7 @@ class TestHistoryDetailView(APIView):
         can_see_all = request.user.has_capability('tests.view_all_history')
         can_see_own = request.user.has_capability('tests.view_own_history')
         if not can_see_all and not can_see_own:
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         queryset = TestHistory.objects.all()
         if not can_see_all:

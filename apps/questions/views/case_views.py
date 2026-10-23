@@ -232,7 +232,7 @@ class CaseDetailView(APIView):
         list(Question.objects.select_for_update().filter(case=visible).order_by('pk').values_list('pk', flat=True))
         case = ClinicalCase.objects.select_for_update().get(pk=visible.pk)
         if not can_edit_case(request.user, case):
-            return api_error('غير مصرح لك بتعديل هذه الحالة', 403)
+            return api_error('غير مصرح لك بتعديل هذه الحالة', 403, reason='CASE_EDIT_FORBIDDEN')
         check_revision(case.version, expected_revision(request))
         body = ClinicalCaseSerializer(case, data={field: request.data[field] for field in ('stem', 'title', 'translations') if field in request.data}, partial=True)
         body.is_valid(raise_exception=True)
@@ -247,7 +247,7 @@ class CaseDetailView(APIView):
         User.objects.select_for_update().only('id').get(pk=request.user.pk)
         lock_tag_hierarchy()
         if not request.user.has_capability('questions.edit_case_stem_any'):
-            return api_error('غير مصرح لك بحذف هذه الحالة', 403)
+            return api_error('غير مصرح لك بحذف هذه الحالة', 403, reason='CASE_DELETE_FORBIDDEN')
 
         # The caller passed the capability gate above, so
         # `_visible_cases_qs` returns everything for them — the
@@ -291,7 +291,7 @@ class CaseStemUpdateView(APIView):
     def post(self, request, case_key):
         serializer = CaseStemUpdateSerializer(data=request.data)
         if not serializer.is_valid():
-            return api_error('بيانات غير صالحة', 400, details=serializer.errors)
+            return api_error('بيانات غير صالحة', 400, details=serializer.errors, reason='INVALID_DATA')
 
         new_stem = serializer.validated_data['case_stem']
 
@@ -300,14 +300,14 @@ class CaseStemUpdateView(APIView):
         # from a nonexistent one. The message matches the read
         # endpoints' 404 wording.
         if not _visible_cases_qs(request.user).filter(key=case_key).exists():
-            return api_error('الحالة غير موجودة', 404)
+            return api_error('الحالة غير موجودة', 404, reason='CASE_NOT_FOUND')
 
         try:
             updated = QuestionService.update_case_stem(
                 case_key, new_stem, request.user, expected_version=expected_revision(request),
             )
         except PermissionError:
-            return api_error('غير مصرح لك بتعديل نص هذه الحالة', 403)
+            return api_error('غير مصرح لك بتعديل نص هذه الحالة', 403, reason='CASE_STEM_EDIT_FORBIDDEN')
 
         # `updated` is now the affected-question count, NOT a
         # success/failure signal. A zero is a valid outcome of a

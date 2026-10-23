@@ -5,14 +5,14 @@
 - Start at [documentation index](docs/README.md). Read applicable instructions and [workPlan](docs/workPlan.md)/[workDone](docs/workDone.md)
   first; inspect current production source and the working tree. Preserve unrelated
   edits and existing authorization; do not commit unless requested.
+- Only matching post-fix Android, Vue and backend versions require support, including when revisiting earlier fixes. Do not add or retain old-client/version fallbacks solely for backward compatibility. Check the current Vue callers before changing shared contracts; do not modify frontend application code unless explicitly authorized. Existing stored data, drafts and recovery are separate concerns and must not be discarded under this policy.
 - Trace affected contracts and callers before making focused corrections. Do not
   invent endpoints, permissions, idempotency or verification evidence.
-- Ask the user and receive explicit confirmation before running any build, compilation or packaging command, or extensive tests (including full suites, broad integration/end-to-end runs, or other long-running/resource-heavy checks). State the proposed command and scope before asking; a general implementation/fix request is not confirmation. Reuse confirmation already granted for that scope.
-- No migration inspection/changes/setup or automated-suite inspection/work without
-  an explicit request. Supplied logs and user-run builds authorize source
-  troubleshooting; they do not confirm agent-run builds or extensive tests. No
-  version changes unless requested. Production study/exam modules are application
-  source; exclude actual suites and migration directories from content searches.
+- No migration inspection/changes/setup without an explicit request. Supplied logs
+  and user-run builds authorize source troubleshooting, not agent-run builds or
+  tests. No version changes unless requested. Production study/exam modules are
+  application source; exclude suites and migration directories from production searches.
+- Internal test-file work and execution follow the milestone approval rules below.
 - Lightweight production-source/XML/AST/whitespace checks are allowed. State their
   scope; source completion does not establish compilation, HTTP/device behavior,
   accessibility, deployed schema or database concurrency.
@@ -30,6 +30,15 @@
 - Keep only `start.py` and Django `manage.py` as root Python entry points; put
   supporting launch/tutorial utilities in `scripts/` and update callers.
 
+## Milestone test approval
+
+- Finish the authorized implementation and lightweight source checks first. At the end of each implementation milestone, propose the smallest useful internal test scope (Android, Python or Vue) and ask for explicit permission to inspect/create/enhance test files and/or run tests, stating the intended coverage and exact run command. Reuse explicit authorization already granted for that milestone and scope; do not treat it as permission for later milestones or broader suites.
+- New Android test files are allowed with the same milestone approval as Python/Vue files. A specific user instruction to create or enhance tests authorizes that file work; running them still requires authorization for the proposed command/scope. Continue independent implementation while approval is pending.
+- Builds, compilation and packaging require explicit confirmation of their commands/scope, including compilation triggered by a test command. A general implementation request is not confirmation. Migration inspection/changes/setup and version changes still require explicit task authorization.
+- Do not start recurring/watch-mode tests, automatic rerun loops, recurring background agent work or other repeated token/resource-intensive checks. Run approved checks once; repeat only after a relevant change, failure or unresolved issue justifies it within the approved scope. Reuse results and keep large output in a local log; report only the result and useful failure context.
+- Before an approved build or resource-heavy test run, check active builds/test runners and available memory. Avoid concurrent heavy runs; never stop unrelated processes or clear caches to make room. Check for leftover task-owned runners when finishing; do not leave recurring work running.
+- Documentation-only changes need source/link/whitespace checks, not suites. Report source checks, automated tests, compilation and device/browser/live-HTTP verification separately.
+
 ## Backend invariants
 
 - Preserve Django service transactions, capability checks, audit logging and the
@@ -37,7 +46,7 @@
 - Review lock ordering, fresh state after locks, rollback and concurrent writes when
   relevant; SQLite checks do not establish server-database locking correctness.
 - Preserve login/session CSRF, token rotation, account expiry and localized errors.
-  Keep Arabic/English consistent and import/export formats backward-compatible.
+  Keep Arabic/English consistent and coordinate import/export formats with current clients.
 - Verify affected Vue/Android callers directly; document coordinated deployment
   requirements when a contract or authentication change needs matching clients.
 - Preserve safe field-validation details and semantic error reasons in the response

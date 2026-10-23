@@ -140,6 +140,8 @@ bash scripts/quiz_start.sh
 
 The launcher discovers a venv or accepts `QUIZ_VENV`, generates a user-owned nginx configuration/runtime under `$HOME/.config/quiz`, collects missing admin static assets, starts three gunicorn workers and nginx, and stops both on Ctrl+C. It does not bootstrap schema. `QUIZ_NGINX` selects an alternate executable if the system nginx cannot run on the CPU.
 
+The supplied nginx proxy preserves `Host $http_host` (including the external port) and forwards `X-Forwarded-Proto $scheme`; Django uses the forwarded scheme through `SECURE_PROXY_SSL_HEADER`. Preserve both settings in replacement proxies: Android sends its selected server origin on writes, and Django must see the same public host/port/scheme. Trust only proxy-controlled forwarding headers and list any additional legitimate cross-origin clients explicitly in the configured trusted origins. Verify login, token rotation and writes through the actual HTTPS listener; source configuration alone does not verify a deployed proxy.
+
 Allow only the intended HTTPS listener through your deployment firewall. PostgreSQL/cache can remain local to Django. PostgreSQL `DB_SSLMODE` is independent of browser/Android TLS. Removing `django-sslserver` does not weaken certificate/hostname validation. A Django `runserver` command is for development, not production.
 
 ## 5. OS-specific development

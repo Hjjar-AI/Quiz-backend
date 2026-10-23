@@ -60,12 +60,14 @@ class ApiResponseShapeTests(SimpleTestCase):
         self.assertEqual(r.status_code, 400)
         self.assertEqual(r.data['code'], 400)
         self.assertEqual(r.data['message'], 'bad input')
-        self.assertIsNone(r.data['details'])
+        self.assertEqual(r.data['details'], {'reason': 'VALIDATION_ERROR'})
 
     def test_api_error_with_details(self):
         r = api_error('bad', code=422, details={'field': ['required']})
         self.assertEqual(r.status_code, 422)
-        self.assertEqual(r.data['details'], {'field': ['required']})
+        self.assertEqual(r.data['details'], {
+            'field': ['required'], 'reason': 'REQUEST_FAILED',
+        })
 
 
 class PaginateTests(CacheClearingTestCase):

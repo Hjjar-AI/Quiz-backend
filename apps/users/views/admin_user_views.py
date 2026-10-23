@@ -55,7 +55,7 @@ def _require_admin_password(request):
     """
     raw = request.data.get('admin_password')
     if not admin_password_matches(request.user, raw):
-        return api_error('كلمة مرور المدير غير صحيحة', 403)
+        return api_error('كلمة مرور المدير غير صحيحة', 403, reason='ADMIN_PASSWORD_INCORRECT')
     return None
 
 
@@ -344,7 +344,7 @@ class AdminUserDetailView(APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return api_error('المستخدم غير موجود', 404)
+            return api_error('المستخدم غير موجود', 404, reason='USER_NOT_FOUND')
 
         serializer = UserSerializer(user)
         data = serializer.data
@@ -356,7 +356,7 @@ class AdminUserDetailView(APIView):
 
     def put(self, request, user_id):
         if user_id == request.user.id:
-            return api_error('لا يمكنك تعديل نفسك', 400)
+            return api_error('لا يمكنك تعديل نفسك', 400, reason='SELF_EDIT_FORBIDDEN')
 
         error = _require_admin_password(request)
         if error is not None:
@@ -374,7 +374,7 @@ class AdminUserDetailView(APIView):
         try:
             user_probe = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return api_error('المستخدم غير موجود', 404)
+            return api_error('المستخدم غير موجود', 404, reason='USER_NOT_FOUND')
 
         serializer = UserUpdateSerializer(
             user_probe, data=request.data, partial=True,
@@ -403,7 +403,7 @@ class AdminUserDetailView(APIView):
             # active admins.
             user, other_active_admin_ids = _acquire_admin_lock_set(user_id)
             if user is None:
-                return api_error('المستخدم غير موجود', 404)
+                return api_error('المستخدم غير موجود', 404, reason='USER_NOT_FOUND')
 
             # The guard only fires when the target IS the last
             # active admin AND the request would strip that status.
@@ -418,6 +418,7 @@ class AdminUserDetailView(APIView):
                 return api_error(
                     'لا يمكن إزالة أو تعطيل آخر مدير في النظام',
                     400,
+                    reason='LAST_ADMIN_PROTECTED',
                 )
 
             # Rebind the serializer's instance to the row we hold
@@ -463,7 +464,7 @@ class AdminUserDetailView(APIView):
 
     def delete(self, request, user_id):
         if user_id == request.user.id:
-            return api_error('لا يمكنك حذف نفسك', 400)
+            return api_error('لا يمكنك حذف نفسك', 400, reason='SELF_DELETE_FORBIDDEN')
 
         error = _require_admin_password(request)
         if error is not None:
@@ -475,10 +476,10 @@ class AdminUserDetailView(APIView):
         with transaction.atomic():
             user, other_active_admin_ids = _acquire_admin_lock_set(user_id)
             if user is None:
-                return api_error('المستخدم غير موجود', 404)
+                return api_error('المستخدم غير موجود', 404, reason='USER_NOT_FOUND')
 
             if user.is_admin and user.is_active and not other_active_admin_ids:
-                return api_error('لا يمكن حذف آخر مدير في النظام', 400)
+                return api_error('لا يمكن حذف آخر مدير في النظام', 400, reason='LAST_ADMIN_DELETE_FORBIDDEN')
 
             # PROTECT on Question.authored_by / owned_by blocks a raw
             # delete when the user has any question. Surface a clear
@@ -496,6 +497,7 @@ class AdminUserDetailView(APIView):
                     'لا يمكن حذف هذا المستخدم لأنه مرتبط بأسئلة. '
                     'أعد تعيين ملكية أسئلته أو قم بتعطيل الحساب بدلاً من حذفه.',
                     409,
+                    reason='USER_HAS_QUESTIONS',
                 )
 
             deleted_username = user.username
@@ -508,6 +510,7 @@ class AdminUserDetailView(APIView):
                 return api_error(
                     'لا يمكن حذف هذا المستخدم لأنه مرتبط بسجلات أخرى.',
                     409,
+                    reason='USER_HAS_RECORDS',
                 )
 
         log_privileged_action(
@@ -523,6 +526,17 @@ class AdminUserDetailView(APIView):
         )
 
         return api_success(message='تم حذف المستخدم')
+
+
+class AdminUserDeleteView(AdminUserDetailView):
+    """POST alternative to DELETE; keeps reauthentication secrets in the body."""
+    http_method_names = ['post', 'options']
+
+    def get_throttles(self):
+        return [AdminPasswordRateThrottle()] if self.request.method == 'POST' else []
+
+    def post(self, request, user_id):
+        return super().delete(request, user_id)
 
 
 class AdminToggleUserView(APIView):
@@ -543,7 +557,7 @@ class AdminToggleUserView(APIView):
 
     def post(self, request, user_id):
         if user_id == request.user.id:
-            return api_error('لا يمكنك تعطيل نفسك', 400)
+            return api_error('لا يمكنك تعطيل نفسك', 400, reason='SELF_DISABLE_FORBIDDEN')
 
         error = _require_admin_password(request)
         if error is not None:
@@ -555,18 +569,19 @@ class AdminToggleUserView(APIView):
         with transaction.atomic():
             user, other_active_admin_ids = _acquire_admin_lock_set(user_id)
             if user is None:
-                return api_error('المستخدم غير موجود', 404)
+                return api_error('المستخدم غير موجود', 404, reason='USER_NOT_FOUND')
 
             if user.is_stub:
                 return api_error(
                     'هذا مستخدم وهمي (مؤلف خارجي). قم بترقيته إلى مستخدم '
                     'حقيقي من لوحة الإدارة أولاً.',
                     400,
+                    reason='STUB_USER_PROTECTED',
                 )
 
             next_state = not user.is_active if desired is None else desired
             if not next_state and user.is_admin and user.is_active and not other_active_admin_ids:
-                return api_error('لا يمكن تعطيل آخر مدير في النظام', 400)
+                return api_error('لا يمكن تعطيل آخر مدير في النظام', 400, reason='LAST_ADMIN_DISABLE_FORBIDDEN')
 
             previous_state = user.is_active
             user.is_active = next_state
@@ -595,7 +610,7 @@ class AdminSetUserActiveView(AdminToggleUserView):
 
     def post(self, request, user_id):
         if 'is_active' not in request.data:
-            return api_error('حالة التفعيل المطلوبة إلزامية', 400)
+            return api_error('حالة التفعيل المطلوبة إلزامية', 400, reason='ACTIVE_STATE_REQUIRED')
         return super().post(request, user_id)
 
 
@@ -618,15 +633,15 @@ class AdminResetPasswordView(APIView):
     def post(self, request, user_id):
         body = AdminResetPasswordSerializer(data=request.data)
         if not body.is_valid():
-            return api_error('كلمة مرور المدير الحالية مطلوبة', 400, details=body.errors)
+            return api_error('كلمة مرور المدير الحالية مطلوبة', 400, details=body.errors, reason='ADMIN_PASSWORD_REQUIRED')
 
         if not admin_password_matches(request.user, body.validated_data['admin_password']):
-            return api_error('كلمة مرور المدير غير صحيحة', 403)
+            return api_error('كلمة مرور المدير غير صحيحة', 403, reason='ADMIN_PASSWORD_INCORRECT')
 
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return api_error('المستخدم غير موجود', 404)
+            return api_error('المستخدم غير موجود', 404, reason='USER_NOT_FOUND')
 
         new_password = body.validated_data['new_password']
 

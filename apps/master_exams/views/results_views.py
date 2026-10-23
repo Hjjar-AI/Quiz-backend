@@ -35,7 +35,7 @@ class MasterExamResultsView(APIView):
     def get(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_view_results(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         # Cache-gated global sweep. Every request after the first
         # within the gate window skips the query. The gate uses
@@ -74,7 +74,7 @@ class MasterExamResultsSummaryCSVView(APIView):
     def get(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_view_results(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         csv_body = MasterExamResultsService.csv_summary(exam)
         filename = f'master_exam_{exam.id}_summary.csv'
@@ -94,7 +94,7 @@ class MasterExamResultsMatrixCSVView(APIView):
     def get(self, request, pk):
         exam = get_object_or_404(MasterExam, pk=pk)
         if not _can_view_results(request.user, exam):
-            return api_error('غير مصرح لك', 403)
+            return api_error('غير مصرح لك', 403, reason='PERMISSION_DENIED')
 
         csv_body = MasterExamResultsService.csv_matrix(exam)
         filename = f'master_exam_{exam.id}_matrix.csv'
