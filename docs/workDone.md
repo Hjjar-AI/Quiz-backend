@@ -1,10 +1,36 @@
 # Current Django source status
 
+## 2026-10-23 complete suites after Android contracts/demo changes
+
+User explicitly requested all existing suites. Final results:
+
+| Suite | Passed | Failures/errors | Skipped | Duration |
+| --- | ---: | ---: | ---: | --- |
+| Django, in-memory SQLite | 1017 | 0 | 36 expected locking skips | 31.890s |
+| Django, isolated PostgreSQL | 1053 | 0 | 0 | 112.503s |
+| Android, all debug unit tests | 63 | 0 | 0 | Gradle 1m |
+| Vue, Vitest/happy-dom, 73 files | 951 | 0 | 0 | 82.52s |
+
+Backend commands (from `backend/`, existing Quiz Python environment):
+
+```bash
+/home/mhmmd/Envs/quiz/bin/python manage.py test tests --settings=tests.test_settings --noinput --verbosity=1
+DB_ENGINE=postgres QUIZ_TEST_POSTGRES_DB=test_quiz_codex_20261010 /home/mhmmd/Envs/quiz/bin/python manage.py test tests --settings=tests.postgresql_settings --keepdb --noinput --verbosity=1
+```
+
+SQLite's initial complete run had three stale expectations: missing stable error reasons in two utility assertions and comma serialization in one PDF forwarding assertion. Updated those tests to the current reason/JSON-array contracts; the complete SQLite rerun passes. PostgreSQL's initial complete run had two setup errors after a new streamed-export test redundantly closed the already-closed test response, closing TestCase's active PostgreSQL transaction. Removed the duplicate close and assert `response.closed` after consuming Django's wrapped iterator; the corrected 13-test persistence module also passes SQLite (0.503s), and the complete PostgreSQL rerun passes. No production behavior was changed for these failures.
+
+Android initially passed 62/63; fixed the interrupted-export test to consume/assert its expected CSRF GET and export POST before checking for extra requests. Complete rerun passes; cleanup and no-replay assertions remain. Vue required no source/snapshot changes. [Android command/evidence](../../Android/docs/verification/checklist.md#2026-10-23-complete-android-unit-suite) · [Vue evidence](../../frontend/docs/workDone.md#2026-10-23-complete-frontend-test-run).
+
+Logs: `/tmp/mukhtabir-backend-full-sqlite-tests.log`, `/tmp/mukhtabir-backend-full-postgresql-tests.log`, `/tmp/mukhtabir-backend-persistence-sqlite-tests.log`, `/tmp/mukhtabir-android-full-tests.log`, `/tmp/mukhtabir-frontend-full-tests.log`. Logs with corrections retain the initial failure followed by final success; raw logs may contain generated test credentials and stay outside repository documentation.
+
+Runs were sequential, used installed dependencies and isolated test databases/cache/temp artifacts, and used one Android/Vue worker. PostgreSQL reused only `test_quiz_codex_20261010`; application databases and migration files were not modified. No dependency/version/default changes, production packaging, application frontend changes, browser/device/accessibility/live-HTTP checks or fresh line/branch coverage measurement. No recurring/watch runner remains. All existing suites passing does not establish complete behavioral coverage; Android DTO deserialization and screen/navigation/offline-sync tests remain valuable additions.
+
 ## 2026-10-23 additional persistence coverage prepared
 
 Created 13 real-database API regressions in `tests/api/test_android_persistence_contracts.py`: CSRF-cookie rotation/logout and account-switch session invalidation; owner/foreign/body-based discard; successful/password/self/last-admin/question-owner POST deletion; and exact category/comma-tag consistency across question list, availability, offline catalog, study start and streamed JSON export. Reused existing factories and `tests.test_settings` for isolated in-memory SQLite/cache/artifact storage. Android adds 16 lifecycle/cookie cases. No production or frontend application changes.
 
-AST/lexical/whitespace source checks passed. New tests are unrun; isolated test-schema creation and focused test commands await milestone approval. No application database, migration files, build, package/version, runtime coverage measurement or device check was performed. The previous 32/32 backend and 23/23 Android runs remain the latest executed evidence; this source addition does not establish persistence or concurrency results.
+AST/lexical/whitespace source checks passed. The subsequent user-authorized complete suites above execute all these cases on SQLite/PostgreSQL and Android. No application database or migration files were modified; runtime coverage percentages and device encryption/HTTP behavior remain unmeasured.
 
 ## 2026-10-23 focused Android/backend regression run
 
