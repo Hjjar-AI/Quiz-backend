@@ -1,0 +1,4 @@
+interface:
+  display_name: "Book Data Extraction"
+  short_description: "Extract traceable books into app-ready CSV and JSON"
+  default_prompt: "Use $book-data-extraction to extract the supplied book into structured records and validate the requested import formats."

@@ -14,7 +14,7 @@ Focused database-free contracts now pass 32/32; their mocked ORM/service boundar
 
 ## 2026-10-18 book Arabic review
 
-- No unreviewed original prompts/cases/choices or nonempty explanations remain: cumulative direct review covers all 476 DSM exercises and 602 Kaplan questions, with 475 DSM standalone explanations, 26 glossary-derived explanations and 602 Kaplan explanations. Resolve flagged source/key ambiguities without inventing replacements. Verify actual import and bilingual rendering in the running app; existing imported UUIDs are skipped, not updated. [Coverage and limits](archive/reviews/2026-10-17-importDataReview.md).
+- No unreviewed original prompts/cases/choices or nonempty explanations remain: cumulative direct review covers all 476 DSM exercises and 602 Kaplan questions, with 475 DSM standalone explanations, 26 glossary-derived explanations and 602 Kaplan explanations. Both PDFs have now been used to source-check all 134 questions in the previous manual list; no PDF transcription checks remain for that list. Resolve the actual printed-source editorial/key conflicts without inventing replacements; retain the documented clinical and historical qualifications. Verify actual import and bilingual rendering in the running app; existing imported UUIDs are skipped, not updated. [Coverage and limits](archive/reviews/2026-10-17-importDataReview.md). [Source-checked editorial decisions](verification/bookManualReview.md).
 
 ## 2026-10-17 logic/model correction verification
 

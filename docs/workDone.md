@@ -1,5 +1,33 @@
 # Current Django source status
 
+## 2026-11-03 standalone workflow Markdown guides
+
+Added self-contained [extraction](reusable-skills/data-extraction-instructions.md), [translation](reusable-skills/translation-review-instructions.md) and [source review](reusable-skills/source-issue-review-instructions.md) guides alongside the skill folders. Extraction/source-review guides include their supporting references inline, so each file can be copied alone. Renamed the original translation reference to translation-review-instructions.md and updated skill/document links. Installed translation skill synchronized with the reference rename; metadata/reference/link/whitespace checks only, no application changes or suites/builds.
+
+## 2026-11-03 reusable book skills
+
+Created and installed three portable skills: book-data-extraction, specialist-translation-review and source-issue-review, with self-contained references and UI metadata. The [standalone translation-review-instructions.md](reusable-skills/specialist-translation-review/references/translation-review-instructions.md) can be copied to other projects. Sources are under docs/reusable-skills; identical installed copies are under ~/.codex/skills for future sessions. The workflows default to direct contextual translation without translation engines/services, source-first verification, reproducible repairs, stable identities and distinct source/editorial/schema/runtime evidence.
+
+All three pass the skill-creator validator; reference links, YAML metadata, portability, implicit-invocation defaults and installed file hashes checked. Reviewed decision coverage for OCR versus printed errors, intentional distractors, provisional questions, edited-edition scope and case-identity preservation. No independent agent evaluation, internal application suites, builds, migrations or application/data changes.
+
+## 2026-11-03 full flagged-item PDF recheck
+
+Source-checked every question in the former manual list: 33 DSM and 101 Kaplan. DSM uses fresh embedded-text extraction plus question/guide comparison. Kaplan uses fresh local column OCR on 104 question/answer pages plus 38 continuation pages, normalized field comparison and targeted image inspection; three OCR parser exceptions were checked by direct question-page viewing and answer OCR blocks. No whole-book word-by-word visual certification is claimed.
+
+Corrected Kaplan FMR1 (2.6), letter r (2.8) and SSRI (7.2) OCR errors; removed false printed-source typo attributions from Arabic. Retired DSM 15.11’s overly broad ambiguity warning and clarified provisional/suggested/context-dependent items. The [remaining list](verification/bookManualReview.md) now contains actual printed-source editorial issues, with full per-ID evidence; no repeat user PDF transcription requested. Saved English extraction overrides now survive re-extraction, and corrected cases retain their existing keys/UUIDs through explicit case-key overrides.
+
+Regenerated both books; both local artifact verifiers pass all 1147 rows. Exactly four rows changed; question/case IDs, answer mappings, explanations, relationships and all unrelated rows are preserved. JSON/cache/AST/document/whitespace checks pass. No external services/translation engine, internal suites, builds, migrations, database or live import/render work.
+
+## 2026-11-03 manual book review checklist
+
+Prepared a [page-numbered checklist](verification/bookManualReview.md) separating possible invalid keys from missing criteria, ambiguous wording and historical/context checks. Resolved OCR/table values and completed translation fixes are excluded from the pending transcription list. Import data and application source unchanged; document/link/whitespace checks only.
+
+## 2026-11-03 book PDFs / targeted source verification
+
+Located both PDFs in their book source folders. Checked 13 flagged items (six DSM by embedded text/rendering; seven Kaplan by direct rendering), resolving three unreadable values: DSM 12.18 >50%; Kaplan 4.2 one third to one half; Kaplan 25.6 18 months. Direct PDF inspection of Kaplan 16.12 also corrects E back to >16, superseding the earlier user transcription ≥16; D remains correct. Retained historical/statistical and clinical qualifications. Confirmed that several other contradictions are printed-source issues; no unsupported replacement keys or clinical facts added.
+
+Regenerated both books; both local artifact verifiers pass all 1147 rows. Exactly four question rows changed, preserving UUIDs, answer mappings, case/knowledge links and all other 1143 rows. Source/JSON/cache/AST/whitespace/link checks pass. Extraction/OCR utilities now use PDFs in source folders; saved extraction overrides preserve the three corrected values and table repair. Full OCR/extraction was not rerun. No translation engine/services, internal suites, builds, migrations, database or live app work. [Source evidence and remaining limits](archive/reviews/2026-10-17-importDataReview.md#2026-11-03-pdf-verification).
+
 ## 2026-10-23 complete suites after Android contracts/demo changes
 
 User explicitly requested all existing suites. Final results:

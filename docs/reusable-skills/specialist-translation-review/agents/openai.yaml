@@ -1,0 +1,4 @@
+interface:
+  display_name: "Specialist Translation Review"
+  short_description: "Review technical translations directly in context"
+  default_prompt: "Use $specialist-translation-review to translate or repair this material directly, preserve source meaning, and track field review coverage."

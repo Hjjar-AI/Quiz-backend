@@ -1,0 +1,4 @@
+interface:
+  display_name: "Source Issue Review"
+  short_description: "Resolve PDF, extraction, and answer-key discrepancies"
+  default_prompt: "Use $source-issue-review to check flagged items against the supplied source pages, fix supported errors, and narrow unresolved editorial decisions."
