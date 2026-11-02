@@ -28,6 +28,12 @@ When an edited edition is explicitly authorized, correct prompt/choices/key/expl
 
 Use [Evidence and issue records](#evidence-and-issue-records) for persistent review states, evidence, and coverage. Keep PDF verification, editorial disposition, and delivery validation independent.
 
+## Review independent evidence when in scope
+
+Keep independent clinical verification distinct from checking what the book prints. Use relevant primary research, official criteria, product labels or guidelines when external verification is requested or required; respect the session's access restrictions. Permission to consult a public source does not imply permission to upload the book, use a translation service, or claim access to a named service that was not used.
+
+Put every substantive correction or qualification in the affected question's explanation in each delivered language, with a concise reference. A separate review ledger alone is insufficient. Explain whether the finding is a confirmed error, conditional answer, unsupported generalization or unresolved ambiguity. Do not turn an exception-dependent answer into a categorically wrong one. Read the evidence-record guidance for access limits and population/jurisdiction applicability.
+
 ## Verify closure
 
 Save corrections at the layer actually used by extraction/export. Preserve stable IDs, including existing case identities when corrected text would change a content hash. Regenerate affected outputs and check mappings, relationships, bilingual alignment, and unchanged records with permitted lightweight checks.
@@ -69,6 +75,14 @@ Example of a small internal ledger entry:
 ```
 
 This is a sidecar example, not a runtime import schema. Adapt fields to existing records. Do not add review metadata to application records unless supported.
+
+### Independent evidence records
+
+For externally checked claims, record the exact claim, source URL/PMID, publication or guidance version, review date, finding, applicability and remaining editorial decision. State whether the evidence was read as full text, abstract or indexed passage; a blocked full text is not a completed full-text review. Distinguish primary findings from the reviewer's inference. A newer paper alone does not settle a question framed for another population, jurisdiction or purpose.
+
+Separate confirmed errors from conditional recommendations, incomplete support and source-only contradictions. A treatment exception after failed alternatives may preserve a conditional answer; it does not establish universal safety. An outside paper cannot recover the author's intended age, chronology or medication history when the book contradicts itself. Do not invent those details or substitute a new key without support.
+
+Keep each substantive correction/qualification visible in the delivered explanation, with the same meaning and applicable references in all delivered languages. Retain raw source wording separately; clearly label any superseded text retained for comparison. Update stale warnings, manifests and current review metadata to reflect the bounded evidence pass without rewriting historical provenance. Count external-evidence items separately from source-only checks; neither count certifies the entire book.
 
 ### What closes an issue
 

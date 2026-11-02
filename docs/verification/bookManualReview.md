@@ -1,6 +1,6 @@
 # Printed-source issues after PDF recheck
 
-Updated 2026-11-03. **All 134 questions in the former manual checklist have now been source-checked: 33 DSM and 101 Kaplan. No manual PDF transcription check remains for that list.** This was an embedded-text/local-OCR comparison with targeted image inspection, not independent clinical or current legal/statistical certification.
+Updated 2026-11-03. **All 134 questions in the former manual checklist have now been source-checked: 33 DSM and 101 Kaplan. No manual PDF transcription check remains for that list.** This was an embedded-text/local-OCR comparison with targeted image inspection, not independent clinical or current legal/statistical certification. A subsequent [evidence review of all 30 entries](bookEvidenceReview.md) adds explicit corrections/qualifications and references to their Arabic and English explanations; 28 use external evidence and two are source-only contradictions. This does not certify every printed key for grading.
 
 Three additional OCR errors were fixed: Kaplan 2.6 FMR1, 2.8 letter r, and 7.2 SSRI. Their English and Arabic/source attribution are reconciled. The earlier DSM 15.11 ambiguity flag was too broad: the stem asks about actual Criterion A categories, making D the missing category; its Arabic ambiguity warning is removed.
 
@@ -29,7 +29,7 @@ The items below are printed-source editorial decisions, not requests to send or 
 | `4.11` | The printed explanation conflates pellagra and thiamine deficiency. | 43 / 48 |
 | `6.1` | Printed explanation denies duration differences, leaving both duration and hospitalization choices relevant. | 58 / 60 |
 | `13.5` | Printed binge definition/key needs review of calorie-threshold and loss-of-control wording. | 84 / 87 |
-| `21.46` | The printed pregnancy/valproate answer relies on folate; source-key clinical concern remains. | 131 / 142 |
+| `21.46` | Folate does not cancel fetal risk; continuation can be defensible after failed alternatives in this severe bipolar case. The key is conditional, not a universal safe-pregnancy plan. | 131 / 142 |
 | `25.1` | The question prints DSM terminology as the context for a specialty/society naming change. | 161 / 165 |
 | `25.22` | Printed osmotic-diuresis/lavage toxicity-management answer remains problematic; 25.21 itself correctly asks for the culprit medication. | 163 / 166 |
 | `25.27` | Printed pediatric HIV primary-site/early-detection assertions remain source claims. | 164 / 167 |
@@ -50,7 +50,7 @@ The items below are printed-source editorial decisions, not requests to send or 
 
 Short vignettes may not spell out every diagnostic exclusion, duration or differential. The PDF comparison did not recover omitted clinical facts; existing Arabic qualifications remain. They are not all defective questions. DSM 12.21 explicitly asks what is suggested, 17.6 asks for a provisional diagnosis, and 19.6 gives both absence of distress and absence of enactment; these are no longer pending user source checks. DSM 12.27 has a bibliographic-heading inconsistency, while its actual keyed answer and explanation agree.
 
-Legal/regulatory examples, demographic comparisons and population estimates remain labelled as source-era context. The supplied books cannot independently verify current local law or current treatment/regulatory/statistical guidance. No external service was used.
+Legal/regulatory examples, demographic comparisons and population estimates remain labelled as source-era context. The supplied books cannot independently verify current local law or current treatment/regulatory/statistical guidance. No external service was used for the PDF comparison. The subsequent authorized evidence review used PubMed and public official/primary sources; see the linked evidence report.
 
 Full per-question evidence: [DSM 33-question recheck](../../import_data/dsm5_ar/review/2026-11-03_full_pdf_recheck.json), [Kaplan 101-question recheck](../../import_data/kaplan_ar/review/2026-11-03_full_pdf_recheck.json). [Earlier targeted source findings](../archive/reviews/2026-10-17-importDataReview.md#2026-11-03-pdf-verification) remain available.
 

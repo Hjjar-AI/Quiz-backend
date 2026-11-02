@@ -34,6 +34,14 @@ Example of a small internal ledger entry:
 
 This is a sidecar example, not a runtime import schema. Adapt fields to existing records. Do not add review metadata to application records unless supported.
 
+## Independent evidence records
+
+For externally checked claims, record the exact claim, source URL/PMID, publication or guidance version, review date, finding, applicability and remaining editorial decision. State whether the evidence was read as full text, abstract or indexed passage; a blocked full text is not a completed full-text review. Distinguish primary findings from the reviewer's inference. A newer paper alone does not settle a question framed for another population, jurisdiction or purpose.
+
+Separate confirmed errors from conditional recommendations, incomplete support and source-only contradictions. A treatment exception after failed alternatives may preserve a conditional answer; it does not establish universal safety. An outside paper cannot recover the author's intended age, chronology or medication history when the book contradicts itself. Do not invent those details or substitute a new key without support.
+
+Keep each substantive correction/qualification visible in the delivered explanation, with the same meaning and applicable references in all delivered languages. Retain raw source wording separately; clearly label any superseded text retained for comparison. Update stale warnings, manifests and current review metadata to reflect the bounded evidence pass without rewriting historical provenance. Count external-evidence items separately from source-only checks; neither count certifies the entire book.
+
 ## What closes an issue
 
 - A repair is closed only after the actual generated output contains it, and regeneration retains it.

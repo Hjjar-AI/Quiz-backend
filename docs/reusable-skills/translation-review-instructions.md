@@ -1,6 +1,6 @@
 # Translation review instructions
 
-Use these instructions for a new book or project by supplying its source files, source/target languages, desired scope, and output location. The default method is direct contextual translation and review using subject knowledge, with no translation engine or external service. Respect the user's explicit preferences and the project's applicable instructions.
+Use these instructions for a new book or project by supplying its source files, source/target languages, desired scope, and output location. The default method is direct contextual translation and review using subject knowledge, with no translation engine or external service. Authorized external evidence research is distinct from translation-service use; follow the session's authorization and access restrictions. Respect the user's explicit preferences and the project's applicable instructions.
 
 ## 1. Establish what is being produced
 
@@ -35,6 +35,14 @@ When the source itself seems wrong, distinguish:
 4. Historical context: identify the source edition and avoid presenting its regulations, prevalence figures, legal rules, or treatment assumptions as independently verified current guidance.
 
 If an edited edition is authorized, revise the prompt, choices, key, and explanation coherently in all supported languages. Preserve the original source separately in provenance. A warning does not make an invalid graded answer valid; unresolved graded items require an explicit editorial disposition, not a claim that translation has solved them.
+
+### Independent evidence and visible corrections
+
+When fact-checking is in scope, use primary research, official diagnostic criteria, product labels and applicable guidelines. Record URLs/PMIDs, evidence date/version, access level (full text, abstract or indexed passage), and population or jurisdiction limits. Do not claim that a service or full article was consulted when it was unavailable. Research access does not authorize uploading source books or using translation engines.
+
+State every substantive correction or qualification in the affected explanation in all delivered languages, with concise citations. Distinguish confirmed errors, conditional answers, unsupported claims and unresolved ambiguities. Evidence may qualify a recommendation without invalidating it in a refractory or otherwise exceptional case. It cannot supply an author's missing intended age, timeline or medication history.
+
+Preserve raw source wording separately. If superseded wording remains visible for comparison, label it clearly so it does not appear endorsed. Keep the full clinical teaching content unless an edited or summarized explanation is authorized. Update stale current warnings and evidence metadata, then verify the correction reaches every canonical output. Report externally checked claims separately from source-only contradictions and overall translation coverage; do not certify the whole book from a selected pass.
 
 ## 4. English-Arabic practice
 

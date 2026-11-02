@@ -33,6 +33,12 @@ When an edited edition is explicitly authorized, correct prompt/choices/key/expl
 
 Use [issue-records.md](references/issue-records.md) for persistent review states, evidence, and coverage. Keep PDF verification, editorial disposition, and delivery validation independent.
 
+## Review independent evidence when in scope
+
+Keep independent clinical verification distinct from checking what the book prints. Use relevant primary research, official criteria, product labels or guidelines when external verification is requested or required; respect the session's access restrictions. Permission to consult a public source does not imply permission to upload the book, use a translation service, or claim access to a named service that was not used.
+
+Put every substantive correction or qualification in the affected question's explanation in each delivered language, with a concise reference. A separate review ledger alone is insufficient. Explain whether the finding is a confirmed error, conditional answer, unsupported generalization or unresolved ambiguity. Do not turn an exception-dependent answer into a categorically wrong one. Read the evidence-record guidance for access limits and population/jurisdiction applicability.
+
 ## Verify closure
 
 Save corrections at the layer actually used by extraction/export. Preserve stable IDs, including existing case identities when corrected text would change a content hash. Regenerate affected outputs and check mappings, relationships, bilingual alignment, and unchanged records with permitted lightweight checks.

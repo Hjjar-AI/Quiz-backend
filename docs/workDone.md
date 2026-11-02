@@ -1,5 +1,15 @@
 # Current Django source status
 
+## 2026-11-03 evidence-review skill follow-up
+
+Updated source-issue-review and specialist-translation-review, their references and standalone Markdown guides with the evidence-review lessons: substantive corrections must appear in every delivered-language explanation with citations; distinguish confirmed errors, conditional answers and source-only contradictions; record access/applicability limits and bounded coverage. Synchronized four installed skill files with independent-change/hash guards. Both skill validators, local links, standalone translation parity and whitespace checks pass. No book data or application changes in this follow-up.
+
+## 2026-11-03 remaining-question evidence review
+
+Reviewed all 30 issues in the source-checked list (9 DSM, 21 Kaplan): 28 with external research/official-source evidence or qualifications, two with source-only contradictions. Every item now has a dated correction/clarification and applicable citations in its Arabic and English explanation. Research used PubMed and public primary/official sources, with abstract/indexed-access limits recorded; no OpenEvidence/VeraHealth, translation engine or PDF upload. The valproate item is conditional after failed alternatives, rather than automatically wrong; folate does not eliminate fetal risk. [Per-question findings, dispositions and references](verification/bookEvidenceReview.md).
+
+Regenerated all 58 canonical chapter CSV/JSON pairs. Both content artifact verifiers pass 1,147 rows. Baseline comparison proves exactly 30 bilingual explanation-only row changes; IDs, cases, source keys/options/relationships and all other rows/fields are unchanged. Four content-script ASTs and local document/whitespace checks pass. Raw source explanations remain available; per-question English overrides now survive export. No ZIP packaging, application suites/builds/migrations, database writes or live import/render verification. Ambiguous or unsupported source keys remain editorial decisions, not certified grading answers.
+
 ## 2026-11-03 standalone workflow Markdown guides
 
 Added self-contained [extraction](reusable-skills/data-extraction-instructions.md), [translation](reusable-skills/translation-review-instructions.md) and [source review](reusable-skills/source-issue-review-instructions.md) guides alongside the skill folders. Extraction/source-review guides include their supporting references inline, so each file can be copied alone. Renamed the original translation reference to translation-review-instructions.md and updated skill/document links. Installed translation skill synchronized with the reference rename; metadata/reference/link/whitespace checks only, no application changes or suites/builds.
