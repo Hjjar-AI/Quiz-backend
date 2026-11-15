@@ -394,7 +394,7 @@ for folder in [BACKUP_FOLDER, EXPORT_FOLDER, UPLOAD_FOLDER]:
 MAX_QUIZ_QUESTIONS = 200
 MAX_IMPORT_QUESTIONS = 5000
 ITEMS_PER_PAGE = REST_FRAMEWORK['PAGE_SIZE']
-MAX_CHOICES = 8
+MAX_CHOICES = 15
 
 # PDF rendering materializes the selected questions, embeds images as base64,
 # and lets WeasyPrint build the complete document in one worker. Bound both

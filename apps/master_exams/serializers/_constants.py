@@ -12,4 +12,4 @@ number by construction.
 from django.conf import settings
 
 
-MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 8)
+MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 15)

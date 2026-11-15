@@ -1,5 +1,23 @@
 # Current Django source status
 
+## 2026-11-04 DSM/Kaplan limit review
+
+Reviewed all 545 DSM and 602 Kaplan import rows against the increased limits and saved source/translation records. Restored DSM `4.4` English choice E (316 characters including label), previously shortened for 300; PDF text pages 53/252 confirms full wording and unchanged answer D. No other limit overflow or limit-induced content loss found. Existing DSM glossary conversions (26 terms exceed 15) and Kaplan multi-select combinations retain source coverage. Updated both exporters/verifiers to read production constants and emit 15 CSV choice columns; corrected current delivery READMEs. [Findings, measurements and limits](verification/bookLimitReview.md).
+
+Both offline artifact verifiers pass 1,147 rows, including full saved English explanations, source choices/keys, cases, metadata and CSV–JSON equality. Baseline proves exactly one English choice changed; all Arabic, IDs/keys/relationships and every other row field are unchanged. All 1,627 protected hashes, including the entire PreTest tree, are unchanged. All 116 delivery files plus ten manifest/support files repeat byte-identically; five content-script ASTs, local links and whitespace pass. No application changes, internal suite/test-file work, builds, database writes, migrations or versions; actual import/rendering remains unverified.
+
+## 2026-11-04 question content limits
+
+Implemented requested 4,000-character question/explanation/case limits, 500-character choices and 2–15 choices across backend models/config/validation/import/export, matching Vue forms/previews/manuals and Android editors/default config. Import ceiling remains 5,000. Kept knowledge-object text at its separate 3,000-character limit; master drafts now display explanation overflow validation. Numeric answer shortcuts advertise 1–9; all 15 options remain selectable. [Contract, coverage and rollout limits](contracts/questionContentLimits.md).
+
+Python AST, five Vue SFC parses/nine JavaScript syntax checks, eight Kotlin lexical checks and bilingual XML/resources pass. PreTest artifact verifier passes all 500 bilingual rows; 58 full banks and seven full explanations restored, all other fields preserved. All 1,728 protected hashes unchanged; 31 generated files regenerate byte-identically. No application suites, builds/compilation/packaging, database writes, migration inspection/changes or versions in this milestone. Focused boundary tests and live import/browser/device verification remain pending authorization/rollout.
+
+## 2026-11-04 PreTest Psychiatry 14 — completed after resume
+
+Completed direct Arabic/English extraction of all 500 questions, all original choices/instructions and 369 unique answer blocks, retaining hashed PDF/text and seven visually transcribed tables. Saved chapter authoring, independent 92-question review and contextual closure of 124 digit-comparison flags remain traceable. Final 13 CSV/JSON chapter pairs include 25 shared cases and preserved Q106 dual accepted answers. The subsequent requested limit increase restores all 58 full banks and the complete shared explanation 289–295; no omitted options or excerpts remain. Source-only qualifications reach both delivered languages; source keys remain preserved.
+
+Resumed the 2026-11-03 pause and propagated the Arabic title-prefix adjustment. All 500 current rows pass coverage/mapping/wording/note/field-limit/case/CSV–JSON checks. Baseline comparison proves only the 500 Arabic prefixes changed; all other row fields and 1,718 protected source/translation/existing-book file hashes are unchanged. All 26 delivery and five manifest/support files regenerate byte-identically. [Delivery and verification evidence](verification/pretestPsychiatry14Extraction.md). No application code changes, database writes/import, suites/builds/compilation/packaging, migrations, versions, live rendering or independent current medical/legal research. Source-conflicted grading and runtime verification remain separate limits.
+
 ## 2026-11-03 evidence-review skill follow-up
 
 Updated source-issue-review and specialist-translation-review, their references and standalone Markdown guides with the evidence-review lessons: substantive corrections must appear in every delivered-language explanation with citations; distinguish confirmed errors, conditional answers and source-only contradictions; record access/applicability limits and bounded coverage. Synchronized four installed skill files with independent-change/hash guards. Both skill validators, local links, standalone translation parity and whitespace checks pass. No book data or application changes in this follow-up.

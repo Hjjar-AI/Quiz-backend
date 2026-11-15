@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 # ── Constants ──────────────────────────────────────────────────────────
 
-MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 8)
+MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 15)
 
 ALLOWED_UPLOAD_MIMES = frozenset({
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

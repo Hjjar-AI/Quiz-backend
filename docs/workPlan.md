@@ -1,5 +1,15 @@
 # Django remaining work
 
+## 2026-11-04 content-limit verification
+
+- Verify actual DSM/Kaplan import/rendering after matching rollout, including restored DSM `4.4` choice E. [Offline limit review](verification/bookLimitReview.md) is complete; existing UUIDs skip rather than update, so any already-imported row needs a separately authorized update path.
+
+- Source implementation and PreTest regeneration are complete. After milestone approval, verify 4,000/4,001 text boundaries, 500/501 choice boundaries, translations/cases, 2/15/16 choices, answer 15 and 15-column import/export. Deploy matching backend before refreshed clients; verify import, large/RTL text, options 10–15, keyboard/focus and actual Android/browser behavior. Existing UUIDs skip rather than update; no database repair/import was performed. [Contract and evidence](contracts/questionContentLimits.md). Suites, compilation/builds and migration work retain their separate authorization gates.
+
+## PreTest Psychiatry 14 — remaining verification
+
+- Offline extraction, translation, chapter exports and artifact checks are complete. Live import/bilingual/RTL/Markdown rendering and independent current clinical/legal review remain unverified; source-conflicted grading items retain their original keys. [Delivery, evidence and limits](verification/pretestPsychiatry14Extraction.md). Database writes, suites/builds and editorial key changes require their applicable authorization.
+
 ## Remaining test coverage
 
 - Current existing suites pass completely on PostgreSQL (1053), Android (63) and Vue (951); SQLite passes 1017 with 36 intended PostgreSQL-only skips. [Current evidence](verification/pythonTests.md).

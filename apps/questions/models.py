@@ -13,10 +13,11 @@ from apps.core.model_validation import InvariantValidationMixin, require
 
 TAG_NAME_MAX_LENGTH = 50
 CATEGORY_NAME_MAX_LENGTH = 100
-QUESTION_TEXT_MAX_LENGTH = 3000
-EXPLANATION_TEXT_MAX_LENGTH = 3000
-CHOICE_TEXT_MAX_LENGTH = 300
-CASE_STEM_MAX_LENGTH = 3000
+QUESTION_TEXT_MAX_LENGTH = 4000
+EXPLANATION_TEXT_MAX_LENGTH = 4000
+CHOICE_TEXT_MAX_LENGTH = 500
+CASE_STEM_MAX_LENGTH = 4000
+KNOWLEDGE_TEXT_MAX_LENGTH = 3000
 CASE_GROUP_MAX_LENGTH = 64
 SOURCE_DOCUMENT_MAX_LENGTH = 500
 
@@ -268,9 +269,9 @@ class KnowledgeObject(InvariantValidationMixin, TimeStampedModel):
         db_index=True,
     )
     title = models.CharField(max_length=200, unique=True)
-    learning_objective = models.TextField(max_length=QUESTION_TEXT_MAX_LENGTH)
+    learning_objective = models.TextField(max_length=KNOWLEDGE_TEXT_MAX_LENGTH)
     canonical_answer = models.TextField(
-        max_length=EXPLANATION_TEXT_MAX_LENGTH,
+        max_length=KNOWLEDGE_TEXT_MAX_LENGTH,
         blank=True,
         default='',
     )

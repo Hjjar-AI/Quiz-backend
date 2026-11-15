@@ -27,7 +27,7 @@ from ..models import ExamSession, TestHistory, Blueprint
 
 
 def _max_choices():
-    return getattr(settings, 'MAX_CHOICES', 8)
+    return getattr(settings, 'MAX_CHOICES', 15)
 
 
 def _bounded_session_label(label):

@@ -31,6 +31,7 @@ from ...models import (
     clean_tag_name,
     CATEGORY_NAME_MAX_LENGTH,
     QUESTION_TEXT_MAX_LENGTH,
+    KNOWLEDGE_TEXT_MAX_LENGTH,
     EXPLANATION_TEXT_MAX_LENGTH,
     CHOICE_TEXT_MAX_LENGTH,
     CASE_STEM_MAX_LENGTH,
@@ -320,7 +321,7 @@ def _resolve_knowledge_object(row, author=None):
         _cell_to_str(row.get('learning_objective')).strip()
         or _cell_to_str(nested.get('learning_objective')).strip()
         or title
-    )[:QUESTION_TEXT_MAX_LENGTH]
+    )[:KNOWLEDGE_TEXT_MAX_LENGTH]
     if not raw_uuid and not title:
         return None
 

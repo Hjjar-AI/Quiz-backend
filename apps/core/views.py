@@ -98,7 +98,7 @@ class PublicConfigView(APIView):
     def get(self, request):
         return api_success(data={
             'max_quiz_questions': getattr(django_settings, 'MAX_QUIZ_QUESTIONS', 200),
-            'max_choices': getattr(django_settings, 'MAX_CHOICES', 8),
+            'max_choices': getattr(django_settings, 'MAX_CHOICES', 15),
             'items_per_page': getattr(django_settings, 'ITEMS_PER_PAGE', 20),
             'roles': {
                 'admin': 'admin',

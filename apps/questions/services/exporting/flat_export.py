@@ -342,7 +342,7 @@ def export_questions(
 
     # ── Excel / CSV — build the flat row list once ────────────────
     if fmt in ('excel', 'csv'):
-        max_choices = getattr(settings, 'MAX_CHOICES', 8)
+        max_choices = getattr(settings, 'MAX_CHOICES', 15)
         data = [_row_for_flat_format(q, max_choices) for q in queryset]
         df = pd.DataFrame(data)
 

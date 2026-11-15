@@ -4,6 +4,7 @@ Start with [current status](workDone.md), [remaining work](workPlan.md), and [ag
 
 | Topic | Canonical location |
 | --- | --- |
+| Question text, choices and import ceilings | [Shared content limits](contracts/questionContentLimits.md) |
 | Whole project navigation and maintenance rules | [Project documentation map](../../Android/README.md) |
 | This repository's functional guides | [Startup](guides/START_HERE.md) · [PostgreSQL setup](guides/POSTGRESQL_SETUP.md) · [Deployment](guides/DEPLOYMENT.md) |
 | Learning, selection and planner chronology | [Learning contracts](contracts/learningConsistency.md) |
@@ -13,7 +14,7 @@ Start with [current status](workDone.md), [remaining work](workPlan.md), and [ag
 | Python suite results, reruns and coverage limits | [Python verification](verification/pythonTests.md) |
 | PostgreSQL concurrency scenarios, measurements and capacity limits | [Concurrency verification](verification/concurrencyLimits.md) |
 | Previous reviews/change details | [Dated archive](archive/README.md) |
-| Selected book evidence | [Remaining-question evidence review](verification/bookEvidenceReview.md) · [Source-checked editorial list](verification/bookManualReview.md) |
+| Selected book evidence | [DSM/Kaplan limits](verification/bookLimitReview.md) · [Remaining-question evidence review](verification/bookEvidenceReview.md) · [Source-checked editorial list](verification/bookManualReview.md) · [PreTest Psychiatry 14 extraction](verification/pretestPsychiatry14Extraction.md) |
 | Reusable book workflows | [Data extraction instructions](reusable-skills/data-extraction-instructions.md) · [Translation review instructions](reusable-skills/translation-review-instructions.md) · [Source issue review instructions](reusable-skills/source-issue-review-instructions.md) |
 
 Guides/contracts are maintained by function; archived reviews are dated evidence, not the current queue. Links are document-relative; commands/source paths use repository root unless stated otherwise. Record actual runtime results with revision/environment; source completion is separate.

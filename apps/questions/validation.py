@@ -67,7 +67,7 @@ from .models import CHOICE_TEXT_MAX_LENGTH
 
 
 MIN_CHOICES = 2
-MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 8)
+MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 15)
 
 
 def validate_correct_answer(correct_answer, num_choices):

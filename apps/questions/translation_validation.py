@@ -13,7 +13,7 @@ LOCALE_PATTERN = re.compile(r'^[a-z]{2,3}(?:-[A-Z]{2})?$')
 TRANSLATION_FIELDS = frozenset({'question', 'choices', 'explanation'})
 
 
-def normalize_translations(value, *, max_choices=8, base_choice_count=None):
+def normalize_translations(value, *, max_choices=15, base_choice_count=None):
     """Return a normalized translations dict or raise ``ValueError``."""
     if value in (None, ''):
         return {}

@@ -274,7 +274,7 @@ class Command(BaseCommand):
     help = 'Seed sample psychiatry questions (including clinical case chains)'
 
     def handle(self, *args, **options):
-        max_choices = getattr(settings, 'MAX_CHOICES', 8)
+        max_choices = getattr(settings, 'MAX_CHOICES', 15)
         count = 0
 
         # Resolve the acting owner ONCE. The CheckConstraint on

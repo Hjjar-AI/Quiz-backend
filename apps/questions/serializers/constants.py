@@ -19,4 +19,4 @@ from apps.questions.image_policy import (
 )
 
 
-MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 8)
+MAX_CHOICES = getattr(settings, 'MAX_CHOICES', 15)
