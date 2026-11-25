@@ -14,6 +14,8 @@ Start with [current status](workDone.md), [remaining work](workPlan.md), and [ag
 | Python suite results, reruns and coverage limits | [Python verification](verification/pythonTests.md) |
 | PostgreSQL concurrency scenarios, measurements and capacity limits | [Concurrency verification](verification/concurrencyLimits.md) |
 | Previous reviews/change details | [Dated archive](archive/README.md) |
+| Source collection organization | [Extraction/review status and current locations](../import_data/organization.json) |
+| Additional exam sources and repeats | [Extraction report and source gaps](../import_data/README.md) · [Exact recommended CSV/JSON files](../import_data/import_manifest.json) |
 | Selected book evidence | [DSM/Kaplan limits](verification/bookLimitReview.md) · [Remaining-question evidence review](verification/bookEvidenceReview.md) · [Source-checked editorial list](verification/bookManualReview.md) · [PreTest Psychiatry 14 extraction](verification/pretestPsychiatry14Extraction.md) |
 | Reusable book workflows | [Data extraction instructions](reusable-skills/data-extraction-instructions.md) · [Translation review instructions](reusable-skills/translation-review-instructions.md) · [Source issue review instructions](reusable-skills/source-issue-review-instructions.md) |
 

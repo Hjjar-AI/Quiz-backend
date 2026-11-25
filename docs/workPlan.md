@@ -1,8 +1,17 @@
 # Django remaining work
 
+## 2026-11-25 additional-source verification and source gaps
+
+- Offline extraction of all nine staged groups and bounded image/question overlap comparison are complete: [184 additional rows; recommended 341 canonical exam rows](../import_data/README.md). Each actual exam remains isolated; all completed new projects are under extracted_only. Original 2015/2019 payloads and approved records remain unchanged; the recommended separate 2019 view selects 98 unique rows.
+- The 206 deferred source appearances need fuller source material, unambiguous keys or a separately requested editorial review before grading; they include 77 July 2024 recall notes. Fourth-year April 2015 lacks Q92–96, with partial Q56/Q91 and an inferred Q97 continuation. Full July 2015 has ten deferred units. No missing material/medical answers were invented. Optional live import/Arabic/RTL verification and independent clinical review remain unperformed; no application/database write, suite/build, migration or version work is authorized by this record.
+
+## 2026-11-25 July 2015 psychiatry extraction verification
+
+- Offline extraction/export is complete: [59 matching Mukhtabir CSV/JSON rows](../import_data/extracted_only/psychiatry_july2015_ar/README.md), tagged **امتحان الهيئة الأول 2015**, from the user-selected newer PDF. Optional live import and Arabic/RTL rendering remain unverified. Printed keys and source wording issues are preserved and documented; no independent clinical correctness is inferred.
+
 ## 2026-11-25 July 2019 psychiatry extraction verification
 
-- All 24 requested editorial dispositions are applied; no pending selections. The [backend-only delivery](../import_data/psychiatry_july2019_ar/README.md) contains 99 matching import rows and all 100 readable records, with Q83 deferred and approved edited Q99 included as D. Optional live import and Arabic/RTL rendering remain unverified. Retained-with-note items preserve their clinical limitations; see the saved English decision record and explanations.
+- All 24 requested editorial dispositions are applied; no pending selections. The [backend-only delivery](../import_data/extracted_and_reviewed/psychiatry_july2019_ar/README.md) contains 100 matching import rows and all 100 readable records; no deferred items, with approved Q83/Q99 rewrites included as D. Optional live import and Arabic/RTL rendering remain unverified. Retained-with-note items preserve their clinical limitations; see the saved English decision record and explanations.
 
 ## 2026-11-04 content-limit verification
 

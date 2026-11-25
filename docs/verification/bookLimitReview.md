@@ -32,7 +32,7 @@ The verifiers pass all 1,147 rows: complete source coverage and answer mappings,
 
 Baseline comparison proves exactly **one English choice in one DSM row changed**. All other DSM row fields and all 602 Kaplan rows remain identical, including Arabic, UUIDs, keys and case/knowledge links. All **1,627 protected file hashes** remain unchanged, including both books' sources/translation/evidence inputs and the entire PreTest tree. Repeated export reproduces **116 delivery files plus ten manifest/support files byte-identically**; final hashes match the passing verifier reports.
 
-Detailed field measurements, source hashes, issue disposition, preservation and regeneration hashes: [DSM ledger](../../import_data/dsm5_ar/review/2026-11-04_limit_review.json) · [Kaplan ledger](../../import_data/kaplan_ar/review/2026-11-04_limit_review.json). [Shared application contract](../contracts/questionContentLimits.md).
+Detailed field measurements, source hashes, issue disposition, preservation and regeneration hashes: [DSM ledger](../../import_data/extracted_and_reviewed/dsm5_ar/review/2026-11-04_limit_review.json) · [Kaplan ledger](../../import_data/extracted_and_reviewed/kaplan_ar/review/2026-11-04_limit_review.json). [Shared application contract](../contracts/questionContentLimits.md).
 
 ## Remaining limits
 

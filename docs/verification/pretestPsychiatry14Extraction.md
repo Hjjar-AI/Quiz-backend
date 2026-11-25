@@ -4,7 +4,7 @@ The authorized offline extraction, direct Arabic translation and chapter deliver
 
 ## Delivery and source
 
-- [Delivery instructions and review links](../../import_data/pretest_psychiatry14_ar/README.md): 500 questions in 13 chapter JSONs and 13 matching UTF-8 BOM CSVs. Upload one format only; source/review/manifest files are not imports.
+- [Delivery instructions and review links](../../import_data/extracted_and_reviewed/pretest_psychiatry14_ar/README.md): 500 questions in 13 chapter JSONs and 13 matching UTF-8 BOM CSVs. Upload one format only; source/review/manifest files are not imports.
 - Psychiatry: PreTest Self-Assessment and Review, 14th edition (2016), supplied at `/home/mhmmd/Downloads/Pretest psychiatry 14.pdf` and retained in the book's `source/` folder. PDF SHA-256: `03f393ef6f26aba1efdcac650d3218b2a727b839cec4b9b602b71ed7e72ba30b`.
 - Reflowed ebook: 314 physical PDF pages, without reliable printed folios. `source_page` and provenance use one-based physical PDF pages; question/answer start and continuation pages remain available.
 - User authorized Arabic/English output and parallel agents for direct chapter translation. The later 2–15-choice and 4,000-character limits supersede the previously authorized eight-choice reductions. No translation engine, external service or independent current medical/legal research was used.
@@ -30,11 +30,11 @@ python3 scripts/content/export_pretest_psychiatry14.py
 python3 scripts/content/verify_pretest_psychiatry14_artifacts.py
 ```
 
-The local content verifier passed all 500 current rows: complete chapter sequences/source coverage, source and combined-answer mappings, preserved English/options, saved Arabic and bilingual-note propagation, UUID/text uniqueness, case identities/order, production field limits, 2–15 choices, CSV BOM/quoting and CSV/JSON semantic equality. Q408's plus/minus signs and Q79's original duplicate label are checked explicitly. [Machine-readable artifact report](../../import_data/pretest_psychiatry14_ar/review/verification.json).
+The local content verifier passed all 500 current rows: complete chapter sequences/source coverage, source and combined-answer mappings, preserved English/options, saved Arabic and bilingual-note propagation, UUID/text uniqueness, case identities/order, production field limits, 2–15 choices, CSV BOM/quoting and CSV/JSON semantic equality. Q408's plus/minus signs and Q79's original duplicate label are checked explicitly. [Machine-readable artifact report](../../import_data/extracted_and_reviewed/pretest_psychiatry14_ar/review/verification.json).
 
 The latest baseline comparison confirms **58 banks restored**, with corresponding correct positions, English choices and removal of the reduced-bank tag; **Q289–295 also regain full bilingual explanations**. These seven are within the same 58 changed rows. All other row fields, question text, UUIDs, case relationships and source-answer semantics remain identical. All 1,718 protected source/translation/existing DSM/Kaplan files and ten unrelated Android files retain their SHA-256 hashes. The previously completed Arabic title-prefix edit remains preserved.
 
-A second export confirmed all **26 delivery files plus five manifest/derived-support files regenerate byte-identically**, with final delivery hashes still matching the passing verifier report. [Preservation and determinism report](../../import_data/pretest_psychiatry14_ar/review/finalization.json).
+A second export confirmed all **26 delivery files plus five manifest/derived-support files regenerate byte-identically**, with final delivery hashes still matching the passing verifier report. [Preservation and determinism report](../../import_data/extracted_and_reviewed/pretest_psychiatry14_ar/review/finalization.json).
 
 Matching backend models/config/validation/import/export, Vue editors/import previews/manuals and Android editors/default config now use the requested limits. Python AST, Vue SFC/JavaScript syntax, Kotlin lexical and bilingual XML/resource checks pass. Existing UUIDs are skipped rather than updated. These are local source/artifact checks, not deployed import, compilation or runtime evidence.
 

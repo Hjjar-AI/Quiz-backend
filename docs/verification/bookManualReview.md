@@ -52,7 +52,7 @@ Short vignettes may not spell out every diagnostic exclusion, duration or differ
 
 Legal/regulatory examples, demographic comparisons and population estimates remain labelled as source-era context. The supplied books cannot independently verify current local law or current treatment/regulatory/statistical guidance. No external service was used for the PDF comparison. The subsequent authorized evidence review used PubMed and public official/primary sources; see the linked evidence report.
 
-Full per-question evidence: [DSM 33-question recheck](../../import_data/dsm5_ar/review/2026-11-03_full_pdf_recheck.json), [Kaplan 101-question recheck](../../import_data/kaplan_ar/review/2026-11-03_full_pdf_recheck.json). [Earlier targeted source findings](../archive/reviews/2026-10-17-importDataReview.md#2026-11-03-pdf-verification) remain available.
+Full per-question evidence: [DSM 33-question recheck](../../import_data/extracted_and_reviewed/dsm5_ar/review/2026-11-03_full_pdf_recheck.json), [Kaplan 101-question recheck](../../import_data/extracted_and_reviewed/kaplan_ar/review/2026-11-03_full_pdf_recheck.json). [Earlier targeted source findings](../archive/reviews/2026-10-17-importDataReview.md#2026-11-03-pdf-verification) remain available.
 
 ## Separate app verification
 

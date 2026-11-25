@@ -2,7 +2,7 @@
 
 ## Complete flagged-item PDF recheck
 
-The previous manual list has now been fully source-checked: **33 DSM and 101 Kaplan questions**. There are no pending PDF transcription checks for those 134 items. [Per-ID DSM evidence](../../../import_data/dsm5_ar/review/2026-11-03_full_pdf_recheck.json) and [Kaplan evidence](../../../import_data/kaplan_ar/review/2026-11-03_full_pdf_recheck.json) distinguish embedded text, fresh local OCR, targeted image checks, resolved OCR errors and retained source qualifications. Kaplan uses 142 freshly OCR-read pages, including continuation pages; three structured-parser exceptions were handled with image/answer-block inspection. This is not visual proofreading of every scanned word or medical key certification.
+The previous manual list has now been fully source-checked: **33 DSM and 101 Kaplan questions**. There are no pending PDF transcription checks for those 134 items. [Per-ID DSM evidence](../../../import_data/extracted_and_reviewed/dsm5_ar/review/2026-11-03_full_pdf_recheck.json) and [Kaplan evidence](../../../import_data/extracted_and_reviewed/kaplan_ar/review/2026-11-03_full_pdf_recheck.json) distinguish embedded text, fresh local OCR, targeted image checks, resolved OCR errors and retained source qualifications. Kaplan uses 142 freshly OCR-read pages, including continuation pages; three structured-parser exceptions were handled with image/answer-block inspection. This is not visual proofreading of every scanned word or medical key certification.
 
 Additional corrections: Kaplan `2.6` FMR1, `2.8` letter r and `7.2` SSRI. False printed-source typo attributions were removed from Arabic. DSM `15.11` restricts the question to actual behavior categories, so its ambiguity warning was retired. Provisional/suggested questions (`12.21`, `17.6`) and the contextual `19.6` rationale no longer ask the user to reconfirm the source. Kaplan `25.21` correctly asks the culprit medication; the toxicity-management concern belongs to `25.22`.
 
@@ -10,7 +10,7 @@ The [narrowed remaining list](../../verification/bookManualReview.md) contains p
 
 ## 2026-11-03 PDF verification
 
-Both book PDFs are now present in their `source/` folders. This targeted pass checked 13 flagged items: six DSM items using embedded PDF text/rendering, and seven Kaplan items by viewing rendered scan pages. Evidence records include page numbers, methods, findings and PDF SHA-256 fingerprints: [DSM evidence](../../../import_data/dsm5_ar/review/2026-11-03_pdf_source_review.json), [Kaplan evidence](../../../import_data/kaplan_ar/review/2026-11-03_pdf_source_review.json).
+Both book PDFs are now present in their `source/` folders. This targeted pass checked 13 flagged items: six DSM items using embedded PDF text/rendering, and seven Kaplan items by viewing rendered scan pages. Evidence records include page numbers, methods, findings and PDF SHA-256 fingerprints: [DSM evidence](../../../import_data/extracted_and_reviewed/dsm5_ar/review/2026-11-03_pdf_source_review.json), [Kaplan evidence](../../../import_data/extracted_and_reviewed/kaplan_ar/review/2026-11-03_pdf_source_review.json).
 
 - Resolved extraction errors: DSM `12.18` is **>50%**; Kaplan `4.2` is **one third to one half**; Kaplan `25.6` is **18 months**. Corrected retained English and Arabic; kept source-era study/statistical qualifications.
 - Directly verified Kaplan `16.12`: option E prints **>16**, superseding the earlier user transcription ≥16. D remains ≥16 with gap ≥5 and remains the keyed answer. No new clinical endorsement of the book’s child-age cutoff is implied.
@@ -22,7 +22,7 @@ The earlier dated descriptions below record previous batches; the evidence in th
 
 ## Current delivery and coverage
 
-Current chapter files: [DSM-5](../../../import_data/dsm5_ar/README.md) and [Kaplan](../../../import_data/kaplan_ar/README.md). The final displayed-field continuation reviewed **all 570 remaining original questions**: 314 DSM (14 chapter file pairs) and 256 Kaplan (11 pairs). Pending prompts, clinical cases and every choice were directly reviewed; correct existing wording and prior authored fields were retained. Revised **319 exact-source entries and 351 question-specific fields**; removed **304 superseded cache entries**. Exact-source entries differing from the initial session baseline total **2846** (1042 DSM, 1804 Kaplan). Segment counts overlap and are not distinct-question counts.
+Current chapter files: [DSM-5](../../../import_data/extracted_and_reviewed/dsm5_ar/README.md) and [Kaplan](../../../import_data/extracted_and_reviewed/kaplan_ar/README.md). The final displayed-field continuation reviewed **all 570 remaining original questions**: 314 DSM (14 chapter file pairs) and 256 Kaplan (11 pairs). Pending prompts, clinical cases and every choice were directly reviewed; correct existing wording and prior authored fields were retained. Revised **319 exact-source entries and 351 question-specific fields**; removed **304 superseded cache entries**. Exact-source entries differing from the initial session baseline total **2846** (1042 DSM, 1804 Kaplan). Segment counts overlap and are not distinct-question counts.
 
 **Cumulative general-medical editorial review covers all 1078 original exercises**, including all displayed prompts, cases, choices and all nonempty original explanations. No questions or explanations remain in the translation review queue. Source/key conflicts and live app verification remain separate below; the user has now confirmed the 16.12 table transcription.
 
@@ -45,7 +45,7 @@ Arabic and English passages remain separate, with English case translations supp
 
 ## Source problems
 
-Kaplan's [source repair record](../../../import_data/kaplan_ar/review/2026-10-17_source_repairs.json) preserves previous OCR and evidence:
+Kaplan's [source repair record](../../../import_data/extracted_and_reviewed/kaplan_ar/review/2026-10-17_source_repairs.json) preserves previous OCR and evidence:
 
 - `16.12`: direct PDF page 101 inspection on 2026-11-03 confirms all six rows, with **E >16** (correcting the earlier user transcription ≥16). D has patient ≥16 and gap ≥5 and remains the printed answer. The source’s <14 cutoff remains distinguished from the prepubertal-child criterion and the full diagnostic criteria.
 - `21.46`: restored the lost micro prefix (`50 µg/mL`, supported by the explanation) and distinguished concentration from administered dose.

@@ -134,8 +134,8 @@ The source PDFs and raw extracted English are preserved. Original keys, options,
 
 ## Delivery and verification
 
-The canonical chapter files remain in [DSM CSV](../../import_data/dsm5_ar/csv/), [DSM JSON](../../import_data/dsm5_ar/json/), [Kaplan CSV](../../import_data/kaplan_ar/csv/) and [Kaplan JSON](../../import_data/kaplan_ar/json/): 58 chapter pairs / 1,147 rows. Supporting source/review/manifest files are not import payloads. No ZIP archive was generated.
+The canonical chapter files remain in [DSM CSV](../../import_data/extracted_and_reviewed/dsm5_ar/csv/), [DSM JSON](../../import_data/extracted_and_reviewed/dsm5_ar/json/), [Kaplan CSV](../../import_data/extracted_and_reviewed/kaplan_ar/csv/) and [Kaplan JSON](../../import_data/extracted_and_reviewed/kaplan_ar/json/): 58 chapter pairs / 1,147 rows. Supporting source/review/manifest files are not import payloads. No ZIP archive was generated.
 
-Per-book records: [DSM evidence](../../import_data/dsm5_ar/review/2026-11-03_external_evidence_review.json), [Kaplan evidence](../../import_data/kaplan_ar/review/2026-11-03_external_evidence_review.json). Prior PDF checks: [source-checked issue list](bookManualReview.md).
+Per-book records: [DSM evidence](../../import_data/extracted_and_reviewed/dsm5_ar/review/2026-11-03_external_evidence_review.json), [Kaplan evidence](../../import_data/extracted_and_reviewed/kaplan_ar/review/2026-11-03_external_evidence_review.json). Prior PDF checks: [source-checked issue list](bookManualReview.md).
 
 Both local artifact verifiers passed all 1,147 rows: CSV/JSON parity, source answer mappings, field limits and identities. A separate baseline comparison confirms exactly 30 rows changed, only in Arabic explanation and English translation explanation; all other fields and all unrelated rows are identical. The four edited content scripts passed Python AST checks. Live import and Arabic/English display remain unverified. Existing UUIDs are skipped by import, not used to update existing question translations; no database writes were performed.
