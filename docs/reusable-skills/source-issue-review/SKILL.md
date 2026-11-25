@@ -13,6 +13,7 @@ Close the source-verification work before handing a manual checklist back to the
 - Read both the original question and guide, not just the extracted explanation. Include all choices, table headers/footnotes, continuation pages, and the precise task being asked.
 - Prefer source text when reliable; use available local OCR for scans and render high-impact or ambiguous details. An OCR recognizer can repeat the same error on multiple runs, so use the image for disputed symbols and names.
 - State the method actually used. Distinguish embedded-text comparison, local OCR comparison, and direct page-image inspection. Normalization that removes punctuation or comparison symbols cannot prove their fidelity.
+- When the user asks to see the source, show the relevant readable crop or page with its question ID and enough context to include the complete choices; label source images separately from proposed wording.
 
 ## Decide whether the flag survives context
 
@@ -36,6 +37,8 @@ Use [issue-records.md](references/issue-records.md) for persistent review states
 ## Review independent evidence when in scope
 
 Keep independent clinical verification distinct from checking what the book prints. Use relevant primary research, official criteria, product labels or guidelines when external verification is requested or required; respect the session's access restrictions. Permission to consult a public source does not imply permission to upload the book, use a translation service, or claim access to a named service that was not used.
+
+Match evidence to the exact instrument, edition, diagnostic definition and task named in the question. A broader examination, modified scale, or prevalence of symptoms is not interchangeable with the specified test or diagnosed disorder. Separate confirming a test's contents from evidence about which findings emerge early; do not infer a universal ranking from unrelated study populations.
 
 Put every substantive correction or qualification in the affected question's explanation in each delivered language, with a concise reference. A separate review ledger alone is insufficient. Explain whether the finding is a confirmed error, conditional answer, unsupported generalization or unresolved ambiguity. Do not turn an exception-dependent answer into a categorically wrong one. Read the evidence-record guidance for access limits and population/jurisdiction applicability.
 

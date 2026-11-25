@@ -27,6 +27,7 @@ Read [Assessment data](#assessment-data) for question banks, shared cases, match
 - Keep source/target language fields separate and preserve case translations and meaningful source metadata. Do not stuff provenance or review status into schema fields that the app does not support.
 - Make export deterministic and offline from saved reviewed content. A missing translation should be recorded, not silently filled by a newly introduced translation service.
 - Generate the formats the user needs. Keep supporting review files out of the import file set; document exactly which folders/files to upload.
+- Honor the requested delivery location for source copies, crops, authoring records and exports. When relocation is requested, verify the destination copies before removing task-owned originals; preserve unrelated files.
 
 ## Verify and finish
 
@@ -41,7 +42,7 @@ Keep source evidence, translated-field review, data validation, and live applica
 
 Finish the authorized collection, update concise coverage/issue records, and report exact remaining limitations. Request user input only for evidence or editorial decisions that cannot be resolved from available sources and authorization.
 
-## Assessment data
+## Assessment data: structures and difficult cases
 
 ### Discover the import contract
 
@@ -62,6 +63,14 @@ Shared cases must retain order and links. Correcting one case must not duplicate
 Compare the question's choices with both the guide letter and named answer caption. If they disagree, inspect the actual source pages before deciding. Record the printed letter, caption, selected mapping, and evidence separately. Use a named-caption mapping only when the evidence supports that interpretation; do not make it a universal rule.
 
 An incorrect distractor is expected. A source problem is different: missing correct choice, multiple valid best answers, contradiction within a case, a key unsupported by the explanation, or a factual assertion requiring an editorial correction. Read the exact wording before declaring an ambiguity.
+
+When several answer signals exist, record their provenance and the user's chosen priority: an approximate text key, a printed official key and a handwritten circle need not carry the same authority. A user reading a blurred option aloud clarifies its text; it does not select that option as the answer. Keep the raw key, selected answer and reason separately recoverable.
+
+### Metadata and deferred records
+
+Save collection tags and other approved metadata in the authoring inputs so regeneration preserves them. Use the consumer's supported representations in every format, and check decoded CSV/JSON equality; do not turn a serialized array into a comma-split string when that changes tag identity.
+
+A deferred item remains a source record even when excluded from import. If a later decision includes or excludes it, regenerate membership, answer mappings, readable status, review queues and delivery counts together. Keep its stable ID, original multiple-answer key and superseded decision history. Derive counts from the selected set rather than hard-coding a previous delivery total.
 
 ### Conversions when the destination cannot represent the source
 

@@ -11,6 +11,16 @@ Use separate states for source verification and content disposition. Avoid a sin
 
 A confirmed printed contradiction can have **source check complete** and **editorial decision pending** at the same time. A checked historical claim can remain unverified as current guidance. A source-correct letter can still name a medically questionable answer.
 
+## Editorial choices and follow-up replies
+
+Ask in the user's preferred language and manageable batches. Include the question, relevant choices, supplied key, specific problem and recommended disposition. Distinguish the original from the proposed replacement, especially when explaining why a newly proposed distractor is false. Offer meaningful alternatives such as an edited item, retention with a precise warning, or deferral when the source supports those choices.
+
+Persist each decision by stable question ID. Reuse explicit choices instead of asking again without new evidence or a request to revisit them. A later reply can supersede an earlier deferral or retention; record that history and update the active queue. Treat photo requests, factual questions and option transcriptions as clarification, not approval of a rewrite or answer key. An “I don't know” response does not authorize a proposed edit: follow any established preservation policy and record the remaining clinical uncertainty.
+
+For an approved rewrite, assess the prompt, every option and answer together. Preserve the intended distinction without creating another valid exception or changing an association into an exclusive claim. Keep the original and selected keys explicit in the learner's explanation; replace stale pending or deferred language after the decision changes.
+
+Report editorial disposition separately from clinical validity. “All decisions recorded” may include an intentionally retained disputed key or deferred item; it does not certify every graded item. Distinguish those deliberate choices from questions still awaiting a decision, and offer follow-up on uncertain retained items when the user requests remaining issues.
+
 ## Minimal evidence
 
 Record source ID, edition/document hash, question and answer PDF pages, printed pages where available, disputed field, actual observation, verification method, result, and remaining limitation. Store the original extraction or enough evidence to reconstruct the change; a per-ID patch should not erase provenance.

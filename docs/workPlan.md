@@ -1,5 +1,9 @@
 # Django remaining work
 
+## 2026-11-25 July 2019 psychiatry extraction verification
+
+- All 24 requested editorial dispositions are applied; no pending selections. The [backend-only delivery](../import_data/psychiatry_july2019_ar/README.md) contains 99 matching import rows and all 100 readable records, with Q83 deferred and approved edited Q99 included as D. Optional live import and Arabic/RTL rendering remain unverified. Retained-with-note items preserve their clinical limitations; see the saved English decision record and explanations.
+
 ## 2026-11-04 content-limit verification
 
 - Verify actual DSM/Kaplan import/rendering after matching rollout, including restored DSM `4.4` choice E. [Offline limit review](verification/bookLimitReview.md) is complete; existing UUIDs skip rather than update, so any already-imported row needs a separately authorized update path.

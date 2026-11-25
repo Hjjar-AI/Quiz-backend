@@ -8,6 +8,7 @@ Close the source-verification work before handing a manual checklist back to the
 - Read both the original question and guide, not just the extracted explanation. Include all choices, table headers/footnotes, continuation pages, and the precise task being asked.
 - Prefer source text when reliable; use available local OCR for scans and render high-impact or ambiguous details. An OCR recognizer can repeat the same error on multiple runs, so use the image for disputed symbols and names.
 - State the method actually used. Distinguish embedded-text comparison, local OCR comparison, and direct page-image inspection. Normalization that removes punctuation or comparison symbols cannot prove their fidelity.
+- When the user asks to see the source, show the relevant readable crop or page with its question ID and enough context to include the complete choices; label source images separately from proposed wording.
 
 ## Decide whether the flag survives context
 
@@ -32,6 +33,8 @@ Use [Evidence and issue records](#evidence-and-issue-records) for persistent rev
 
 Keep independent clinical verification distinct from checking what the book prints. Use relevant primary research, official criteria, product labels or guidelines when external verification is requested or required; respect the session's access restrictions. Permission to consult a public source does not imply permission to upload the book, use a translation service, or claim access to a named service that was not used.
 
+Match evidence to the exact instrument, edition, diagnostic definition and task named in the question. A broader examination, modified scale, or prevalence of symptoms is not interchangeable with the specified test or diagnosed disorder. Separate confirming a test's contents from evidence about which findings emerge early; do not infer a universal ranking from unrelated study populations.
+
 Put every substantive correction or qualification in the affected question's explanation in each delivered language, with a concise reference. A separate review ledger alone is insufficient. Explain whether the finding is a confirmed error, conditional answer, unsupported generalization or unresolved ambiguity. Do not turn an exception-dependent answer into a categorically wrong one. Read the evidence-record guidance for access limits and population/jurisdiction applicability.
 
 ## Verify closure
@@ -52,6 +55,16 @@ Use separate states for source verification and content disposition. Avoid a sin
 | Delivery | not regenerated, regenerated, artifact checks passed, live import/render verified |
 
 A confirmed printed contradiction can have **source check complete** and **editorial decision pending** at the same time. A checked historical claim can remain unverified as current guidance. A source-correct letter can still name a medically questionable answer.
+
+### Editorial choices and follow-up replies
+
+Ask in the user's preferred language and manageable batches. Include the question, relevant choices, supplied key, specific problem and recommended disposition. Distinguish the original from the proposed replacement, especially when explaining why a newly proposed distractor is false. Offer meaningful alternatives such as an edited item, retention with a precise warning, or deferral when the source supports those choices.
+
+Persist each decision by stable question ID. Reuse explicit choices instead of asking again without new evidence or a request to revisit them. A later reply can supersede an earlier deferral or retention; record that history and update the active queue. Treat photo requests, factual questions and option transcriptions as clarification, not approval of a rewrite or answer key. An “I don't know” response does not authorize a proposed edit: follow any established preservation policy and record the remaining clinical uncertainty.
+
+For an approved rewrite, assess the prompt, every option and answer together. Preserve the intended distinction without creating another valid exception or changing an association into an exclusive claim. Keep the original and selected keys explicit in the learner's explanation; replace stale pending or deferred language after the decision changes.
+
+Report editorial disposition separately from clinical validity. “All decisions recorded” may include an intentionally retained disputed key or deferred item; it does not certify every graded item. Distinguish those deliberate choices from questions still awaiting a decision, and offer follow-up on uncertain retained items when the user requests remaining issues.
 
 ### Minimal evidence
 

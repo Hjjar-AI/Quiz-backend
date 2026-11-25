@@ -32,6 +32,7 @@ Read [assessment-data.md](references/assessment-data.md) for question banks, sha
 - Keep source/target language fields separate and preserve case translations and meaningful source metadata. Do not stuff provenance or review status into schema fields that the app does not support.
 - Make export deterministic and offline from saved reviewed content. A missing translation should be recorded, not silently filled by a newly introduced translation service.
 - Generate the formats the user needs. Keep supporting review files out of the import file set; document exactly which folders/files to upload.
+- Honor the requested delivery location for source copies, crops, authoring records and exports. When relocation is requested, verify the destination copies before removing task-owned originals; preserve unrelated files.
 
 ## Verify and finish
 

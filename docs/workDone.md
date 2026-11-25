@@ -1,5 +1,13 @@
 # Current Django source status
 
+## 2026-11-25 July 2019 psychiatry extraction delivery
+
+Completed the [backend-only delivery](../import_data/psychiatry_july2019_ar/README.md): 100 numbered Arabic questions, 99 matching CSV/JSON import rows, readable text, original photos/approximate key, stable UUIDs, traceable editorial decisions/references and deterministic offline exporter. All carry **امتحان الهيئة الأول 2019/07**. Verified the backend copy before removing identical frontend artifacts and task-specific records; frontend remains clean. `import_data/` remains Git-ignored local data.
+
+All 24 requested English editorial dispositions are recorded and applied. Follow-up approvals rewrite Q24 as a seizure-versus-panic comparison (E) and Q57 around urgent suicide safety assessment with plan/intent/means (C). Latest approvals rewrite Q96 explicitly within classical Freudian theory (A), and replace Q99 with the complete edited caudate item (D), superseding its earlier deferral. Q83 alone remains deferred but readable. Retained Q16/84/87 keys carry user-approved qualifications, which do not establish unambiguous medical grading. Original question/choice/key values and identities are preserved; approved edits are marked in explanations. Targeted evidence includes PubMed abstracts, public guidance, MMSE-specific studies, the public Continuum manuscript, Cochrane summary/abstract, library catalogues and Freud's historical text, with access/applicability limits recorded.
+
+Regenerated delivery/review files and completed lightweight offline checks for numbering, field limits, answer mappings, CSV/JSON equality, stable UUIDs, source hashes and preserved unrelated content. Latest baseline comparison confirms only approved Q24/Q57 content and notes changed; import membership remains 99 rows. No live import/database writes, application code changes, suites, builds, migrations or versions. Arabic/RTL rendering and live import remain unverified.
+
 ## 2026-11-04 DSM/Kaplan limit review
 
 Reviewed all 545 DSM and 602 Kaplan import rows against the increased limits and saved source/translation records. Restored DSM `4.4` English choice E (316 characters including label), previously shortened for 300; PDF text pages 53/252 confirms full wording and unchanged answer D. No other limit overflow or limit-induced content loss found. Existing DSM glossary conversions (26 terms exceed 15) and Kaplan multi-select combinations retain source coverage. Updated both exporters/verifiers to read production constants and emit 15 CSV choice columns; corrected current delivery READMEs. [Findings, measurements and limits](verification/bookLimitReview.md).
