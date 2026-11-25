@@ -1,5 +1,11 @@
 # Current Django source status
 
+## 2026-11-25 extraction skill follow-up from mixed-source work
+
+Updated the existing [extraction skill](reusable-skills/book-data-extraction/SKILL.md) and [source-review skill](reusable-skills/source-issue-review/SKILL.md), their references and both standalone guides. Added explicit processed/importable/deferred/reviewed accounting; recall/placeholder and inferred-number handling; duplicate-file/page/question distinctions, annotation preservation and authorized cleanup evidence; canonical ID/answer priority and option-order mapping; contextual Arabic recognition repairs; and current source availability checks instead of trusting historical paths. Guidance preserves project isolation and distinguishes canonical navigation text from actual photo transcription.
+
+Installed four guarded text-file updates under the existing extract-book-data and verify-source-discrepancies names, preserving UI/invocation metadata. Source/staged skill validators passed; installed hashes match the validated staging. Final metadata/reference/standalone parity and whitespace checks are recorded for this follow-up. No new skill scripts or independent behavioral evaluation; application suites/builds, exam data and database operations were outside this change.
+
 ## 2026-11-25 additional exam extraction and confirmed repeats
 
 Completed the nine staged source groups: 789 recorded source appearances, plus 90 mapped mixed-folder first-year photo appearances. Prepared 184 additional importable questions (Ibn Rushd 30; January 2024 63; print notes 3; fourth-year April 2015 57; full July 2015 supplement 31). Retained 206 source-incomplete/ambiguous records in per-project deferred queues and 489 duplicate-source references rather than inventing options/keys or importing repeats. All five newly separate projects now sit under extracted_only; mixed first/fourth-year photos were split into their actual July/April 2015 exam projects. [Report, coverage and source limitations](../import_data/README.md) · [Exact recommended files](../import_data/import_manifest.json).

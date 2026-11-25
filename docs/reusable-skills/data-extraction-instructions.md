@@ -6,6 +6,7 @@ Produce source-faithful records and useful delivery files. Keep extraction, edit
 
 - Read applicable project instructions and current work records; inspect existing utilities and outputs before replacing anything.
 - Locate supplied source files, including nested source folders. Inspect edition, page count, embedded text, layout, and a few representative pages. Do not ask the user to transcribe material that is available locally.
+- Verify current source availability and retained-copy hashes. A historical manifest path is provenance, not proof that the original still exists; report unavailable originals separately from verified staged copies.
 - Determine scope: source-faithful extraction, translation, explicitly edited study edition, or a combination. Translation alone does not authorize changing source answer keys or inventing case facts.
 - For app imports, inspect the current importer, validators, models, and relevant language/case consumers. Establish required fields, types, limits, encodings, answer-index convention, relationships, and duplicate/update behavior. If the consumer is unavailable, label the output a proposed schema and state what is unverified.
 
@@ -17,10 +18,11 @@ Produce source-faithful records and useful delivery files. Keep extraction, edit
 - Preserve an identifiable original source and its hash, physical PDF page, printed page, and relevant column/section. Keep raw recognition evidence where it materially supports repairs; do not create redundant historical delivery copies.
 - Reconcile source IDs, chapter sequences, question counts, duplicate appearances, and guide labels. A preface count can disagree with the complete numbered sequence; report the discrepancy instead of dropping records to match it.
 - Store an evidence-backed extraction patch when correcting recognition errors. Ensure the actual extraction path applies it, so regeneration cannot erase verified corrections.
+- Repair Arabic ligature/reading-order defects in context. Broad character substitutions can corrupt valid words or negation; retain raw recognition and the specific repaired fields.
 
 ## Structure and export
 
-Read [Assessment data](#assessment-data) for question banks, shared cases, matching/multi-select conversions, or answer-guide conflicts. Skip that section for unrelated material.
+Read [Assessment data](#assessment-data-structures-and-difficult-cases) for question banks, shared cases, incomplete recall notes, repeated source collections, matching/multi-select conversions, or answer-guide conflicts. Skip that section for unrelated material.
 
 - Use stable source IDs to connect raw records, translations, editorial notes, exports, and coverage records. Keep source values distinct from approved edited values.
 - Preserve established question, case, category, and knowledge IDs. Correcting text must not silently create new identities when an existing exporter hashes case text; retain explicit identity overrides or another supported stable mapping.
@@ -28,6 +30,7 @@ Read [Assessment data](#assessment-data) for question banks, shared cases, match
 - Make export deterministic and offline from saved reviewed content. A missing translation should be recorded, not silently filled by a newly introduced translation service.
 - Generate the formats the user needs. Keep supporting review files out of the import file set; document exactly which folders/files to upload.
 - Honor the requested delivery location for source copies, crops, authoring records and exports. When relocation is requested, verify the destination copies before removing task-owned originals; preserve unrelated files.
+- Preserve the user's project isolation. Identify mixed exam collections from printed headings/content rather than filenames alone; split distinct exams or consolidate confirmed repeats into their existing projects, retaining path aliases and provenance.
 
 ## Verify and finish
 
@@ -41,6 +44,8 @@ Use existing lightweight artifact checks where available. Validate observable in
 Keep source evidence, translated-field review, data validation, and live application verification separate. Counts of overrides or OCR-read pages are not counts of reviewed questions or visually inspected pages. Follow project restrictions on suites, builds, migrations, and database writes; artifact validation does not authorize a live import. Existing UUIDs may be skipped rather than updated.
 
 Finish the authorized collection, update concise coverage/issue records, and report exact remaining limitations. Request user input only for evidence or editorial decisions that cannot be resolved from available sources and authorization.
+
+Report source processing, import-ready rows, deferred records and review completion separately. An empty staging queue means all staged sources were processed; it does not establish that every question is complete, importable or reviewed.
 
 ## Assessment data: structures and difficult cases
 
@@ -58,6 +63,8 @@ Read the vignette, final question, all choices, key, and explanation together. P
 
 Shared cases must retain order and links. Correcting one case must not duplicate it or detach its other questions. English case stems need their own language representation when the consumer separates the prompt from the case.
 
+Recall notes, title-only prompts, placeholder distractors and a named answer without a complete option bank are not complete MCQs. Preserve them as source records, deferring required missing fields rather than inventing choices or a key. Record missing question numbers, partial continuations and inferred numbering explicitly. Separate supporting answer-guide/book-excerpt pages from the requested exam's assessment count.
+
 ### Answer guides
 
 Compare the question's choices with both the guide letter and named answer caption. If they disagree, inspect the actual source pages before deciding. Record the printed letter, caption, selected mapping, and evidence separately. Use a named-caption mapping only when the evidence supports that interpretation; do not make it a universal rule.
@@ -66,11 +73,25 @@ An incorrect distractor is expected. A source problem is different: missing corr
 
 When several answer signals exist, record their provenance and the user's chosen priority: an approximate text key, a printed official key and a handwritten circle need not carry the same authority. A user reading a blurred option aloud clarifies its text; it does not select that option as the answer. Keep the raw key, selected answer and reason separately recoverable.
 
+Before recovering a key from a repeated copy, compare the whole prompt/directive and option bank, including negation, numbers and units; map reordered options by their text rather than transferring a letter. Conflicting circles or a changed exception/distractor can leave the variant unresolved. A clear handwritten selection establishes the annotation, not an official key or clinical validity.
+
+### Repeated source collections
+
+Distinguish duplicate files, repeated page content and repeated assessment units. Hash equality proves identical bytes; decoded-pixel equality can identify image copies differing only in metadata. Similarity/OCR matches nominate candidates, not deletion decisions. Check complete page boundaries, continuations and handwritten annotations before choosing a clearer copy; a sharper page may omit unique notes or a cropped choice.
+
+For a confirmed repeated assessment, reuse the canonical ID and preserve each source occurrence, variant wording, alternate key and source-to-canonical option mapping. Similar topics or materially different case facts/distractors are insufficient. Canonical wording shown for navigation must be labelled as a reference rendition, not a verbatim transcription of a blurred or partial photo.
+
+Honor approved canonical wording/answers when adding source copies. Retain collection membership/tags in the source mappings; account for importers that skip existing IDs instead of merging tags or updating rows. If a source-faithful export intentionally keeps repeated numbers, make the recommended unique import selection explicit without discarding the required original records.
+
+If source cleanup is authorized, record removed/retained paths, hashes, comparison method and retained unique information before removing a copy. Keep uncertain comparisons and unique annotations; identifying a duplicate does not itself authorize deletion.
+
 ### Metadata and deferred records
 
 Save collection tags and other approved metadata in the authoring inputs so regeneration preserves them. Use the consumer's supported representations in every format, and check decoded CSV/JSON equality; do not turn a serialized array into a comma-split string when that changes tag identity.
 
 A deferred item remains a source record even when excluded from import. If a later decision includes or excludes it, regenerate membership, answer mappings, readable status, review queues and delivery counts together. Keep its stable ID, original multiple-answer key and superseded decision history. Derive counts from the selected set rather than hard-coding a previous delivery total.
+
+Reconcile source appearances, distinct assessments, import rows, duplicate references, deferred units and unseen source gaps separately. Do not count an inferred continuation as a fully recovered question, or missing numbers as transcribed records. Publish an exact import-file list that excludes empty/deferred-only exports and supporting sidecars; keep extracted and independently reviewed statuses distinct.
 
 ### Conversions when the destination cannot represent the source
 

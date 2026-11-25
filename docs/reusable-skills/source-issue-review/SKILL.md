@@ -13,6 +13,7 @@ Close the source-verification work before handing a manual checklist back to the
 - Read both the original question and guide, not just the extracted explanation. Include all choices, table headers/footnotes, continuation pages, and the precise task being asked.
 - Prefer source text when reliable; use available local OCR for scans and render high-impact or ambiguous details. An OCR recognizer can repeat the same error on multiple runs, so use the image for disputed symbols and names.
 - State the method actually used. Distinguish embedded-text comparison, local OCR comparison, and direct page-image inspection. Normalization that removes punctuation or comparison symbols cannot prove their fidelity.
+- With alternate copies, compare the full directive and option bank before transferring a key or declaring a duplicate. A missing negation, changed unit/distractor, cropped continuation or competing handwritten mark can leave a source variant unresolved despite clearer text elsewhere.
 - When the user asks to see the source, show the relevant readable crop or page with its question ID and enough context to include the complete choices; label source images separately from proposed wording.
 
 ## Decide whether the flag survives context

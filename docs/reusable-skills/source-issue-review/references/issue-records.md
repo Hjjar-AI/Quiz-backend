@@ -11,6 +11,8 @@ Use separate states for source verification and content disposition. Avoid a sin
 
 A confirmed printed contradiction can have **source check complete** and **editorial decision pending** at the same time. A checked historical claim can remain unverified as current guidance. A source-correct letter can still name a medically questionable answer.
 
+For repeated copies, distinguish recognition confidence, agreement between source versions, and answer authority. Record the canonical ID, each supplied key/annotation, option-order mapping and any changed directive or choice; clearer pixels alone do not supersede an approved answer. Missing/partial source material can be fully inventoried while its question remains deferred. Report processed collections, importable questions and unresolved source gaps separately so an empty extraction queue is not presented as complete grading or content review.
+
 ## Editorial choices and follow-up replies
 
 Ask in the user's preferred language and manageable batches. Include the question, relevant choices, supplied key, specific problem and recommended disposition. Distinguish the original from the proposed replacement, especially when explaining why a newly proposed distractor is false. Offer meaningful alternatives such as an edited item, retention with a precise warning, or deferral when the source supports those choices.

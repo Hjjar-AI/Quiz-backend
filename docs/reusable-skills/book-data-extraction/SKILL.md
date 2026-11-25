@@ -11,6 +11,7 @@ Produce source-faithful records and useful delivery files. Keep extraction, edit
 
 - Read applicable project instructions and current work records; inspect existing utilities and outputs before replacing anything.
 - Locate supplied source files, including nested source folders. Inspect edition, page count, embedded text, layout, and a few representative pages. Do not ask the user to transcribe material that is available locally.
+- Verify current source availability and retained-copy hashes. A historical manifest path is provenance, not proof that the original still exists; report unavailable originals separately from verified staged copies.
 - Determine scope: source-faithful extraction, translation, explicitly edited study edition, or a combination. Translation alone does not authorize changing source answer keys or inventing case facts.
 - For app imports, inspect the current importer, validators, models, and relevant language/case consumers. Establish required fields, types, limits, encodings, answer-index convention, relationships, and duplicate/update behavior. If the consumer is unavailable, label the output a proposed schema and state what is unverified.
 
@@ -22,10 +23,11 @@ Produce source-faithful records and useful delivery files. Keep extraction, edit
 - Preserve an identifiable original source and its hash, physical PDF page, printed page, and relevant column/section. Keep raw recognition evidence where it materially supports repairs; do not create redundant historical delivery copies.
 - Reconcile source IDs, chapter sequences, question counts, duplicate appearances, and guide labels. A preface count can disagree with the complete numbered sequence; report the discrepancy instead of dropping records to match it.
 - Store an evidence-backed extraction patch when correcting recognition errors. Ensure the actual extraction path applies it, so regeneration cannot erase verified corrections.
+- Repair Arabic ligature/reading-order defects in context. Broad character substitutions can corrupt valid words or negation; retain raw recognition and the specific repaired fields.
 
 ## Structure and export
 
-Read [assessment-data.md](references/assessment-data.md) for question banks, shared cases, matching/multi-select conversions, or answer-guide conflicts. Skip that reference for unrelated material.
+Read [assessment-data.md](references/assessment-data.md) for question banks, shared cases, incomplete recall notes, repeated source collections, matching/multi-select conversions, or answer-guide conflicts. Skip that reference for unrelated material.
 
 - Use stable source IDs to connect raw records, translations, editorial notes, exports, and coverage records. Keep source values distinct from approved edited values.
 - Preserve established question, case, category, and knowledge IDs. Correcting text must not silently create new identities when an existing exporter hashes case text; retain explicit identity overrides or another supported stable mapping.
@@ -33,6 +35,7 @@ Read [assessment-data.md](references/assessment-data.md) for question banks, sha
 - Make export deterministic and offline from saved reviewed content. A missing translation should be recorded, not silently filled by a newly introduced translation service.
 - Generate the formats the user needs. Keep supporting review files out of the import file set; document exactly which folders/files to upload.
 - Honor the requested delivery location for source copies, crops, authoring records and exports. When relocation is requested, verify the destination copies before removing task-owned originals; preserve unrelated files.
+- Preserve the user's project isolation. Identify mixed exam collections from printed headings/content rather than filenames alone; split distinct exams or consolidate confirmed repeats into their existing projects, retaining path aliases and provenance.
 
 ## Verify and finish
 
@@ -46,3 +49,5 @@ Use existing lightweight artifact checks where available. Validate observable in
 Keep source evidence, translated-field review, data validation, and live application verification separate. Counts of overrides or OCR-read pages are not counts of reviewed questions or visually inspected pages. Follow project restrictions on suites, builds, migrations, and database writes; artifact validation does not authorize a live import. Existing UUIDs may be skipped rather than updated.
 
 Finish the authorized collection, update concise coverage/issue records, and report exact remaining limitations. Request user input only for evidence or editorial decisions that cannot be resolved from available sources and authorization.
+
+Report source processing, import-ready rows, deferred records and review completion separately. An empty staging queue means all staged sources were processed; it does not establish that every question is complete, importable or reviewed.
