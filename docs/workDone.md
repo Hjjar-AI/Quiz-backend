@@ -1,5 +1,34 @@
 # Current Django source status
 
+## 2026-11-27 January Q7 disposition and reviewed-folder move
+
+User selected retaining Q7's original wording/choices/key E with the classification qualification. Removed the hold from the explanation and decision records; no graded content/identities changed. All January editorial decisions are now settled. Moved the collection to `import_data/extracted_and_reviewed/january_2024`, verified every file byte-identical immediately after relocation, and updated current navigation, manifests and two external answer-evidence location pointers. The 72 study rows, 15 incomplete deferred recalls, seven duplicate references and per-source evidence/access limits remain distinct. Offline export/preservation checks pass; no live import, application/database writes, suites/builds, migrations or versions.
+
+
+## 2026-11-27 strict reference recheck of both exam collections
+
+Rechecked the 30 Ibn Rushd items and all 94 January source appearances, preserving raw/source records and canonical duplicates. Applied only explicit approvals: January clinical repairs, Q33/Q34 keys to E, Q18 appetite distractor, two recoveries and seven labeled true/false conversions; Ibn Rushd Q2/Q16 wording clarifications retain their choices/keys. January Q4 atomoxetine replacement was withdrawn after Kaplan table context plus PubMed/StatPearls review; Q7 remains on user hold. Current exports contain 30 and 72 questions with Arabic explanations ending in physical Kaplan PDF pages and/or named website/article links; 15 January recalls remain deferred and seven remain duplicate references.
+
+Per-item strict-reference ledgers distinguish exact support, descriptive/contextual evidence, theory, incomplete material and access limits; a citation is not universal independent three-source confirmation. All 26 January source pages were viewed; retained Kaplan text was used, with p9856 additionally checked as an image. No new whole-book extraction. Original PDFs/DOCX/TXT, source keys, IDs, membership and unrelated canonical records remain traceable. The offline exporter now distinguishes approved corrected keys from original keys in its explanation prefix and readable output. Content/CSV–JSON/identity/hash/regeneration checks are recorded per collection; no application code/database writes, live import, suites/test-file work, builds/compilation, migrations or versions.
+
+
+
+## 2026-11-27 sectioned Kaplan reference
+
+Split the existing full Kaplan 11 layout text into 60 chapter files plus front matter, three appendices and the book index; added readable navigation and a JSON index with 357 body subsection locations, physical PDF ranges, UTF-8 file offsets and source/output hashes. All 416 contents entries are reconciled; the 55.1 contents versus 55.1/55.1a body discrepancy is explicit. [Reference navigation](../import_data/reference_books/kaplan11_sectioned/README.md).
+
+Offline checks confirm complete 16,525-page coverage, exact full-text reconstruction after removing added page markers, valid subsection offsets, unchanged PDF/full-text hashes and byte-identical regeneration of all 69 outputs. Added an isolated deterministic offline sectioning utility. No new extraction/OCR, book text corrections, exam changes, application code/database writes, suites/builds/compilation, migrations or versions. Image-only material and whole-book medical/editorial verification remain outside this navigation work.
+
+## 2026-11-27 Ibn Rushd evidence review and retained Kaplan reference
+
+Moved the completed 30-question collection into `import_data/extracted_and_reviewed/ibn_rushd_exam`; updated current navigation/classification/import manifests and retained relocation history. All collection files were hash-identical immediately after the move; source files and final question CSV/JSON/IDs remain unchanged. Current manifest hashes now identify the reviewed delivery. Offline preservation, links and deterministic exporter checks passed; live import/rendering remains unverified.
+
+Added Arabic teaching explanations to all 30 approved questions, covering the answer rationale and relevant distractor distinctions while retaining existing clinical/source qualifications and citations. The explanation-only update preserves all stems, choices, keys, UUIDs, tags and original-source records. Offline export/field-limit/CSV–JSON/preservation/regeneration checks pass; live import and browser verification remain unperformed.
+
+Reviewed all 30 Ibn Rushd questions/options/keys with local Kaplan embedded text (28 questions) and external evidence (16 questions). Applied all nine user-approved clinical edits/restorations, including the Q3 speech-output choice and Q7 diagnostic clarifications; original wording, supplied keys and stable UUIDs remain traceable. Q19's missing drug name/EXCEPT directive is explicitly an approved editorial restoration. No pending clinical/editorial decisions from this pass. [Current review](../import_data/extracted_and_reviewed/ibn_rushd_exam/review/clinical_review.txt) · [Decisions](../import_data/extracted_and_reviewed/ibn_rushd_exam/review/editorial_decisions.json). Applied the saved direct Arabic wording/punctuation corrections to 26 questions; preserved false distractors and the intentionally incoherent Q24 quotation. Before/after wording and approvals remain recorded. Access, dated-guidance and applicability limits remain explicit.
+
+Copied and hash-verified the complete Kaplan 11th-edition ©2025 PDF into [reference_books](../import_data/reference_books/README.md), preserved the Downloads original, and saved the already-extracted full layout text with all 16,525 page boundaries. Selected embedded-text page evidence is retained; no page-image or whole-book semantic review claimed. Exporter records optional saved clinical-review metadata. Offline artifact/preservation/regeneration checks are recorded separately; no application code, suites/builds/compilation, migrations, database/live import, versions or browser work.
+
 ## 2026-11-25 extraction skill follow-up from mixed-source work
 
 Updated the existing [extraction skill](reusable-skills/book-data-extraction/SKILL.md) and [source-review skill](reusable-skills/source-issue-review/SKILL.md), their references and both standalone guides. Added explicit processed/importable/deferred/reviewed accounting; recall/placeholder and inferred-number handling; duplicate-file/page/question distinctions, annotation preservation and authorized cleanup evidence; canonical ID/answer priority and option-order mapping; contextual Arabic recognition repairs; and current source availability checks instead of trusting historical paths. Guidance preserves project isolation and distinguishes canonical navigation text from actual photo transcription.
