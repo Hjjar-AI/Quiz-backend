@@ -1,5 +1,22 @@
 # Current Django source status
 
+## 2026-11-27 content skill enhancements
+
+Updated the installed `extract-book-data`, `verify-source-discrepancies` and `translate-specialist-content` skills and their [project copies/standalone guides](reusable-skills/data-extraction-instructions.md). Added guidance for reusing retained book text with page indexes, searching flat/nested bank schemas, separating authoritative keys from student guesses, distinguishing actual recovery from approved new study versions, checking classification/indication/effect context, mapping exact evidence and access limits without forcing reference agreement, and keeping current keys/explanations/manifests/validation synchronized after decisions. Preserved existing installed names, UI metadata and invocation policies; no exam or application content changed.
+
+All three project and installed skills pass the skill-creator validator. Verified installed/project body/reference parity, staged-to-installed hashes, local reference links and complete standalone guidance. Documentation/skill checks only; no application suites/builds, database work, migrations or versions.
+
+
+## 2026-11-27 three additional January study conversions
+
+Applied the user-approved Q35/Q72/Q76 true/false proposals verbatim, each keyed A (true), with cited Arabic explanations. These are explicitly edited study versions, not recovered original questions/keys. Original incomplete wording, placeholders, raw keys/blocks and UUIDs remain traceable; the previous 72 import rows are unchanged. January now has 75 study rows, 12 deferred records and seven canonical duplicate references, with no pending editorial decisions. Updated current inventories/navigation and validation. Offline field-limit, CSV/JSON, identity/preservation and deterministic-export checks pass; no application/database import, suites/builds, migrations or versions.
+
+
+## 2026-11-27 January deferred-source crosscheck
+
+Checked all 15 remaining entries against ten other saved exam groups (854 source appearances including repeats/incomplete notes). No complete matching original was recovered. Directly viewed companion print2 pp3–4 and print3 pp2–4: Q59 still lacks a full bank, Q62 explicitly records a student guess of Adler, Q71 repeats Hippocrates without proving first use, and Q87’s affirmative/all-correct question differs from January’s EXCEPT directive. Topic-only REM, insight, judgment and delirium records cannot be matched to a specific existing question. Saved per-ID findings and proposed—but did not apply—three cited edited true/false versions for Q35/Q72/Q76. All stems/options/keys/IDs and 72-question CSV/JSON are unchanged; only deferred explanation/evidence notes and supporting records were updated. No other collection or application/database was changed.
+
+
 ## 2026-11-27 January Q7 disposition and reviewed-folder move
 
 User selected retaining Q7's original wording/choices/key E with the classification qualification. Removed the hold from the explanation and decision records; no graded content/identities changed. All January editorial decisions are now settled. Moved the collection to `import_data/extracted_and_reviewed/january_2024`, verified every file byte-identical immediately after relocation, and updated current navigation, manifests and two external answer-evidence location pointers. The 72 study rows, 15 incomplete deferred recalls, seven duplicate references and per-source evidence/access limits remain distinct. Offline export/preservation checks pass; no live import, application/database writes, suites/builds, migrations or versions.

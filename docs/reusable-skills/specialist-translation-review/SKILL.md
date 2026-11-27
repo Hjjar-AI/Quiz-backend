@@ -15,6 +15,6 @@ Establish the requested languages, edition, scope, and destination. Resolve rout
 
 For long collections, track coverage by stable source ID and field. Correct retained wording counts as reviewed only after it has actually been read in context. Reuse existing correct translations; producing more changed strings is not an objective.
 
-State each substantive correction or qualification in the affected explanation in every delivered language, with applicable citations; a sidecar note alone does not inform the learner.
+State each substantive correction or qualification in the affected explanation in every delivered language, with applicable citations; a sidecar note alone does not inform the learner. For a cited study edition, explain the selected answer and useful distractor distinctions, then give labeled textbook page numbers or named website/article links. Keep reference scope and historical/theoretical limits explicit; do not invent case details or treat a grammar pass as approval of clinical rewrites.
 
 Validate both preservation and delivery: saved per-question wording must reach actual exports; source/target content must remain aligned; corrected case text must preserve established relationships. Report translation coverage separately from source conflict resolution, schema checks, and live application verification.

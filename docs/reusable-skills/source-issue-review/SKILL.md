@@ -25,6 +25,8 @@ Close the source-verification work before handing a manual checklist back to the
 - **Printed-source problem:** mark the source check complete, describe the actual contradiction or missing support, and distinguish that from an unresolved transcription task.
 - **Historical/current-guidance issue:** preserve and label edition/jurisdiction/context; the supplied textbook alone cannot independently verify today's rules, statistics, or clinical recommendations.
 
+Before declaring a classification error, read the table heading, adjacent rows and the dedicated discussion. Distinguish a drug’s naming/classification, mechanism, approved indication, off-label research and possible effects; one does not settle all the others. Check whether absolute wording (“cannot”, “never”) is actually supported rather than silently weakening it to “less typical”. Record a contextual clarification when it retires the original flag.
+
 A missing fact is not permission to invent it. Different defensible interpretations are not automatically a transcription error. Use appropriate qualifications without turning every abbreviated teaching vignette into a defective question.
 
 ## Apply only the authorized disposition

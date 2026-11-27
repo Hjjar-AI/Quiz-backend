@@ -16,6 +16,16 @@ Shared cases must retain order and links. Correcting one case must not duplicate
 
 Recall notes, title-only prompts, placeholder distractors and a named answer without a complete option bank are not complete MCQs. Preserve them as source records, deferring required missing fields rather than inventing choices or a key. Record missing question numbers, partial continuations and inferred numbering explicitly. Separate supporting answer-guide/book-excerpt pages from the requested exam's assessment count.
 
+## Recovering incomplete recalls from other collections
+
+Inspect the actual record shapes before searching. Banks may store a flat question/choice list, nested original/selected items, or choices keyed by letters. Handle those shapes explicitly; report unread or missing fields rather than silently treating them as empty and claiming coverage. Distinguish the original printed bank from an approved edited rendition of another collection.
+
+Use keywords, Arabic normalization and similarity to retrieve candidates, then compare complete directives, cases, choices and key authority. A shared topic or high similarity score cannot identify an unspecified question. An affirmative “all of the above” bank cannot fill an EXCEPT recall. Count searched source appearances separately from unique questions, repeated imports and genuinely read candidates; describe the bounded search rather than claiming no fuller source exists anywhere.
+
+A matching incomplete note may corroborate wording without recovering any missing options. Read annotations such as “we guessed” or “nobody knew”: agreement with a student guess does not create an authoritative key. Save this evidence and keep unsupported claims deferred rather than carrying confidence from a cleaner copy.
+
+If an edited study edition is authorized, a surviving supported statement may become a useful true/false item. Distinguish three outcomes: recovered original, reduced bank of actual source choices, and new edited study exercise. The latter does not recover the original stem, absent exception or key. Where a decision is needed, present the exact proposed wording, choices, answer, explanation and references before applying it; reuse existing authorization rather than adding a new approval gate. Preserve the incomplete original and mark the derived exercise explicitly. Dropping placeholders is not permission to invent their replacements or guess which missing option was correct.
+
 ## Answer guides
 
 Compare the question's choices with both the guide letter and named answer caption. If they disagree, inspect the actual source pages before deciding. Record the printed letter, caption, selected mapping, and evidence separately. Use a named-caption mapping only when the evidence supports that interpretation; do not make it a universal rule.
@@ -53,6 +63,16 @@ First confirm the user's desired representation and the consumer's capabilities.
 - For a single-choice combination item, preserve the complete correct set; verify the answer position and every candidate set. Do not accidentally create two equivalent correct choices.
 - For matching/glossary material, keep definitions and terms aligned, with distinct meaningful distractors. Review generated distractors; deterministic generation alone does not establish educational quality.
 - Count original exercises and derived import rows separately. Reconcile every extra row to a documented conversion rather than presenting the larger total as extra source questions.
+
+## Applying decisions and refreshing delivery
+
+Keep the earliest source record and raw key immutable. Do not rerun a temporary assembly script that copies the current edited item into its “original” fields or resets prior decisions. Apply the approved field changes, retain unrelated reviewed wording, and recheck source-backed recognition patches when a whole-item proposal could restore an older typo.
+
+When a selected key changes, show the current answer clearly. A retained original letter must be labeled as historical source evidence and must not masquerade as the answer to a new option bank. An absent original key stays absent; the key of an approved new exercise is a separate value.
+
+Update authoring, actual exports, explanations, deferred/duplicate queues, decision records and current manifests together. Recompute counts from current membership; keep initial extraction counts as dated history. For added exercises, verify that existing import rows remain unchanged unless an additional edit was authorized. Refresh validation after the last content change and verify deterministic regeneration from the saved inputs.
+
+A reviewed collection may still contain inventoried, incomplete records. Report review completion, retained qualifications, pending decisions and importable coverage separately. Move a collection only within the authorized organization workflow; verify preservation, retain old-path aliases, and update current pointers without rewriting the meaning of past relocation/hash checks.
 
 ## An adaptable intermediate representation
 

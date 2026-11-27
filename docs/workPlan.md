@@ -1,13 +1,17 @@
 # Django remaining work
 
+## 2026-11-27 July 2024 recall review
+
+- Review all 77 source notes and 29 supplied answer captions against the three source pages, retained Kaplan and relevant PubMed/StatPearls evidence. Keep absent original option banks/keys deferred; present exact edited study proposals before applying substantive changes.
+
 ## 2026-11-27 Ibn Rushd exam verification
 
 - All 30 questions rechecked; initial approved edits/copyediting plus strict-recheck Q2/Q16 clarifications applied. No pending content decisions from this pass. Live import/Arabic rendering and any update of already imported rows remain unperformed and separately scoped. [Review and approved edits](../import_data/extracted_and_reviewed/ibn_rushd_exam/review/clinical_review.txt).
 
 ## 2026-11-25 additional-source verification and source gaps
 
-- Offline extraction of all nine staged groups and bounded image/question overlap comparison are complete: [193 additional rows; recommended 350 canonical exam rows](../import_data/README.md). Each actual exam remains isolated; current collection locations and reviewed status are recorded in the index. Original 2015/2019 payloads and approved records remain unchanged; the recommended separate 2019 view selects 98 unique rows.
-- The 197 remaining deferred source appearances need fuller source material, unambiguous keys or a separately requested editorial review before grading; they include 77 July 2024 recall notes. Fourth-year April 2015 lacks Q92–96, with partial Q56/Q91 and an inferred Q97 continuation. Full July 2015 has ten deferred units. No missing material/medical answers were invented. Optional live import/Arabic/RTL verification and independent clinical review remain unperformed; no application/database write, suite/build, migration or version work is authorized by this record.
+- Offline extraction of all nine staged groups and bounded image/question overlap comparison are complete: [196 additional rows; recommended 353 canonical exam rows](../import_data/README.md). Each actual exam remains isolated; current collection locations and reviewed status are recorded in the index. Original 2015/2019 payloads and approved records remain unchanged; the recommended separate 2019 view selects 98 unique rows.
+- The 194 remaining deferred source appearances need fuller source material, unambiguous keys or a separately requested editorial review before grading; they include 77 July 2024 recall notes. Fourth-year April 2015 lacks Q92–96, with partial Q56/Q91 and an inferred Q97 continuation. Full July 2015 has ten deferred units. No missing material/medical answers were invented. Optional live import/Arabic/RTL verification and independent clinical review remain unperformed; no application/database write, suite/build, migration or version work is authorized by this record.
 
 ## 2026-11-25 July 2015 psychiatry extraction verification
 

@@ -67,6 +67,12 @@ Do not omit clinically relevant source details for fluency. Unless summarization
 
 Keep patient-facing or study content focused on learning. Put OCR mechanics, extraction history, internal status, and evidence paths in review records. Add a short visible note only when a source conflict affects understanding or grading.
 
+For a cited study edition, write a self-contained teaching explanation for the current item, not a second copy of the review log. Explain why the selected answer fits and why plausible alternatives differ; keep source-critical qualifications visible. End with the textbook edition and clearly identified physical PDF or printed pages, or the chapter/article/website title and direct link. Do not present a topical reference as verification of every option or infer inaccessible full-text content from a title.
+
+Keep “not a usual diagnostic feature” distinct from “cannot coexist”, “lower propensity” from “impossible adverse effect”, and a theoretical developmental age from a diagnostic age inference. These are substantive distinctions, not stylistic synonyms; suggest a clinical wording change when required by scope rather than silently altering its meaning during proofreading. Keep an intentionally incoherent patient quotation intact when its incoherence is the tested finding.
+
+When an edited exercise changes its bank or key, make the current answer unambiguous. Retain the original key as separately labeled provenance, not an unexplained answer prefix. A new true/false version of a recall is an edited exercise, not recovered source text. Once the user's decision settles an item, remove obsolete pending/hold language from the teaching explanation while preserving the source and decision history separately.
+
 ## 6. Save corrections so they survive regeneration
 
 Use stable record IDs and the project's existing content pipeline. Reuse working per-record overrides rather than inventing another translation engine.

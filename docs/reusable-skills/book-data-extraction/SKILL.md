@@ -15,6 +15,8 @@ Produce source-faithful records and useful delivery files. Keep extraction, edit
 - Determine scope: source-faithful extraction, translation, explicitly edited study edition, or a combination. Translation alone does not authorize changing source answer keys or inventing case facts.
 - For app imports, inspect the current importer, validators, models, and relevant language/case consumers. Establish required fields, types, limits, encodings, answer-index convention, relationships, and duplicate/update behavior. If the consumer is unavailable, label the output a proposed schema and state what is unverified.
 
+Reuse a verified retained extraction before running OCR or extracting the book again. When navigation needs improvement, section the existing text with physical-page anchors and a small machine-readable index; retain readable text rather than assuming the entire book should become JSON. Verify page coverage, reconstruction and index offsets for the units actually used (bytes or Unicode characters). This checks navigation integrity, not medical content or image-only material.
+
 ## Recover records before translating
 
 - Prefer embedded PDF text when reliable. For scans, use available local OCR; render difficult pages and inspect the image. Local OCR is source recognition, not a translation engine. Do not upload sources or use external services without authorization.

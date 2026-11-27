@@ -23,6 +23,10 @@ For an approved rewrite, assess the prompt, every option and answer together. Pr
 
 Report editorial disposition separately from clinical validity. “All decisions recorded” may include an intentionally retained disputed key or deferred item; it does not certify every graded item. Distinguish those deliberate choices from questions still awaiting a decision, and offer follow-up on uncertain retained items when the user requests remaining issues.
 
+A “wait” reply keeps the affected mutation on hold while independent work continues. A request to recheck is authorization to investigate, not acceptance of the proposed replacement. After rechecking, withdraw a disproven proposal; if the user chooses retention with a qualification, record that as a final disposition rather than leaving it pending. Keep optional new study conversions separate from the completed review of the existing bank.
+
+Use the final selected wording to regenerate explanations and current status. Remove obsolete hold language, unsupported source-error claims and rejected alternatives from the active delivery; keep the decision history in provenance. Do not leave an earlier “not applied” proposal list or a pre-change validation report presented as the current result.
+
 ## Minimal evidence
 
 Record source ID, edition/document hash, question and answer PDF pages, printed pages where available, disputed field, actual observation, verification method, result, and remaining limitation. Store the original extraction or enough evidence to reconstruct the change; a per-ID patch should not erase provenance.
@@ -53,6 +57,16 @@ For externally checked claims, record the exact claim, source URL/PMID, publicat
 Separate confirmed errors from conditional recommendations, incomplete support and source-only contradictions. A treatment exception after failed alternatives may preserve a conditional answer; it does not establish universal safety. An outside paper cannot recover the author's intended age, chronology or medication history when the book contradicts itself. Do not invent those details or substitute a new key without support.
 
 Keep each substantive correction/qualification visible in the delivered explanation, with the same meaning and applicable references in all delivered languages. Retain raw source wording separately; clearly label any superseded text retained for comparison. Update stale warnings, manifests and current review metadata to reflect the bounded evidence pass without rewriting historical provenance. Count external-evidence items separately from source-only checks; neither count certifies the entire book.
+
+## Comparing requested references without manufacturing agreement
+
+Attach evidence to the claim it actually addresses: diagnostic criteria, symptom terminology, pharmacologic classification, indication, adverse-effect possibility, comparative risk or historical theory are different tasks. Read the relevant context within a source and record genuine disagreements rather than treating any named book or website as infallible. An absence from approved indications is not proof that a drug never appears in a broader classification; a possible effect is not proof of a standard treatment indication.
+
+PubMed indexes articles; it is not itself a primary clinical finding. Identify the article and whether it is a trial, case report, consensus, review or theoretical account. NCBI Bookshelf hosts multiple publishers: identify StatPearls by the actual chapter, and do not count its PubMed listing as independent corroboration. A page title or bibliography alone is a lead, not evidence for a detailed claim. An indexed passage can support its explicit content when direct access is blocked, but does not establish full-text review.
+
+When the user requests several reference families, record per-item support, contradiction, context only, or no applicable support identified. A citation count is not a count of facts verified, and a topical paper cannot certify every distractor. Do not force unrelated citations onto a question to claim all sources agree. Historical models may be described accurately without being experimentally validated; case reports support possibility without establishing incidence or comparative safety.
+
+For a cited study edition, end each explanation with the relevant textbook edition and explicitly labeled PDF or printed pages, or the website/chapter/article title and direct link (PMID when useful). Preserve the source-specific limits in the explanation when they affect grading. Keep internal file paths, approval bookkeeping and access logs in sidecars. Refresh coverage from the references actually mapped to each item, distinguishing direct support from contextual/descriptive pointers.
 
 ## What closes an issue
 
